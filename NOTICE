@@ -24,6 +24,9 @@ THIRD-PARTY COMPONENTS
 Included in this repository:
 - Barlow and Barlow Condensed fonts (assets/fonts), SIL Open Font License 1.1, see assets/fonts/OFL.txt.
 - Montserrat font (motion/public/fonts), SIL Open Font License 1.1, see motion/public/fonts/OFL.txt.
+- World map shapes (motion/src/library/worldmap.json) from Natural Earth 1:110m countries, public domain
+  (https://www.naturalearthdata.com), converted by tools/make_worldmap.py.
+- The motion prop library (motion/src/library/) is our own SVG code, covered by this repository's MIT License.
 Installed by setup.sh (not included):
 - Remotion 4 (motion/, npm). Free for individuals and companies of up to 3 people, commercial use included;
   larger companies need a Remotion company licence (https://www.remotion.dev/license).

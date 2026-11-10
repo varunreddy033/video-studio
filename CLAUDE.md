@@ -309,6 +309,17 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         heat), -14.0 LUFS, every cue lands ~2 frames before its word. Until Sterling Flat (phase 6) [char:] shows the
         classic pack's pose cut-out. Phase-2 test job 20261110-183704-ccc7a6 (classic tags + style: motion) no
         longer passes Check (expected; ask before deleting it).
+  - [x] Phase 4 library (2026-11-10): motion/src/library/catalog.json = the one list of kinds (Python + Remotion read
+        it): 45 parametric SVG props in 8 groups (places, tech, ideas, money, things, signs...), each with its own idle
+        motion and art bounds so it fills its box; data components line/bar chart, big number, calendar, pie,
+        compare (VS), ranking, world map with pin (Natural Earth 110m, public domain, tools/make_worldmap.py,
+        122 KB); headline pill + label tags; transitions push x4 with shadow band, zoom-through, iris, whip pan,
+        fade, cut + a chooser (opening words: deeper -> zoom, fall -> drop from top, flashback -> from left, else
+        mostly push right / whip / iris, never twice in a row); palettes navy + light (per scene: palette=light),
+        onPanel text colour so pills and tags read on both. Contact sheet: tools/motion_library_sheet.py ->
+        output/motion_library.mp4 (75 s: 3 prop pages, 7 data pages incl. light palette, 9 transitions), rendered
+        in 39-41 s. Motion sample final 55 s (Remotion 50 s warm), -14.0 LUFS; classic draft 13 s, classic parse
+        identical.
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:

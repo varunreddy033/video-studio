@@ -17,8 +17,10 @@ Every cue is stored as (segment, token): the n-th word of that segment's narrati
 Kokoro's real word timings (pipeline/motion.py), so a pop lands exactly on its word.
 """
 
+import json
 import re
 
+from . import config as C
 from . import script_parser as SP
 
 WORD_RE = re.compile(r"[A-Za-z0-9']+")
@@ -27,10 +29,78 @@ SIZES = {"tiny", "small", "medium", "large", "big", "huge"}
 SIDES = {"left", "right", "center", "centre", "top", "bottom", "top-left", "top-right", "bottom-left",
          "bottom-right", "middle", "floor", "sky"}
 FROM_DIRS = {"right": "from-right", "left": "from-left", "top": "from-top", "bottom": "from-bottom"}
-# element kinds the renderer draws (phase 4 grows this list; anything else is drawn as a labelled placeholder)
-DATA_KINDS = {"number", "chart", "quote", "card"}
+# element kinds the renderer draws: motion/src/library/catalog.json (shared with Remotion)
+CATALOG = json.loads((C.BASE_DIR / "motion" / "src" / "library" / "catalog.json").read_text(encoding="utf-8"))
+DATA_KINDS = {"number", "chart", "quote", "card"}                 # classic syntax, as in-scene elements
+NEW_DATA = {"pie", "compare", "ranking", "map"}                   # motion-only data components
 SCENE_SHOTS = {"talk", "ai", "stock"}
-PROPS = {"door", "bubble", "question", "exclamation", "coin", "coins", "calendar", "arrow", "label"}
+PROPS = set(CATALOG["props"]) | {"label"}
+
+
+def _pairs(text: str, line: int, err, what: str):
+    """'A: 40, B: 35' -> [["A", 40.0], ["B", 35.0]] (values may carry $ , %)."""
+    out = []
+    for item in [x for x in text.split(",") if x.strip()]:
+        if ":" not in item:
+            err(line, f"[{what}: ...] items look like 'label: number', got '{item.strip()}'")
+            return None
+        k, v = item.rsplit(":", 1)
+        try:
+            out.append([k.strip(), float(v.strip().replace("$", "").replace("%", "").replace(",", ""))])
+        except ValueError:
+            err(line, f"[{what}: ...] '{v.strip()}' is not a number")
+            return None
+    return out
+
+
+def _new_data(kind: str, arg: str, line: int, err):
+    """[pie: title | A: 40, B: 60 | place]  [ranking: title | A: 3, B: 5 | place]
+       [compare: LEFT LABEL: $13B | RIGHT LABEL: $38.5B | place]  [map: India, China | pin=37.77,-122.42 | place]"""
+    parts = [x.strip() for x in arg.split("|")]
+    place = size = anim = None
+    keep, opts = [], {}
+    for j, p in enumerate(parts):
+        low = p.lower()
+        if j and low in ANIMS:
+            anim = low
+        elif j and low in SIZES:
+            size = low
+        elif j and _position(p) and not re.search(r"[a-z]{3,}\s*:", low):
+            place = _position(p)
+        elif j and re.fullmatch(r"[a-z_]+\s*=.+", p, re.I):
+            k, v = p.split("=", 1)
+            opts[k.strip().lower()] = v.strip()
+        else:
+            keep.append(p)
+    data = {}
+    if kind in ("pie", "ranking"):
+        if len(keep) < 2:
+            err(line, f"[{kind}: title | label: number, label: number, ...]")
+            return None
+        pairs = _pairs(keep[1], line, err, kind)
+        if not pairs or len(pairs) < 2:
+            if pairs is not None:
+                err(line, f"[{kind}: ...] needs at least 2 items")
+            return None
+        data = {"title": keep[0], "data": pairs, "unit": opts.get("unit", "")}
+    elif kind == "compare":
+        if len(keep) < 2:
+            err(line, "[compare: LEFT LABEL: value | RIGHT LABEL: value]")
+            return None
+        sides = []
+        for side in keep[:2]:
+            m = re.fullmatch(r"(.+?):\s*([^\d\-+]*)([-+]?[\d,]*\.?\d+)(.*)", side)
+            if not m:
+                err(line, f"[compare: ...] each side looks like 'Label: $13B', got '{side}'")
+                return None
+            sides.append([m.group(1).strip(), float(m.group(3).replace(",", "")),
+                          (m.group(2) + "{v}" + m.group(4)).strip()])
+        data = {"left": sides[0], "right": sides[1], "title": keep[2] if len(keep) > 2 else ""}
+    else:   # map
+        countries = [c.strip() for c in keep[0].split(",") if c.strip()]
+        data = {"countries": countries, "pin": opts.get("pin", ""), "pinLabel": opts.get("label", "")}
+    return {"op": "add", "kind": kind, "text": "", "id": None, "place": place, "anim": anim, "size": size,
+            "opts": {}, "data": data, "line": line}
 
 
 def tokens(text: str):
@@ -248,6 +318,10 @@ def parse_body(lines, start, meta, err, warn):
                     pending_events.append({"op": "add", "kind": kind, "text": sh.get("text", ""), "id": None,
                                            "place": place, "anim": anim, "size": size, "opts": {}, "data": data,
                                            "line": ln})
+            elif kind in NEW_DATA:
+                ev = _new_data(kind, arg, ln, err)
+                if ev:
+                    pending_events.append(ev)
             elif kind == "sfx":
                 if arg:
                     pending_sfx.append(arg)
@@ -260,7 +334,8 @@ def parse_body(lines, start, meta, err, warn):
                 err(ln, f"[{kind}: ...] is a classic tag; in motion scripts use [+ ...] elements and [scene: ...]")
             else:
                 err(ln, f"unknown tag [{kind}: ...] in a motion script. Use [scene:], [char:], [+ ...], [- ...], "
-                        f"[head:], [label:], [number:], [chart:], [quote:], [talk:], [sfx:], [pause:]")
+                        f"[head:], [label:], [number:], [chart:], [pie:], [compare:], [ranking:], [map:], [quote:], "
+                        f"[talk:], [sfx:], [pause:]")
         add_text(s[pos:], ln)
     if pending_events:
         warn(pending_events[0]["line"], "these tags have no narration after them, so they never appear")
@@ -311,7 +386,7 @@ def check(meta, segments, shots, warn, err, wps):
                 err(e["line"], "[char: ...] needs a presenter: add 'character: sterling_flat' (or another) to the header")
             if e["op"] == "char" and char and e["pose"] not in char["poses"]:
                 err(e["line"], f"pose '{e['pose']}' isn't in {char['name']}'s poses: {', '.join(char['poses'])}")
-            if e["op"] == "add" and e["kind"] not in PROPS | DATA_KINDS | {"gen"}:
+            if e["op"] == "add" and e["kind"] not in PROPS | DATA_KINDS | NEW_DATA | {"gen"}:
                 warn(e["line"], f"'{e['kind']}' isn't in the prop library yet; it's drawn as a labelled placeholder")
         if sh["type"] == "talk" and not char:
             err(sh["line"], "[talk: ...] needs a presenter: add 'character: <name>' to the header")

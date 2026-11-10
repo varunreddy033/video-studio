@@ -23,7 +23,7 @@ export const HeadlinePill: React.FC<{p: Palette; words: HeadWord[]; appear: numb
           const bump = pop(f, w.at - 1, 30, 9, 260);
           return (
             <span key={i} style={{
-              color: lit > 0.5 ? p.bg : '#B7BDC8', opacity: fill,
+              color: lit > 0.5 ? p.onPanel : '#B7BDC8', opacity: fill,
               transform: `translateY(${(1 - Math.min(1, bump)) * 4}px) scale(${1 + 0.12 * Math.sin(Math.min(1, bump) * Math.PI)})`,
               display: 'inline-block',
             }}>{w.text}</span>

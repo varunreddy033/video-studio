@@ -17,17 +17,14 @@ FPS, W, H = 30, 1920, 1080
 FLOOR = 900
 TRANSITION = 18
 # default size (w, h) and resting place of each kind; 'stand' kinds sit on the floor, others float
-KIND_BOX = {
-    "door": (230, 410, "stand"), "coin": (120, 134, "stand"), "coins": (330, 300, "stand"),
-    "bubble": (360, 360, "float"), "question": (130, 130, "float"), "exclamation": (130, 130, "float"),
-    "calendar": (300, 380, "float"), "arrow": (420, 160, "float"), "gen": (420, 420, "float"),
-    "number": (900, 420, "float"), "chart": (1300, 640, "float"), "quote": (1400, 520, "float"),
-    "card": (1400, 480, "float"), "char": (420, 620, "stand"), "label": (300, 80, "float"),
-}
+KIND_BOX = {k: (v["w"], v["h"], v["rest"]) for group in ("props", "data", "special")
+            for k, v in V3.CATALOG[group].items()}
+DEFAULT_ANIM = {k: v["anim"] for group in ("props", "data", "special") for k, v in V3.CATALOG[group].items()}
 SIZE_K = {"tiny": 0.5, "small": 0.75, "medium": 1.0, "large": 1.3, "big": 1.3, "huge": 1.7}
 SIDE_X = {"left": 0.22, "right": 0.78, "center": 0.5, "top-left": 0.22, "top-right": 0.78, "bottom-left": 0.22,
           "bottom-right": 0.78, "top": 0.5, "bottom": 0.5, "floor": 0.5, "sky": 0.5}
-TINTS = ["#16294A", "#1A2440", "#132643", "#182A45", "#1B2440", "#14284A"]
+TINTS = {"navy": ["#16294A", "#1A2440", "#132643", "#182A45", "#1B2440", "#14284A"],
+         "light": ["#FBF8F1", "#F8F2E6", "#FCF6EA", "#F6F1E6", "#FAF4E8", "#F7F3EA"]}
 COLORS = ["accent", "teal", "sky", "coral", "good", "bad"]
 
 
@@ -174,7 +171,8 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
     for k, sh in enumerate(shots):
         frm = starts[k]
         nxt = starts[k + 1] if k + 1 < len(starts) else dur_frames
-        tr = _transition(sh.get("from"), k, scenes, prev_elements)
+        opening = " ".join(sg["text"] for sg in parsed["segments"] if sg["shot"] == k)[:160]
+        tr = _transition(sh.get("from"), k, scenes, prev_elements, opening)
         begin = frm - (tr["frames"] if tr and tr["type"] != "cut" else 0)
         local = lambda sec: max(0, round(sec * FPS) - begin)  # noqa: E731
         elements, headline = [], None
@@ -208,7 +206,7 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
                     auto_i += 1
                 el = {"id": ev.get("id") or f"s{k}_{ev['kind']}_{len(elements)}", "kind": ev["kind"],
                       "box": box, "enter": {**cue, "anim": ev.get("anim") or _default_anim(ev["kind"])}}
-                if ev["kind"] in ("number", "chart", "quote", "card"):
+                if ev["kind"] in ("number", "chart", "quote", "card", "pie", "compare", "ranking", "map"):
                     el.update(type=ev["kind"], props=dict(ev.get("data") or {}))
                     if ev["kind"] == "number":
                         el["props"]["countFrames"] = 40
@@ -257,9 +255,11 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
             carried_char = {**carried_char, "_place": live_char.get("_place") or {"side": "left"}}
         for e in elements:
             e.pop("_place", None)
+        sc_pal = (sh.get("opts") or {}).get("palette")
         scenes.append({"id": f"s{k}", "from": begin, "frames": nxt - begin, "transition": tr,
+                       **({"palette": sc_pal} if sc_pal else {}),
                        "name": sh.get("name"), "line": sh.get("line"),
-                       "background": {"tint": TINTS[k % len(TINTS)], "name": sh.get("name")},
+                       "background": {"tint": TINTS.get(sc_pal or palette, TINTS["navy"])[k % 6], "name": sh.get("name")},
                        **({"headline": headline} if headline else {}), "elements": elements})
         prev_elements = elements
     return {"version": 1, "fps": FPS, "width": W, "height": H, "durationFrames": dur_frames, "palette": palette,
@@ -267,8 +267,7 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
 
 
 def _default_anim(kind):
-    return {"door": "grow", "coins": "grow", "chart": "pop", "number": "pop", "quote": "fade", "card": "pop",
-            "arrow": "draw", "calendar": "drop"}.get(kind, "pop")
+    return DEFAULT_ANIM.get(kind, "pop")
 
 
 NUMBER_WORDS = {"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven",
@@ -300,8 +299,16 @@ def _head_words(text, spoken, local, appear):
     return [{"text": w, "frame": int(t)} for w, t in zip(hw, times)]
 
 
-def _transition(frm, k, scenes, prev_elements):
-    """Scene k's arrival. Explicit 'from:' wins; otherwise a chooser varies them (phase 4 widens the set)."""
+DEEPER = re.compile(r"\b(inside|deeper|how (does|do|did)|why|what'?s (in|behind)|look (at|closer)|under the hood|zoom)\b", re.I)
+FALL = re.compile(r"\b(fell|falls|crash\w*|drop\w*|collaps\w*|plung\w*|sank|slammed|result|consequence|then)\b", re.I)
+PAST = re.compile(r"\b(years? ago|back in|in (19|20)\d\d|remember|used to|history|once upon)\b", re.I)
+
+
+def _transition(frm, k, scenes, prev_elements, opening=""):
+    """Scene k's arrival. An explicit 'from:' wins. Otherwise the opening words choose it (MOTION_PLAN.md):
+    going deeper -> zoom through the previous scene's main element, a fall / consequence -> drop from the top,
+    a flashback -> push from the left, anything else -> mostly push from the right, sometimes a whip pan or an iris.
+    Never the same move twice in a row."""
     if k == 0:
         return None
     if frm:
@@ -318,9 +325,25 @@ def _transition(frm, k, scenes, prev_elements):
         if frm["type"] == "cut":
             return {"type": "cut", "frames": 0}
         return {"type": frm["type"], "frames": TRANSITION}
-    cycle = ["from-right", "from-right", "from-bottom", "from-right", "from-left", "from-top"]
     last = scenes[-1]["transition"] if scenes else None
-    d = cycle[k % len(cycle)]
-    if last and last.get("type") == "push" and last.get("dir") == d:
-        d = cycle[(k + 1) % len(cycle)]
-    return {"type": "push", "dir": d, "frames": TRANSITION}
+    key = lambda t: (t or {}).get("type", "") + (t or {}).get("dir", "")  # noqa: E731
+    head = opening[:120]
+    cands = []
+    big = max((e for e in prev_elements if e["type"] not in ("label", "char")),
+              key=lambda e: e["box"]["w"] * e["box"]["h"], default=None)
+    if DEEPER.search(head) and big:
+        b = big["box"]
+        cands.append({"type": "zoom", "x": round(b["x"] + b["w"] / 2), "y": round(b["y"] + b["h"] / 2), "frames": TRANSITION + 4})
+    if FALL.search(head):
+        cands.append({"type": "push", "dir": "from-top", "frames": TRANSITION})
+    if PAST.search(head):
+        cands.append({"type": "push", "dir": "from-left", "frames": TRANSITION})
+    rot = ["from-right", "whip", "from-right", "iris", "from-bottom", "from-right"]
+    for j in range(len(rot)):
+        r = rot[(k + j) % len(rot)]
+        cands.append({"type": "push", "dir": r, "frames": TRANSITION} if r.startswith("from-")
+                     else {"type": r, "frames": TRANSITION + (4 if r == "iris" else -4)})
+    for c in cands:
+        if key(c) != key(last):
+            return c
+    return cands[-1]

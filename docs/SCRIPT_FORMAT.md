@@ -228,8 +228,37 @@ the presenter's side), `over <element>` (`over calendar`, `over door: fund`, `ov
 **Sizes**: `tiny`, `small`, `medium`, `large`, `huge`. Elements are named by kind (`door`, `number`, `chart`),
 by `kind: text` (`door: fund`), or by an id you give: `[+ door: FUND #fund | ...]`.
 
-Elements in the library today: `door`, `coin`, `coins`, `bubble`, `question`, `exclamation`, `calendar`,
-`arrow`, plus the data elements. Any other kind is drawn as a labelled placeholder (motion phase 4 adds ~40 props).
+**The prop library** (45 props, all drawn in code in our palette, each with its own idle motion; list in
+`motion/src/library/catalog.json`, preview in `output/motion_library.mp4`, made by `bin/python tools/motion_library_sheet.py`):
+- **places**: `door`, `house`, `bank`, `factory`, `skyline`
+- **tech**: `server`, `phone`, `laptop`, `chip`, `battery`, `gear`, `rocket`
+- **ideas**: `lightbulb`, `magnifier`, `question`, `exclamation`, `bubble`, `target`, `cloud`
+- **money**: `coin`, `coins`, `cash`, `piggy`, `wallet`, `creditcard`, `jar`, `briefcase`, `scale`
+- **things**: `envelope`, `calendar`, `clock`, `hourglass`, `shield`, `lock`, `crown`, `trophy`, `globe`, `flag`, `megaphone`
+- **signs**: `arrow`, `arrow_up`, `arrow_down`, `check`, `cross`, `warning`
+
+Props take a colour: `[+ house | left | color=teal]` (accent, teal, sky, coral, good, bad, or a #hex). Any other kind is drawn as a
+labelled placeholder, and `[+ gen: ...]` makes a new one with the image model (motion phase 5).
+
+**Data components** (in-scene, with a place at the end):
+| Tag | Example |
+|---|---|
+| `[number: ...]` | `[number: 5.5 \| percent: the Nasdaq's fall \| suffix=% \| right]`, counts up |
+| `[chart: bar or line \| title \| A: 1, B: 2 \| place]` | bars grow / the line draws; the title hides when the scene has a headline |
+| `[pie: title \| A: 45, B: 35, C: 20 \| unit=%]` | slices sweep in, legend beside it |
+| `[ranking: title \| A: 220, B: 200, C: 170 \| unit=B]` | sorted rows, rank badges, bars grow |
+| `[compare: Revenue (2025): $13B \| Net loss (2025): $38.5B]` | two sides with VS; the bigger number gets the bigger circle |
+| `[map: United States of America, Taiwan \| pin=37.77,-122.42 \| label=SAN FRANCISCO]` | countries fill in, a pin drops and pulses (Natural Earth, public domain) |
+| `[quote: ...]` `[card: ...]` | as in classic scripts |
+
+**Transitions**: `from: right / left / top / bottom` (push with a shadow band), `zoom <element>`, `iris`, `whip`, `fade`,
+`cut`. Without `from:`, a chooser picks one from the new scene's first words, never the same twice in a row:
+"inside / how does / why..." zooms through the previous scene's main element, "fell / crashed / then..." drops from
+the top, "back in 2000 / years ago..." pushes from the left, and everything else is mostly a push from the right with
+the occasional whip pan or iris.
+
+**Palettes**: `palette: navy` (default) or `palette: light`, for the whole video; one scene can differ with
+`[scene: name | palette=light]`.
 
 ### Motion pacing rules (Check enforces them)
 - Something new every ~3 s: an element, a label or a scene change (Check warns at 3.5 s).

@@ -4,7 +4,8 @@ export type Cue = {frame: number; word?: number; seg?: number; tok?: number;
 export type Box = {x: number; y: number; w: number; h: number};
 export type Element = {
   id: string;
-  type: 'image' | 'video' | 'card' | 'number' | 'quote' | 'chart' | 'prop' | 'gen' | 'char' | 'label';
+  type: 'image' | 'video' | 'card' | 'number' | 'quote' | 'chart' | 'prop' | 'gen' | 'char' | 'label'
+    | 'pie' | 'compare' | 'ranking' | 'map';
   kind?: string;
   props: Record<string, any>;
   box: Box;
@@ -19,7 +20,7 @@ export type Transition =
 export type Scene = {
   id: string; from: number; frames: number; transition: Transition | null;
   background?: {tint?: string; name?: string};
-  name?: string; line?: number;
+  name?: string; line?: number; palette?: string;
   headline?: {appear: number; words: {text: string; word?: number; frame: number}[]};
   elements: Element[];
 };

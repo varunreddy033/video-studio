@@ -5,6 +5,7 @@ import {FONT, Palette} from '../lib/theme';
 import {BigNumber, LineChart} from '../components/props';
 import {Element} from './types';
 import {CharView, GenView, LabelView, Motion, PropView} from './Placed';
+import {Compare, Pie, Ranking, WorldMap} from '../library/Data';
 
 const MOVES = [[1, 1.1, 0, 0], [1.08, 1.08, -0.03, 0], [1.1, 1, 0, 0], [1.08, 1.08, 0.03, 0], [1, 1.1, -0.02, -0.015], [1.08, 1.08, 0, 0.025]];
 
@@ -139,6 +140,10 @@ export const ElementView: React.FC<{el: Element; p: Palette; sceneFrames: number
   else if (el.type === 'number') body = <Fit el={el}><NumberEl el={el} p={p} /></Fit>;
   else if (el.type === 'quote') body = <Fit el={el}><QuoteEl el={el} p={p} /></Fit>;
   else if (el.type === 'chart') body = <Fit el={el}><ChartEl el={el} p={p} frames={frames} /></Fit>;
+  else if (el.type === 'pie') body = <Motion el={el} frames={frames} idle={false}><Pie p={p} w={el.box.w} h={el.box.h} data={el.props.data} unit={el.props.unit} /></Motion>;
+  else if (el.type === 'ranking') body = <Motion el={el} frames={frames} idle={false}><Ranking p={p} w={el.box.w} h={el.box.h} data={el.props.data} unit={el.props.unit} /></Motion>;
+  else if (el.type === 'compare') body = <Motion el={el} frames={frames} idle={false}><Compare p={p} w={el.box.w} h={el.box.h} left={el.props.left} right={el.props.right} /></Motion>;
+  else if (el.type === 'map') body = <Motion el={el} frames={frames} idle={false}><WorldMap p={p} w={el.box.w} h={el.box.h} countries={el.props.countries} pin={el.props.pin} pinLabel={el.props.pinLabel} /></Motion>;
   else if (el.type === 'label') body = <AbsoluteFill><LabelView el={el} p={p} /></AbsoluteFill>;
   else if (el.type === 'prop' && el.kind === 'arrow') body = <AbsoluteFill><PropView el={el} p={p} /></AbsoluteFill>;
   else if (el.type === 'prop') body = <Motion el={el} frames={frames}><PropView el={el} p={p} /></Motion>;

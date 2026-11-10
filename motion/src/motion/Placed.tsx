@@ -5,6 +5,7 @@ import {FONT, Palette} from '../lib/theme';
 import {CalendarPage, Coin, DashedArrow, Door, QuestionBubble} from '../components/props';
 import {LabelTag} from '../components/LabelTag';
 import {Element} from './types';
+import {LibraryProp, PROPS} from '../library/Props';
 
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
 const colorOf = (p: Palette, c?: string) => (c && (p as Record<string, string>)[c]) || c || p.accent;
@@ -50,12 +51,12 @@ const Bubble: React.FC<{p: Palette; w: number; text: string}> = ({p, w, text}) =
     <svg width={w} height={w} viewBox="0 0 100 100" style={{overflow: 'visible', transform: `scale(${wob}, ${2 - wob})`}}>
       <defs>
         <radialGradient id="bub" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="55%" stopColor={p.sky} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={p.teal} stopOpacity="0.45" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+          <stop offset="50%" stopColor={p.sky} stopOpacity="0.45" />
+          <stop offset="100%" stopColor={p.teal} stopOpacity="0.75" />
         </radialGradient>
       </defs>
-      <circle cx="50" cy="50" r="46" fill="url(#bub)" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.6" />
+      <circle cx="50" cy="50" r="46" fill="url(#bub)" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.6" />
       <ellipse cx="34" cy="28" rx="10" ry="6" fill="#fff" opacity="0.75" transform="rotate(-30 34 28)" />
       <text x="50" y="57" textAnchor="middle" fontFamily={FONT} fontWeight={900} fontSize={text.length > 6 ? 12 : 18} fill={p.ink}>{text}</text>
     </svg>
@@ -82,6 +83,7 @@ export const PropView: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
   }
   if (k === 'arrow') return <DashedArrow x1={el.box.x} y1={el.box.y + h / 2} x2={el.box.x + w} y2={el.box.y + h / 2} from={0} to={20} color={c} bend={-h * 0.6} />;
   if (k === 'bubble') return <Bubble p={p} w={Math.min(w, h)} text={text} />;
+  if (PROPS[k]) return <LibraryProp kind={k} w={w} h={h} p={p} c={c} text={text} />;
   return <Placeholder p={p} title={k.toUpperCase()} text={text} w={w} h={h} />;
 };
 

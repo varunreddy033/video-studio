@@ -102,7 +102,7 @@ export const CalendarPage: React.FC<{p: Palette; x: number; y: number; month: st
         padding: `${w * 0.05}px 0`, borderRadius: `${w * 0.08}px ${w * 0.08}px 0 0`, letterSpacing: 4}}>{month}</div>
       <div style={{background: p.panel, borderRadius: `0 0 ${w * 0.08}px ${w * 0.08}px`, textAlign: 'center',
         padding: `${w * 0.02}px 0 ${w * 0.07}px`, boxShadow: `0 14px 0 ${p.shadow}`}}>
-        <div style={{color: p.bg, fontWeight: 900, fontSize: w * 0.5, lineHeight: 1.05}}>{day}</div>
+        <div style={{color: p.onPanel, fontWeight: 900, fontSize: w * 0.5, lineHeight: 1.05}}>{day}</div>
         <div style={{color: '#6B7385', fontWeight: 800, fontSize: w * 0.11, letterSpacing: 3}}>{weekday}</div>
       </div>
       {[0.25, 0.5, 0.75].map((k) => (
