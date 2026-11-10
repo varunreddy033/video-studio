@@ -294,6 +294,21 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         (checked every second). Concurrency on the M5 Air (825-frame demo): 2 tabs 23 s, 4 tabs 17 s, 6 tabs 17 s,
         8 tabs 18 s -> MOTION_CONCURRENCY=4 default. Classic re-check: sample passes Check, draft 13 s, old job's
         final 10 s with 0 new AI images, -14.1 LUFS.
+  - [x] Phase 3 script v3 (2026-11-10): pipeline/script_v3.py parses motion bodies ([scene: | from:], [char:],
+        [+ kind: text | place | anim | size], [- x], [head:], [label: | target], [+ gen:], in-scene
+        [number:]/[chart:]/[quote:]/[card:] with a place, [talk:]/[ai:]/[stock:] as full-frame scenes, [sfx:]
+        [pause:] ##). Cues = (segment, token); pipeline/motion_timeline.py aligns them to Kokoro's words (difflib)
+        or to estimates (previews), lays out boxes (slots avoid the presenter's side, boxes clamped in frame,
+        presenter carries into later scenes until [- char]), headline words light on their spoken word (digits on
+        the first number word). Check: motion pacing (something new every 3 s, scenes 6-15 s, a headline per scene,
+        varied transitions) + a scene list + "Show scene previews" (motion/scripts/stills.mjs: one bundle, one
+        browser, renderStill per scene; ~2-3 s for 4 scenes; cached; refused while a render holds
+        jobs.RENDER_LOCK, which every render now holds). Classic parser: body loop only skipped for style: motion;
+        20/20 classic scripts parse byte-identically (snapshot compare). docs/SCRIPT_FORMAT.md section 5 +
+        docs/sample_motion_script.md (36 s, 4 scenes, 15 elements): final 27-51 s (Remotion 25-47 s, varies with
+        heat), -14.0 LUFS, every cue lands ~2 frames before its word. Until Sterling Flat (phase 6) [char:] shows the
+        classic pack's pose cut-out. Phase-2 test job 20261110-183704-ccc7a6 (classic tags + style: motion) no
+        longer passes Check (expected; ask before deleting it).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:

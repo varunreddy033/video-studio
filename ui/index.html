@@ -178,6 +178,12 @@ video { width: 100%; border-radius: var(--radius); background: #000; display: bl
 .timebox { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .timebox .inp { width: 90px; font-family: var(--mono); }
 .chip.type { background: var(--info-soft); color: var(--info); }
+.scenegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.scenegrid figure { margin: 0; cursor: pointer; }
+.scenegrid img, .scenegrid .ph { width: 100%; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid var(--line); display: block; object-fit: cover; }
+.scenegrid .ph { display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--muted); font-size: 13px; }
+.scenegrid figcaption { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; font-size: 13px; }
+.scenegrid figcaption span { color: var(--muted); }
 .stagetimes { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 10px; }
 .stagetimes .stg { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); }
 .stagetimes .stg b { font-weight: 650; }
@@ -352,7 +358,32 @@ async function refresh(force = false) {
 }
 
 // --------------------------------------------------------- check report
-function report(r, onJump) {
+function motionScenes(r, onJump, getText) {
+  // style: motion: the scene list from Check, plus one preview still per scene (rendered on request)
+  const s = r.stats || {};
+  const tr = (t) => !t ? "first scene" : t.type === "push" ? "push " + (t.dir || "").replace("from-", "from ") : t.type === "zoom" ? `zoom through ${t.target || "centre"}` : t.type;
+  const grid = h("div", { class: "scenegrid" });
+  const status = h("span", { class: "hint" });
+  const btn = h("button", { class: "btn small", disabled: !r.ok || !getText, onclick: async () => {
+    btn.disabled = true; status.textContent = "Rendering previews (a few seconds)…";
+    try {
+      const res = await api("/api/preview", { method: "POST", body: JSON.stringify({ text: getText() }) });
+      status.textContent = "";
+      res.scenes.forEach((x) => {
+        const cell = grid.children[x.scene]; if (!cell) return;
+        cell.querySelector(".ph").replaceWith(h("img", { src: `/api/preview/${res.key}/${x.file}`, alt: `Scene ${x.scene + 1}`, loading: "lazy" }));
+      });
+    } catch (e) { status.textContent = e.message; }
+    btn.disabled = false; } }, "Show scene previews");
+  (s.scenes || []).forEach((x) => grid.append(h("figure", { onclick: () => onJump && onJump(x.line) },
+    h("div", { class: "ph" }, `Scene ${x.index + 1}`),
+    h("figcaption", {}, h("b", {}, `${x.index + 1}. ${x.name || x.type}`), h("span", {}, `${ts(x.est_start)} · ~${Math.round(x.est_dur)} s · ${tr(x.transition)}`),
+      h("span", {}, x.headline ? `“${x.headline}”` : "no headline"), h("span", {}, `${x.elements} element${x.elements === 1 ? "" : "s"}`)))));
+  return h("div", {}, h("div", { class: "row", style: "margin:14px 0 8px" }, h("h3", { style: "margin:0" }, `Scenes (${(s.scenes || []).length})`),
+    btn, status), grid);
+}
+
+function report(r, onJump, getText) {
   const box = h("div");
   const s = r.stats || {}, by = s.by_type || {};
   if (s.clip) {
@@ -379,6 +410,7 @@ function report(r, onJump) {
   if (r.warnings.length) box.append(h("h3", {}, `${r.warnings.length} warning${r.warnings.length > 1 ? "s" : ""}`),
     h("ul", { class: "msgs" }, r.warnings.map(m => item(m, "w"))));
   if (r.chapters && r.chapters.length) box.append(h("p", { class: "hint" }, "Chapters: " + r.chapters.map(c => `${ts(c.est_start)} ${c.title}`).join("  ·  ")));
+  if (s.style === "motion" && s.scenes) { box.append(motionScenes(r, onJump, getText)); return box; }
   if (r.shots && r.shots.length) {
     const what = (x) => x.type === "stock" ? x.query : x.type === "ai" ? x.prompt : x.type === "card" ? x.text + (x.sub ? " — " + x.sub : "")
       : x.type === "number" ? `${x.prefix || ""}${x.value}${x.suffix || ""} ${x.label || ""}` : x.type === "quote" ? `“${x.text}” ${x.by ? "— " + x.by : ""}`
@@ -685,7 +717,7 @@ function showNew(kind = "full") {
   const doCheck = async () => {
     if (!newText.trim()) { toast("Paste a script first"); return; }
     try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: withType(newText, kind) }) });
-      out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln))),
+      out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => withType(newText, kind))),
         lookCard(r, () => newText, (t) => { newText = t; ta.value = t; }, doCheck));
       createBtn.disabled = !r.ok; if (r.ok) createBtn.focus();
     } catch (e) { toast(e.message); } };
@@ -820,7 +852,7 @@ function editorCard(d, open) {
       lastReport = r; data.script = editText; data.check = r; toast(r.ok ? "Saved. No errors." : `Saved, ${r.errors.length} error(s) to fix`);
       const dd = await api("/api/jobs/" + current); data = dd; editText = dd.script; showJob(); loadJobs();
     } catch (e) { toast(e.message); } };
-  const out = h("div", { style: "margin-top:14px" }, rep ? report(rep, (ln) => jumpTo(ta, ln)) : null,
+  const out = h("div", { style: "margin-top:14px" }, rep ? report(rep, (ln) => jumpTo(ta, ln), () => editText) : null,
     rep && !running ? lookCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null);
   return h("details", { class: "card", open },
     h("summary", {}, "Script"),

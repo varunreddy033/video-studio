@@ -253,49 +253,54 @@ def parse(text: str) -> dict:
         pending_sfx, pending_pause = [], 0.0
         para_open = True
 
-    for i in range(start, len(lines)):
-        ln = i + 1
-        raw = lines[i].rstrip()
-        s = raw.strip()
-        if not s:
-            para_open = False
-            continue
-        if s.startswith("<!--") or s.startswith("//"):
-            continue
-        if re.match(r"^#{1,3}\s", s):
-            section = s.lstrip("#").strip()
-            chapters.append({"title": section, "line": ln, "segment": len(segments)})
-            para_open = False
-            continue
-        if re.fullmatch(r"-{3,}|\*{3,}", s):
-            para_open = False
-            continue
-        pos = 0
-        for m in TAG_RE.finditer(s):
-            add_text(s[pos:m.start()], ln)
-            pos = m.end()
-            kind, arg = m.group(1).lower(), m.group(2).strip()
-            if kind in VISUAL:
-                if pending_shot is not None:
-                    warn(ln, f"two shots in a row with no narration between them; "
-                             f"the {pending_shot['type']} shot from line {pending_shot['line']} is skipped")
-                shot = _parse_visual(kind, arg, ln, errors)
-                if shot:
-                    pending_shot = shot
-            elif kind == "sfx":
-                if arg:
-                    pending_sfx.append(arg)
-            elif kind == "pause":
-                try:
-                    pending_pause += max(0.0, min(5.0, float(arg.rstrip("s"))))
-                except ValueError:
-                    err(ln, f"[pause: ...] needs seconds, like [pause: 1.5], got '{arg}'")
-            else:
-                err(ln, f"unknown tag [{kind}: ...]. Use one of: {', '.join(sorted(VISUAL | OTHER))}")
-        add_text(s[pos:], ln)
+    is_motion = (meta.get("style") or "").strip().lower() == "motion"
+    if is_motion:                      # style: motion -> v3 scene tags (pipeline/script_v3.py)
+        from . import script_v3
+        segments, shots, chapters = script_v3.parse_body(lines, start, meta, err, warn)
+    if not is_motion:
+        for i in range(start, len(lines)):
+            ln = i + 1
+            raw = lines[i].rstrip()
+            s = raw.strip()
+            if not s:
+                para_open = False
+                continue
+            if s.startswith("<!--") or s.startswith("//"):
+                continue
+            if re.match(r"^#{1,3}\s", s):
+                section = s.lstrip("#").strip()
+                chapters.append({"title": section, "line": ln, "segment": len(segments)})
+                para_open = False
+                continue
+            if re.fullmatch(r"-{3,}|\*{3,}", s):
+                para_open = False
+                continue
+            pos = 0
+            for m in TAG_RE.finditer(s):
+                add_text(s[pos:m.start()], ln)
+                pos = m.end()
+                kind, arg = m.group(1).lower(), m.group(2).strip()
+                if kind in VISUAL:
+                    if pending_shot is not None:
+                        warn(ln, f"two shots in a row with no narration between them; "
+                                 f"the {pending_shot['type']} shot from line {pending_shot['line']} is skipped")
+                    shot = _parse_visual(kind, arg, ln, errors)
+                    if shot:
+                        pending_shot = shot
+                elif kind == "sfx":
+                    if arg:
+                        pending_sfx.append(arg)
+                elif kind == "pause":
+                    try:
+                        pending_pause += max(0.0, min(5.0, float(arg.rstrip("s"))))
+                    except ValueError:
+                        err(ln, f"[pause: ...] needs seconds, like [pause: 1.5], got '{arg}'")
+                else:
+                    err(ln, f"unknown tag [{kind}: ...]. Use one of: {', '.join(sorted(VISUAL | OTHER))}")
+            add_text(s[pos:], ln)
 
-    if pending_shot is not None:
-        warn(pending_shot["line"], "the last shot tag has no narration after it, so it is not used")
+        if pending_shot is not None:
+            warn(pending_shot["line"], "the last shot tag has no narration after it, so it is not used")
 
     # ------------------------------------------------------------- checks
     if not meta.get("title"):
@@ -426,7 +431,7 @@ def parse(text: str) -> dict:
         sh["est_dur"] = round(sum(s["est_dur"] + s["pause_before"] for s in segs), 1)
         limit = (P["hold_talk"] if sh["type"] == "talk" else P["hold_photo"] if sh["type"] in ("ai", "stock", "act")
                  else P["hold_graphic"])
-        if sh["est_dur"] > limit:
+        if sh["est_dur"] > limit and not is_motion:      # motion scenes have their own pacing rules
             warn(sh["line"], f"this {sh['type']} shot stays on screen ~{sh['est_dur']:.0f} s; "
                              f"add another shot inside that narration so the picture changes")
         if sh["type"] in CHARACTER_SHOTS and not char:
@@ -443,7 +448,7 @@ def parse(text: str) -> dict:
         if sh["type"] == "quote" and not sh["by"]:
             warn(sh["line"], "quote has no source; add | who said it (never invent quotes)")
     for seg in segments:
-        if seg["words"] > 70:
+        if seg["words"] > 70 and not is_motion:
             warn(seg["line"], f"{seg['words']} words without a cut; split it with another shot tag")
         if re.search(r"\b(e\.g|i\.e|etc|vs)\.", seg["text"], re.I):
             warn(seg["line"], "abbreviations like e.g. / vs. sound odd when spoken; write them out")
@@ -486,7 +491,7 @@ def parse(text: str) -> dict:
     if dups:
         warn(1, "these image prompts repeat word for word, so they make the same picture: " + "; ".join(dups[:5]))
 
-    if char:
+    if char and not is_motion:
         run, run_start = 0, None
         for sh in shots:
             if sh["type"] in CHARACTER_SHOTS:
@@ -546,6 +551,16 @@ def parse(text: str) -> dict:
     }
     if clip:
         stats.update(est_draft_seconds=round(10 + total * 0.4), est_final_seconds=round(15 + total * 1.2))
+    if is_motion and segments:
+        from . import script_v3
+        scenes = script_v3.check(meta, segments, shots, warn, err, wps)
+        gens = sum(1 for sh in shots for e in sh.get("events", []) if e.get("op") == "add" and e.get("kind") == "gen")
+        pics = sum(1 for sh in shots if sh["type"] in ("ai", "stock"))
+        stats.update(scenes=scenes, motion_elements=sum(sc["elements"] for sc in scenes), ai_images=gens + pics,
+                     est_draft_seconds=round(15 + total * 1.0),
+                     est_final_seconds=round(20 + total * 1.6 + (gens + pics) * C.SECONDS_PER_IMAGE))
+        errors.sort(key=lambda e: e["line"])
+        warnings.sort(key=lambda w: w["line"])
     for c in chapters:
         c["est_start"] = segments[c["segment"]]["est_start"] if c["segment"] < len(segments) else total
     errors.sort(key=lambda e: e["line"])

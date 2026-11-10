@@ -190,3 +190,107 @@ Check shows the character's share of the runtime (aim for 50-70%).
 ## 4. Example
 
 See `docs/sample_script.md` (the **Load sample** button in Video Studio).
+
+## 5. Motion style (`style: motion`)
+
+`style: classic` (the default) is everything above: one picture per shot, captions at the bottom. **`style: motion`**
+makes an animated explainer instead: flat scenes in one palette, elements that appear on the exact word they belong
+to, a headline pill that fills in as it is spoken, camera-move transitions between scenes, and the presenter as a
+small puppet inside the scene. The voice, music, sound effects, loudness, thumbnails and upload pack are the same.
+It is opt-in per script; nothing changes for scripts without `style: motion`.
+
+```
+style: motion            (classic | motion)
+palette: navy            (the colour set; one palette per channel keeps the look consistent)
+character: sterling      (the presenter for [char:] and [talk:]; Sterling Flat comes with motion phase 6)
+```
+Motion videos are landscape (16:9) for now; motion Shorts arrive later.
+
+### Motion tags
+
+| Tag | What it does |
+|---|---|
+| `[scene: name \| from: right]` | Starts a new scene. `from:` = how the camera arrives: `right` `left` `top` `bottom` (a push with a shadow band), `zoom <element>` (dive into an element of the previous scene, e.g. `zoom number`), `cut`. Without `from:`, the transitions vary by themselves. |
+| `[head: TEXT]` | The headline pill at the top. It appears empty, then each word lights up when it is spoken (a word with digits like `$730` lights on the first spoken number word). One per scene. |
+| `[+ kind: text \| place \| animation \| size]` | Adds an element **at the next spoken word**. Example: `[+ door: FUND \| 1 of 4 \| grow]`. |
+| `[- kind]` or `[- kind: text]` | Removes that element at the next word (`[- char]` removes the presenter). |
+| `[label: TEXT \| element]` | A white tag that points at an element: `[label: WORST DAY IN 19 MONTHS \| number]`. |
+| `[char: pose \| place \| size]` | The presenter in the scene (`thinking`, `pointing`, `shrug`, ...). He stays in the next scenes until `[- char]`. Lip-sync is automatic once Sterling Flat is built (until then: the pose cut-out). |
+| `[number: ...]` `[chart: ...]` `[quote: ...]` `[card: ...]` | The classic data tags, as elements inside the current scene. Add a place at the end: `[number: 5.5 \| label \| suffix=% \| right]`. |
+| `[+ gen: a pair of white wired earphones \| right \| slide]` | A prop drawn by the AI image model in the flat style, cut out and cached for later videos (motion phase 5; until then a labelled placeholder). |
+| `[talk: pose \| set]` | Sterling full screen, as its own scene, for punchy moments. |
+| `[ai: ...]` `[stock: ...]` | A full-frame picture as its own scene (looks like classic; use sparingly). |
+| `[sfx: ...]` `[pause: ...]` `## chapter` | As in classic scripts. |
+
+**Places**: `left`, `center`, `right`, `top`, `bottom`, `top-left` ..., `2 of 4` (slots in a row, kept clear of
+the presenter's side), `over <element>` (`over calendar`, `over door: fund`, `over char`), or `30%, 60%`.
+**Animations**: `pop` (default), `grow` (up from the floor), `slide`, `fade`, `drop`, `draw`, `shake`, `none`.
+**Sizes**: `tiny`, `small`, `medium`, `large`, `huge`. Elements are named by kind (`door`, `number`, `chart`),
+by `kind: text` (`door: fund`), or by an id you give: `[+ door: FUND #fund | ...]`.
+
+Elements in the library today: `door`, `coin`, `coins`, `bubble`, `question`, `exclamation`, `calendar`,
+`arrow`, plus the data elements. Any other kind is drawn as a labelled placeholder (motion phase 4 adds ~40 props).
+
+### Motion pacing rules (Check enforces them)
+- Something new every ~3 s: an element, a label or a scene change (Check warns at 3.5 s).
+- A new scene every 6-15 s.
+- A headline in every scene.
+- Vary the transitions (Check warns when three scenes in a row arrive the same way).
+
+Check lists every scene (start, length, transition, headline, elements). **Show scene previews** draws one still
+of each scene from estimated timings, in a few seconds, without making any AI image (pictures are placeholders).
+Previews wait while a video is rendering.
+
+### Full motion example (docs/sample_motion_script.md)
+```
+---
+title: Four Doors Into Your Money (motion sample)
+style: motion
+palette: navy
+character: sterling
+music: misdirection
+tags: ai bubble, stock market, motion sample
+description: |
+  A short sample of the motion style: scenes, elements that appear on their words, headlines and transitions.
+  Facts from scripts/ai_bubble_sterling.md (Reuters / CNBC, Nov 2026).
+---
+
+## Four doors
+[scene: doors]
+[char: thinking | left | small]
+[head: FOUR DOORS INTO YOUR MONEY]
+There are four doors into your money.
+[+ door: FUND | 1 of 4 | grow] Your fund.
+[+ door: PENSION | 2 of 4 | grow] Your pension.
+[+ door: JOB | 3 of 4 | grow] Your job.
+[+ door: BILLS | 4 of 4 | grow] And your bills.
+
+## The fall
+[scene: chart | from: right]
+[- char]
+[head: THE NASDAQ FELL 5.5%]
+[+ calendar: NOV 5 | left | drop] Last Thursday, one of them slammed shut.
+[number: 5.5 | percent: the Nasdaq's fall in one day | suffix=% | right]
+The Nasdaq fell five and a half percent
+[label: IN ONE DAY | number] in a single day.
+[+ exclamation | over calendar | pop] Its worst day in nineteen months.
+
+## Who pays
+[scene: spending | from: zoom number]
+[head: $730 BILLION THIS YEAR]
+[chart: bar | 2026 plans, $ billions (approx.) | Amazon: 220, Alphabet: 200, Microsoft: 170, Meta: 140 | left]
+Amazon, Microsoft, Alphabet and Meta
+[label: THE BIG FOUR | chart] are on track to spend about
+[+ coins | right | grow] seven hundred and thirty billion dollars this year.
+[label: ABOUT $2 BILLION A DAY | coins] That's roughly two billion dollars. Every single day.
+
+## Next
+[scene: next | from: top]
+[char: shrug | left | small]
+[head: WHICH DOOR IS NEXT?]
+[+ door: FUND | 1 of 4 | grow | small] [+ door: PENSION | 2 of 4 | grow | small] So which door
+[+ door: JOB | 3 of 4 | grow | small] [+ door: BILLS | 4 of 4 | grow | small] is next?
+[+ question | over door: fund | pop] [+ question | over door: job | pop] Is it your fund, or your job?
+[label: FOLLOW THE MONEY | door: bills] Let's follow the money.
+```
+

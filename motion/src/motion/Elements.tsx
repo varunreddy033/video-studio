@@ -4,6 +4,7 @@ import {bob, clamp, ease, pop} from '../lib/anim';
 import {FONT, Palette} from '../lib/theme';
 import {BigNumber, LineChart} from '../components/props';
 import {Element} from './types';
+import {CharView, GenView, LabelView, Motion, PropView} from './Placed';
 
 const MOVES = [[1, 1.1, 0, 0], [1.08, 1.08, -0.03, 0], [1.1, 1, 0, 0], [1.08, 1.08, 0.03, 0], [1, 1.1, -0.02, -0.015], [1.08, 1.08, 0, 0.025]];
 
@@ -75,7 +76,7 @@ const ChartEl: React.FC<{el: Element; p: Palette; frames: number}> = ({el, p, fr
   const f = useCurrentFrame();
   const data: [string, number][] = el.props.data;
   const unit: string = el.props.unit ?? '';
-  const title = (
+  const title = el.props.hideTitle ? null : (
     <div style={{position: 'absolute', top: 70, left: 0, right: 0, textAlign: 'center', fontFamily: FONT, fontWeight: 900,
       fontSize: 62, color: p.ink, opacity: ease(f, 0, 10)}}>{el.props.title}</div>
   );
@@ -111,17 +112,37 @@ const ChartEl: React.FC<{el: Element; p: Palette; frames: number}> = ({el, p, fr
   );
 };
 
+/** Full-frame designs (card/number/quote/chart) scaled into a smaller box when the scene places them. */
+const Fit: React.FC<{el: Element; children: React.ReactNode}> = ({el, children}) => {
+  const {x, y, w, h} = el.box;
+  if (w >= 1900 && h >= 1060) return <>{children}</>;
+  // each design is drawn on a 1920x1080 canvas; scale by the size of what it actually draws
+  const content: Record<string, [number, number]> = {card: [1600, 700], quote: [1500, 700], number: [1300, 560],
+    chart: el.props.hideTitle ? [1580, 780] : [1580, 920]};
+  const [cw, ch] = content[el.type] ?? [1920, 1080];
+  const k = Math.min(w / cw, h / ch);
+  return (
+    <div style={{position: 'absolute', left: x + w / 2 - 960 * k, top: y + h / 2 - 540 * k, width: 1920, height: 1080,
+      transform: `scale(${k})`, transformOrigin: '0 0'}}>{children}</div>
+  );
+};
+
 /** One element of a scene, shown from its enter frame (and until its exit frame, if any). */
 export const ElementView: React.FC<{el: Element; p: Palette; sceneFrames: number}> = ({el, p, sceneFrames}) => {
   const from = el.enter?.frame ?? 0;
   const until = el.exit ? el.exit.frame : sceneFrames;
   const frames = Math.max(1, until - from);
-  const body = el.type === 'image' ? <ImageEl el={el} frames={frames} />
-    : el.type === 'video' ? <VideoEl el={el} />
-    : el.type === 'card' ? <CardEl el={el} p={p} />
-    : el.type === 'number' ? <NumberEl el={el} p={p} />
-    : el.type === 'quote' ? <QuoteEl el={el} p={p} />
-    : el.type === 'chart' ? <ChartEl el={el} p={p} frames={frames} />
-    : null;
+  let body: React.ReactNode = null;
+  if (el.type === 'image') body = <ImageEl el={el} frames={frames} />;
+  else if (el.type === 'video') body = <VideoEl el={el} />;
+  else if (el.type === 'card') body = <Fit el={el}><CardEl el={el} p={p} /></Fit>;
+  else if (el.type === 'number') body = <Fit el={el}><NumberEl el={el} p={p} /></Fit>;
+  else if (el.type === 'quote') body = <Fit el={el}><QuoteEl el={el} p={p} /></Fit>;
+  else if (el.type === 'chart') body = <Fit el={el}><ChartEl el={el} p={p} frames={frames} /></Fit>;
+  else if (el.type === 'label') body = <AbsoluteFill><LabelView el={el} p={p} /></AbsoluteFill>;
+  else if (el.type === 'prop' && el.kind === 'arrow') body = <AbsoluteFill><PropView el={el} p={p} /></AbsoluteFill>;
+  else if (el.type === 'prop') body = <Motion el={el} frames={frames}><PropView el={el} p={p} /></Motion>;
+  else if (el.type === 'gen') body = <Motion el={el} frames={frames}><GenView el={el} p={p} /></Motion>;
+  else if (el.type === 'char') body = <Motion el={el} frames={frames} idle={false}><CharView el={el} p={p} /></Motion>;
   return <Sequence from={from} durationInFrames={frames} layout="none">{body}</Sequence>;
 };

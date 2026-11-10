@@ -20,6 +20,9 @@ from . import config as C
 from .util import fmt_ts, log
 
 _lock = threading.Lock()
+# Held for a whole render, and by Check-page motion previews: the image model (FLUX) and Remotion never run at
+# the same time, and only one heavy job uses the Mac at once.
+RENDER_LOCK = threading.Lock()
 _queue: "queue.Queue[tuple[str, str]]" = queue.Queue()
 ID_RE = re.compile(r"[0-9]{8}-[0-9]{6}-[0-9a-f]{6}")
 
@@ -292,7 +295,8 @@ def _worker():
     while True:
         job_id, mode = _queue.get()
         try:
-            _run(job_id, mode)
+            with RENDER_LOCK:
+                _run(job_id, mode)
         except Exception as e:
             log(jdir(job_id), "ERROR " + traceback.format_exc().strip().splitlines()[-1])
             set_state(job_id, status="failed", stage=f"{mode} render failed", error=f"{type(e).__name__}: {e}")

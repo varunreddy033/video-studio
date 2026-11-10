@@ -4,7 +4,8 @@ motion.py  -  `style: motion` renderer (docs/MOTION_PLAN.md). The classic render
   1 voice      the classic voice step (Kokoro, cached) -> word timings
   2 assets     images (FLUX, cached; drafts use placeholders) and lip-synced [talk:] clips, made in Python,
                ONE image job at a time; the image model is stopped before step 4 (never FLUX + Remotion together)
-  3 timeline   timeline.json (docs/MOTION_TIMELINE.md): scenes, layers, cues tied to word indexes -> frames
+  3 timeline   timeline.json (docs/MOTION_TIMELINE.md) from the v3 script (script_v3.py, motion_timeline.py):
+               scenes, layers, cues tied to word indexes -> frames from Kokoro's word timings
   4 picture    Remotion (motion/) renders the video only, with MOTION_CONCURRENCY browser tabs
   5 audio      the classic mix: voice + ducked music + sfx -> two-pass loudnorm to -14 LUFS
   6 mux        picture + audio -> draft.mp4 / final.mp4 (no re-encode of the picture)
@@ -56,7 +57,7 @@ def _assets(parsed, tl, spans, all_words, job_dir: Path, public: Path, mode: str
     style = (meta.get("presets") or {}).get("art_style")
     out = {}
     shots = parsed["shots"]
-    need = [i for i, s in enumerate(shots) if s["type"] in ("ai", "stock", "act", "talk")]
+    need = [i for i, s in enumerate(shots) if s["type"] in ("ai", "stock", "talk")]
     for n, i in enumerate(need):
         progress("images + presenter", n, len(need))
         sh, (t0, dur) = shots[i], spans[i]
@@ -89,72 +90,30 @@ def _assets(parsed, tl, spans, all_words, job_dir: Path, public: Path, mode: str
         _link(Path(img), dst)
         out[i] = {"type": "image", "src": f"assets/{dst.name}"}
     progress("images + presenter", len(need), len(need))
+    out["chars"] = character_cutouts(parsed, public)
     visuals.stop_image_worker()        # frees ~5 GB and the GPU before Remotion starts
     return out
 
 
-# ---------------------------------------------------------------------------------------- timeline ---
-def _transition(k: int, kinds):
-    """Phase-2 chooser (phase 4 replaces it): push from the right, every 4th scene a push from the bottom,
-    never the same twice in a row when the next scene is a graphic."""
-    if k == 0:
-        return None
-    if k % 4 == 3:
-        return {"type": "push", "dir": "from-bottom", "frames": TRANSITION}
-    return {"type": "push", "dir": "from-right", "frames": TRANSITION}
-
-
-def build_timeline(parsed, tl, spans, total, assets) -> dict:
-    """Classic shot tags -> timeline v1 (one scene per shot). Phase 3's v3 tags ([scene:], [+ ...]) build richer
-    scenes on the same contract."""
-    words = []
-    for si, s in enumerate(tl):
-        for wd in s["words"]:
-            st = s["start"] + wd[1]
-            words.append({"w": wd[0], "s": round(st, 3), "e": round(s["start"] + wd[2], 3), "seg": si,
-                          "frame": round(st * FPS)})
-    dur_frames = round(total * FPS)
-    # scene k: from its shot's start frame; it lasts until the next scene starts + the transition overlap
-    starts = [round(st * FPS) for st, _ in spans]
-    scenes = []
-    for k, sh in enumerate(parsed["shots"]):
-        frm = starts[k]
-        nxt = starts[k + 1] if k + 1 < len(starts) else dur_frames
-        trans = _transition(k, None)
-        begin = frm - (trans["frames"] if trans else 0)
-        frames = nxt - begin
-        first_word = next((wi for wi, w in enumerate(words) if w["frame"] >= frm - 2), None)
-
-        def cue(offset_frames=0, word=None):
-            f = (words[word]["frame"] if word is not None else frm + offset_frames) - begin
-            return {"frame": max(0, f), **({"word": word} if word is not None else {})}
-
-        el = {"id": f"e{k}", "box": {"x": 0, "y": 0, "w": W, "h": H}}
-        kind = sh["type"]
-        if k in assets:
-            a = assets[k]
-            el.update(type=a["type"], props={"src": a["src"], "move": k}, enter={"frame": 0, "anim": "none"})
-        elif kind == "card":
-            el.update(type="card", props={"text": sh["text"], "sub": sh.get("sub", "")}, enter={**cue(2), "anim": "pop"})
-        elif kind == "number":
-            # count up over the first ~1.5 s of its narration
-            el.update(type="number", props={"value": sh["value"], "decimals": sh["decimals"], "prefix": sh["prefix"],
-                                            "suffix": sh["suffix"], "label": sh.get("label", ""), "countFrames": 45},
-                      enter={**(cue(word=first_word) if first_word is not None else cue(2)), "anim": "pop"})
-        elif kind == "quote":
-            el.update(type="quote", props={"text": sh["text"], "by": sh.get("by", "")}, enter={**cue(2), "anim": "fade"})
-        elif kind == "chart":
-            el.update(type="chart", props={"kind": sh["chart"], "title": sh["title"], "data": sh["data"],
-                                           "unit": sh.get("unit", "")}, enter={**cue(2), "anim": "pop"})
-        else:
-            raise PipelineError(f"motion style can't show a [{kind}:] shot yet")
-        scenes.append({"id": f"s{k}", "from": begin, "frames": frames, "transition": trans,
-                       "background": {"tint": SCENE_PALETTE_TINTS[k % len(SCENE_PALETTE_TINTS)]},
-                       "elements": [el]})
-    return {"version": 1, "fps": FPS, "width": W, "height": H, "durationFrames": dur_frames,
-            "palette": parsed["meta"].get("palette") or "navy", "words": words,
-            "captions": {"show": True, "style": (parsed["meta"].get("presets") or {}).get("captions", "amber_word")},
-            "scenes": scenes}
+def character_cutouts(parsed, public: Path) -> dict:
+    """[char: pose] layers: until Sterling Flat's puppet exists (motion phase 6), a character with a finished pack
+    is shown as that pose's cut-out (no lip-sync yet). Without a pack: no src -> the renderer draws a placeholder."""
+    from . import characters, presenter
+    char = parsed["meta"].get("character_data")
+    poses = {e["pose"] for sh in parsed["shots"] for e in sh.get("events", []) if e.get("op") == "char"}
+    out = {}
+    if not char or not poses or not presenter.pack_ready(char["name"]):
+        return out
+    pack = json.loads((characters.pack_dir(char["name"]) / "pack.json").read_text(encoding="utf-8"))
+    for pose in poses:
+        info = pack["poses"].get(pose)
+        if info and "dir" in info:
+            src = characters.pack_path(char["name"], info["dir"]) / "closed_cut.png"
+            if src.exists():
+                dst = public / "assets" / f"char_{pose}.png"
+                _link(src, dst)
+                out[pose] = {"src": f"assets/{dst.name}"}
+    return out
 
 
 # -------------------------------------------------------------------------------------- the render ---
@@ -207,7 +166,12 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     stages["images + presenter"] = time.time() - t
 
     t = time.time()
-    timeline = build_timeline(parsed, tl, spans, total, assets)
+    from . import motion_timeline as MT
+    words_out = [{"w": wd[0], "s": round(st, 3), "e": round(en, 3), "seg": si, "frame": round(st * FPS)}
+                 for si, seg in enumerate(tl) for wd in seg["words"]
+                 for st, en in [(seg["start"] + wd[1], seg["start"] + wd[2])]]
+    timeline = MT.build(parsed, MT.RealTiming(parsed["segments"], tl), spans, total, assets, words_out,
+                        palette=meta.get("palette") or "navy")
     tpath = work / "timeline.json"
     tpath.write_text(json.dumps(timeline), encoding="utf-8")
     (job_dir / f"motion_timeline_{mode}.json").write_text(json.dumps(timeline, indent=1), encoding="utf-8")
@@ -254,3 +218,56 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "music": music, "type": meta.get("type", "full"), "style": "motion", "encoder": "remotion (libx264)",
             "loudness_before": loud_in, "loudness_target": C.TARGET_LUFS,
             "stages": {k: round(v, 1) for k, v in stages.items()}}
+
+
+# ------------------------------------------------------------------------------------- Check previews ---
+def preview(parsed: dict, out_dir: Path) -> list:
+    """One still per scene for the Check page, from ESTIMATED word timings (no voice) and placeholder pictures
+    (never the image model). Returns [{scene, line, name, file}]. Caller holds jobs.RENDER_LOCK."""
+    from . import motion_timeline as MT
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    work = out_dir / "work"
+    shutil.rmtree(work, ignore_errors=True)
+    public = work / "motion_public"
+    for f in (MOTION_DIR / "public" / "fonts").iterdir():
+        _link(f, public / "fonts" / f.name)
+    segs, shots = parsed["segments"], parsed["shots"]
+    total = parsed["stats"]["est_seconds"]
+    spans = []
+    for k, sh in enumerate(shots):
+        ss = [s for s in segs if s["shot"] == k]
+        start = 0.0 if k == 0 else ss[0]["est_start"]
+        nxt = [s for s in segs if s["shot"] == k + 1]
+        end = nxt[0]["est_start"] if nxt else total
+        spans.append((start, max(0.5, end - start)))
+    assets = {}
+    for k, sh in enumerate(shots):
+        if sh["type"] in ("ai", "stock", "talk"):
+            label = {"talk": f"PRESENTER: {sh.get('pose', '')}", "ai": "AI IMAGE", "stock": "AI PHOTO"}[sh["type"]]
+            img = visuals.placeholder_image(label, sh.get("prompt") or sh.get("query") or "", W // 2, H // 2, work)
+            dst = public / "assets" / f"img_{k:03d}.png"
+            _link(Path(img), dst)
+            assets[k] = {"type": "image", "src": f"assets/{dst.name}"}
+    assets["chars"] = character_cutouts(parsed, public)
+    tl = MT.build(parsed, MT.EstimateTiming(segs), spans, total, assets, palette=parsed["meta"].get("palette") or "navy")
+    frames = []
+    for k, sc in enumerate(tl["scenes"]):
+        nxt = tl["scenes"][k + 1] if k + 1 < len(tl["scenes"]) else None
+        end = (nxt["from"] if nxt else tl["durationFrames"]) - 1          # just before the next scene arrives
+        last_in = max([e["enter"]["frame"] for e in sc["elements"]] + [sc.get("headline", {}).get("appear", 0)] + [0])
+        frames.append(min(sc["from"] + max(last_in + 24, int(sc["frames"] * 0.6)), end))
+    tpath = work / "timeline.json"
+    tpath.write_text(json.dumps(tl), encoding="utf-8")
+    node = str(Path(npx()).with_name("node"))
+    p = subprocess.run([node, "scripts/stills.mjs", str(tpath), str(public), str(out_dir), ",".join(map(str, frames)), "0.5"],
+                       cwd=MOTION_DIR, capture_output=True, text=True)
+    if p.returncode != 0:
+        raise PipelineError("preview render failed: " + ((p.stderr or p.stdout).strip().splitlines() or ["?"])[-1])
+    out = []
+    for k in range(len(frames)):
+        sc = tl["scenes"][k]
+        out.append({"scene": k, "line": sc.get("line"), "name": sc.get("name"), "file": f"scene_{k:02d}.jpg",
+                    "at": round(frames[k] / FPS, 1)})
+    shutil.rmtree(work, ignore_errors=True)
+    return out

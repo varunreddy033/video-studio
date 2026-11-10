@@ -375,6 +375,50 @@ def list_presets():
     return jsonify({kind: presets.list(kind) for kind in presets.KINDS})
 
 
+PREVIEW_DIR = C.BASE_DIR / "output" / "previews"
+PREVIEW_RE = re.compile(r"[0-9a-f]{16}")
+
+
+@app.post("/api/preview")
+def preview():
+    """Motion scripts: one still per scene for the Check page (estimated timings, placeholder pictures, no image
+    model). Cached per script text. Refused while a render is running (FLUX and Remotion never run together)."""
+    import hashlib
+    import json as _json
+    text = (request.get_json(force=True) or {}).get("text", "")
+    parsed = script_parser.parse(text)
+    if parsed["meta"].get("style") != "motion":
+        return jsonify({"error": "scene previews are for style: motion scripts"}), 400
+    if not parsed["ok"]:
+        return jsonify({"error": "fix the errors first, then show the previews"}), 400
+    key = hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
+    d = PREVIEW_DIR / key
+    idx = d / "index.json"
+    if idx.exists():
+        return jsonify({"key": key, "scenes": _json.loads(idx.read_text(encoding="utf-8"))})
+    if not jobs.RENDER_LOCK.acquire(blocking=False):
+        return jsonify({"error": "a video is rendering right now; scene previews wait until it finishes"}), 409
+    try:
+        from pipeline import motion
+        scenes = motion.preview(parsed, d)
+    except Exception as e:      # noqa: BLE001  (show the reason on the page)
+        return jsonify({"error": f"preview failed: {e}"}), 500
+    finally:
+        jobs.RENDER_LOCK.release()
+    idx.write_text(_json.dumps(scenes), encoding="utf-8")
+    return jsonify({"key": key, "scenes": scenes})
+
+
+@app.get("/api/preview/<key>/<name>")
+def preview_file(key, name):
+    if not PREVIEW_RE.fullmatch(key) or not re.fullmatch(r"scene_\d{2}\.jpg", name):
+        abort(404)
+    p = PREVIEW_DIR / key / name
+    if not p.exists():
+        abort(404)
+    return send_file(p, mimetype="image/jpeg", max_age=3600)
+
+
 @app.get("/api/jobs")
 def list_jobs():
     keep = ("id", "title", "status", "stage", "done", "total", "mode", "created", "updated", "est_seconds", "format",
