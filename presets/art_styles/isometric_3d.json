@@ -1,0 +1,13 @@
+{
+  "id": "isometric_3d",
+  "label": "Isometric 3D",
+  "description": "Clean miniature 3D dioramas seen from above, soft pastel colours.",
+  "prefix": "isometric 3D render",
+  "suffix": "miniature diorama, soft studio lighting, clean pastel colours, smooth materials, tilt-shift, high detail, no text",
+  "stock_suffix": "a real-world place as a miniature model",
+  "realistic": false,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

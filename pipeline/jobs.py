@@ -3,7 +3,7 @@ jobs.py  -  one folder per video in output/jobs/<id>/ and a background queue tha
 
   state.json status:  script (saved + checked)  ->  queued  ->  rendering  ->  draft_ready / done
                       failed at any point (cache/ keeps voice, stock clips and AI images, so a retry resumes)
-  files:  script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render.log, cache/
+  files:  script.md, job.json (resolved presets, rewritten on every render), draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render.log, cache/
 """
 
 import json
@@ -15,7 +15,7 @@ import traceback
 import uuid
 from pathlib import Path
 
-from . import assemble, clip, script_parser, thumbnails, visuals
+from . import assemble, clip, presets, script_parser, thumbnails, visuals
 from . import config as C
 from .util import fmt_ts, log
 
@@ -57,8 +57,47 @@ def set_state(job_id: str, **fields) -> dict:
         return st
 
 
-def check_summary(parsed: dict) -> dict:
+def ai_images_needed(parsed: dict, job_dir=None) -> dict:
+    """AI images the FINAL makes in the chosen art style ([ai:]/[stock:] shots + the 2 AI thumbnails), and how
+    many of them aren't in job_dir/cache yet (job_dir None = a new video: none are). [act:] images not counted."""
+    meta = parsed["meta"]
+    if meta.get("clip"):
+        return {"total": 0, "new": 0}
+    W, H = C.SIZES[(meta["format"], "final")]
+    style = meta["presets"]["art_style"]
+    d = Path(job_dir) if job_dir else C.JOBS_DIR / "_none_"
+    paths = {visuals.ai_cache_path(s["query"] if s["type"] == "stock" else s["prompt"], W, H, d, style=style,
+                                   stock=s["type"] == "stock")[0]
+             for s in parsed["shots"] if s["type"] in ("ai", "stock")}
+    if meta["type"] == "full" and not meta.get("character_data"):
+        tp = thumbnails.thumb_prompt(parsed)
+        paths |= {visuals.ai_cache_path(tp, thumbnails.TW, thumbnails.TH, d, f"thumb{i}", style=style)[0]
+                  for i in (1, 2)}
+    return {"total": len(paths), "new": sum(1 for p in paths if not (p.exists() and p.stat().st_size > 0))}
+
+
+def check_summary(parsed: dict, job_dir=None) -> dict:
     """What the page shows after Check (no huge lists)."""
+    out = _summary(parsed)
+    try:
+        st = presets.load("art_styles", parsed["meta"]["presets"]["art_style"])
+        out["art_style"] = {"id": st["id"], "label": st["label"], "realistic": st["realistic"],
+                            "images": ai_images_needed(parsed, job_dir)}
+    except presets.PresetError:
+        out["art_style"] = None
+    try:
+        cp = presets.load("captions", parsed["meta"]["presets"]["captions"])
+        out["captions"] = {"id": cp["id"], "label": cp["label"], "enabled": cp.get("enabled", True)}
+    except presets.PresetError:
+        out["captions"] = None
+    vid = parsed["meta"].get("voice")
+    vp = next((v for v in presets.list("voices") if v.get("voice") == vid), None)
+    out["voice"] = {"voice": vid, "preset": vp and vp["id"], "label": vp["label"] if vp else vid,
+                    "speed": parsed["meta"].get("speed")}
+    return out
+
+
+def _summary(parsed: dict) -> dict:
     return {"ok": parsed["ok"], "errors": parsed["errors"], "warnings": parsed["warnings"],
             "stats": parsed["stats"], "meta": {k: v for k, v in parsed["meta"].items()},
             "chapters": [{"title": c["title"], "est_start": c["est_start"]} for c in parsed["chapters"]],
@@ -73,7 +112,7 @@ def save_script(job_id: str, text: str) -> dict:
     jdir(job_id).mkdir(parents=True, exist_ok=True)
     (jdir(job_id) / "script.md").write_text(text, encoding="utf-8")
     parsed = script_parser.parse(text)
-    summ = check_summary(parsed)
+    summ = check_summary(parsed, jdir(job_id))
     st = read_state(job_id)
     fields = {"check": summ, "title": parsed["meta"].get("title") or "Untitled",
               "est_seconds": parsed["stats"]["est_seconds"], "format": parsed["meta"]["format"],
@@ -199,7 +238,9 @@ def _run(job_id: str, mode: str):
                             f"The final starts by itself when the pack is done.")
             time.sleep(30)
     set_state(job_id, status="rendering", mode=mode, stage="starting", done=0, total=0, error=None,
-              render_started=time.time(), check=check_summary(parsed))
+              render_started=time.time(), check=check_summary(parsed, d))
+    presets.write_job(d, job_id, mode, parsed)
+    log(d, "job.json: presets " + ", ".join(f"{k}={v}" for k, v in parsed["meta"]["presets"].items()))
 
     def progress(stage, done=0, total=0):
         set_state(job_id, stage=stage, done=done, total=total)

@@ -1,0 +1,16 @@
+{
+  "label": "Emma",
+  "description": "British English, female. Kokoro's own quality grade: B-.",
+  "licence": "Apache-2.0 (Kokoro-82M, hexgrad/Kokoro-82M)",
+  "engine": "kokoro",
+  "model": "hexgrad/Kokoro-82M",
+  "language": "en",
+  "lang": "b",
+  "voice": "bf_emma",
+  "speed": 1.0,
+  "wpm": 155,
+  "word_timings": "kokoro (whisper.cpp backup)",
+  "gender": "female",
+  "accent": "UK",
+  "grade": "B-"
+}

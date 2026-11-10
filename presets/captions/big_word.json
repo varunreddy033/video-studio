@@ -1,0 +1,56 @@
+{
+  "label": "Big word",
+  "description": "One word at a time, heavy letters with a thick outline, popping in.",
+  "licence": "Barlow (SIL Open Font License 1.1, assets/fonts/licences/barlow-OFL.txt)",
+  "highlight": "none",
+  "case": "upper",
+  "font": "Barlow Black",
+  "font_file": "Barlow-Black.ttf",
+  "bold": false,
+  "italic": false,
+  "text_colour": "#FFFFFF",
+  "highlight_colour": "#FFB020",
+  "outline_colour": "#000000",
+  "shadow_colour": "#000000",
+  "shadow_transparency": 150,
+  "outline_ratio": 0.12,
+  "outline_min_px": 2,
+  "position": "bottom-center",
+  "group": {
+    "max_gap_sec": 0.45,
+    "break_after": ".?!:;",
+    "linger_sec": 0.35,
+    "min_word_sec": 0.02
+  },
+  "layouts": {
+    "landscape": {
+      "size": 0.095,
+      "margin_v": 0.075,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 1,
+      "max_chars": 22
+    },
+    "vertical": {
+      "size": 0.055,
+      "margin_v": 0.17,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 1,
+      "max_chars": 16
+    },
+    "short": {
+      "size": 0.08,
+      "margin_v": 0.24,
+      "margin_l": 0.05,
+      "margin_r": 0.15,
+      "max_words": 1,
+      "max_chars": 14
+    }
+  },
+  "srt": {
+    "max_chars": 84,
+    "line_chars": 42
+  },
+  "pop": true
+}

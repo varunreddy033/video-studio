@@ -1,0 +1,55 @@
+{
+  "label": "Amber word highlight",
+  "description": "Short phrases, the spoken word turns amber. The look before caption styles.",
+  "licence": "Barlow fonts: SIL Open Font License 1.1 (bundled in assets/fonts)",
+  "highlight": "word",
+  "case": "as_is",
+  "font": "Barlow Condensed ExtraBold",
+  "font_file": "BarlowCondensed-ExtraBold.ttf",
+  "bold": true,
+  "italic": false,
+  "text_colour": "#FFFFFF",
+  "highlight_colour": "#FFB020",
+  "outline_colour": "#000000",
+  "shadow_colour": "#000000",
+  "shadow_transparency": 150,
+  "outline_ratio": 0.09,
+  "outline_min_px": 2,
+  "position": "bottom-center",
+  "group": {
+    "max_gap_sec": 0.45,
+    "break_after": ".?!:;",
+    "linger_sec": 0.35,
+    "min_word_sec": 0.02
+  },
+  "layouts": {
+    "landscape": {
+      "size": 0.066,
+      "margin_v": 0.075,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 6,
+      "max_chars": 34
+    },
+    "vertical": {
+      "size": 0.042,
+      "margin_v": 0.17,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 3,
+      "max_chars": 18
+    },
+    "short": {
+      "size": 0.062,
+      "margin_v": 0.24,
+      "margin_l": 0.05,
+      "margin_r": 0.15,
+      "max_words": 3,
+      "max_chars": 14
+    }
+  },
+  "srt": {
+    "max_chars": 84,
+    "line_chars": 42
+  }
+}

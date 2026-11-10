@@ -31,3 +31,13 @@ assets/cache/
 assets/characters/*/*
 !assets/characters/*/pack.json
 !assets/characters/*/contact_sheet.jpg
+
+# art style preview images (made on the Mac from the Video Studio page)
+assets/style_previews/
+
+# previews made on demand by Video Studio (voice samples, caption style clips)
+assets/voice_previews/
+assets/caption_previews/
+
+# Node tools of the parked HTML animation branch (f9-html-animation-wip)
+node_modules/

@@ -1,0 +1,13 @@
+{
+  "id": "cinematic_film",
+  "label": "Cinematic film",
+  "description": "Movie-still look: shallow depth of field, colour-graded, film grain.",
+  "prefix": "cinematic film still",
+  "suffix": "anamorphic 35mm film, shallow depth of field, teal and orange colour grade, film grain, moody lighting, highly detailed, no text",
+  "stock_suffix": "real-world location",
+  "realistic": true,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

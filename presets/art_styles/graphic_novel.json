@@ -1,0 +1,13 @@
+{
+  "id": "graphic_novel",
+  "label": "Graphic novel",
+  "description": "Inked comic-book panels: bold outlines, flat shading, halftone dots.",
+  "prefix": "graphic novel illustration",
+  "suffix": "bold black ink outlines, flat cel shading, halftone texture, limited colour palette, dramatic panel composition, no text, no speech bubbles",
+  "stock_suffix": "drawn from a real-world scene",
+  "realistic": false,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

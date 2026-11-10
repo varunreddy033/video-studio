@@ -1,0 +1,13 @@
+{
+  "id": "doc_photo",
+  "label": "Documentary photo",
+  "description": "Natural, believable photos, like a news documentary. Today's default look.",
+  "prefix": "",
+  "suffix": "cinematic documentary photography, natural light, high detail, no text",
+  "stock_suffix": "real-world documentary photograph",
+  "realistic": true,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

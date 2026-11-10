@@ -112,6 +112,7 @@ description: |
 tags: <8-12 comma separated search tags>
 format: landscape
 music: <one track: misdirection, a dyin breed, drop of a hat, at all costs, missed my chance, soaring, elysian fields>
+art_style: doc_photo
 thumbnail: <2-4 word thumbnail text>
 thumbnail_prompt: <one striking image idea for the thumbnail, no text in it>
 ---
@@ -127,7 +128,8 @@ Rules:
 1. Start with "## " chapter headings: at least 3, the first one before any narration.
 2. Change the picture every 5-10 seconds (every 13-25 spoken words) with a shot tag:
    - [ai: prompt]  about 65% of shots (about 45-55 per 10 minutes), each on screen 6-10 seconds. One detailed
-     photorealistic prompt: subject, setting, camera angle, lighting, mood. Make neighbouring shots look different
+     prompt about WHAT is in the picture: subject, setting, camera angle, lighting, mood. Don't name a look or
+     medium (photo, painting, comic...): the art_style: line adds that to every image, and I pick it later. Make neighbouring shots look different
      (wide / close-up / aerial / interior). NO text, letters, numbers, logos, screens with words, or real people's
      faces (show people as silhouettes, hands, crowds from behind). Never repeat a prompt word for word.
    - [card: BIG TEXT | small line], [number: 3.2 | label | prefix=$], [quote: exact words | who said it, where],

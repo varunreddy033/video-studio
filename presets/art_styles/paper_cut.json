@@ -1,0 +1,13 @@
+{
+  "id": "paper_cut",
+  "label": "Paper cut-out",
+  "description": "Handmade layered paper craft with soft shadows and warm light.",
+  "prefix": "layered paper cut-out art",
+  "suffix": "handcrafted paper craft, layered cardstock with soft drop shadows, textured paper, warm gentle lighting, depth, no text",
+  "stock_suffix": "a real-world scene made of paper",
+  "realistic": false,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

@@ -1,0 +1,16 @@
+{
+  "label": "Michael",
+  "description": "American English, male. Kokoro's own quality grade: C+.",
+  "licence": "Apache-2.0 (Kokoro-82M, hexgrad/Kokoro-82M)",
+  "engine": "kokoro",
+  "model": "hexgrad/Kokoro-82M",
+  "language": "en",
+  "lang": "a",
+  "voice": "am_michael",
+  "speed": 1.0,
+  "wpm": 155,
+  "word_timings": "kokoro (whisper.cpp backup)",
+  "gender": "male",
+  "accent": "US",
+  "grade": "C+"
+}

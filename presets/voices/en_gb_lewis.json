@@ -1,0 +1,16 @@
+{
+  "label": "Lewis",
+  "description": "British English, male. Kokoro's own quality grade: D+.",
+  "licence": "Apache-2.0 (Kokoro-82M, hexgrad/Kokoro-82M)",
+  "engine": "kokoro",
+  "model": "hexgrad/Kokoro-82M",
+  "language": "en",
+  "lang": "b",
+  "voice": "bm_lewis",
+  "speed": 1.0,
+  "wpm": 155,
+  "word_timings": "kokoro (whisper.cpp backup)",
+  "gender": "male",
+  "accent": "UK",
+  "grade": "D+"
+}

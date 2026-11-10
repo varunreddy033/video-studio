@@ -107,12 +107,69 @@ def list_audio(folder: Path, min_sec: float = 0.0):
     return files
 
 
+def _lib_audio(root: Path):
+    return sorted(p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in C.AUDIO_EXT) if root.exists() else []
+
+
+def _long_enough(files, min_sec: float):
+    out = []
+    for p in files:
+        if p not in _dur_cache:
+            _dur_cache[p] = media_duration(p)
+        if _dur_cache[p] >= min_sec:
+            out.append(p)
+    return out
+
+
+def music_files(min_sec: float = 60.0):
+    """Every usable music track: assets/audio/bgm (local) + assets/library/music/<mood>/ (in git)."""
+    return list_audio(C.BGM_DIR, min_sec) + _long_enough(_lib_audio(C.MUSIC_LIB), min_sec)
+
+
+def sfx_files():
+    """Every sound effect: assets/audio/sfx (local) + assets/library/sfx/<kind>/ (in git)."""
+    return list_audio(C.SFX_DIR) + _lib_audio(C.SFX_LIB)
+
+
+def audio_duration(p: Path) -> float:
+    if p not in _dur_cache:
+        _dur_cache[p] = media_duration(p)
+    return _dur_cache[p]
+
+
+def library_group(f: Path) -> str:
+    """The mood / kind folder of a library file ('' for files outside the library or directly in music/ or sfx/)."""
+    for root in (C.MUSIC_LIB, C.SFX_LIB):
+        try:
+            rel = Path(f).relative_to(root)
+        except ValueError:
+            continue
+        return rel.parts[0] if len(rel.parts) > 1 else ""
+    return ""
+
+
+def _name_tokens(f: Path) -> set:
+    """Words a file answers to: its name, and for library files also its folder (mood / kind)."""
+    return _tokens(f.stem) | _tokens(library_group(f))
+
+
+def is_starter(f: Path) -> bool:
+    return Path(f).stem.startswith("starter_")
+
+
 def best_match(cue: str, files, fallback_random=False, rng=random):
+    """The file whose name words fit the cue best. Order: most matching words (synonyms count), then exact cue
+    words before synonyms, then your own files before the generated starter pack; ties are picked by rng."""
     if not files:
         return None
     if cue:
-        want = _expand(_tokens(cue))
-        scored = sorted(((len(want & _tokens(f.stem)), f) for f in files), key=lambda x: -x[0])
-        if scored[0][0] > 0:
-            return rng.choice([f for s, f in scored if s == scored[0][0]])
+        exact = _tokens(cue)
+        want = _expand(exact)
+        scored = []
+        for f in files:
+            t = _name_tokens(f)
+            scored.append(((len(want & t), len(exact & t), not is_starter(f)), f))
+        top = max(s for s, _ in scored)
+        if top[0] > 0:
+            return rng.choice([f for s, f in scored if s == top])
     return rng.choice(files) if fallback_random else None

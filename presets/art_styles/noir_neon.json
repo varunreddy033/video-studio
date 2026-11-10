@@ -1,0 +1,13 @@
+{
+  "id": "noir_neon",
+  "label": "Neon noir",
+  "description": "Rainy night scenes lit by magenta and cyan neon, deep black shadows.",
+  "prefix": "neon noir scene",
+  "suffix": "rain-soaked night, glowing magenta and cyan neon light, deep black shadows, wet reflections, light haze, cinematic, high contrast, no text, no signs",
+  "stock_suffix": "real-world street location",
+  "realistic": true,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

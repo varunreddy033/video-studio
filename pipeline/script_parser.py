@@ -31,8 +31,8 @@ Other tags: [sfx: whoosh]  [pause: 1.5]
 import re
 
 from . import config as C
-from . import characters
-from .util import best_match, list_audio
+from . import characters, presets, sfx
+from .util import best_match, music_files, sfx_files
 
 VISUAL = {"stock", "ai", "card", "number", "quote", "chart", "talk", "act"}
 CHARACTER_SHOTS = {"talk", "act"}
@@ -44,7 +44,8 @@ LINK_RE = re.compile(r"\[([^\]]+)\]\((?:https?://|www\.)[^)]+\)")
 NUM_RE = re.compile(r"^[-+]?\d[\d,]*(\.\d+)?$")
 BAD_AI_WORDS = re.compile(r"\b(text|words?|logo|sign(age)?|caption|letters?|written|headline|label)\b", re.I)
 META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed", "thumbnail", "thumbnail_prompt",
-             "character", "short", "type", "clip_from", "clip_start", "clip_end"}
+             "character", "short", "type", "clip_from", "clip_start", "clip_end",
+             "language", "captions", "art_style", "sfx"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -316,16 +317,40 @@ def parse(text: str) -> dict:
             char = characters.load(meta["character"])
         except characters.CharacterError as e:
             err(1, str(e))
-    if char:
-        meta["voice"] = meta.get("voice") or char["voice"] or ""
-        meta["speed"] = meta.get("speed") or (str(char["speed"]) if char["speed"] else "")
     meta["character_data"] = char
+    # presets (presets/<kind>/<id>.json). A missing key = the default preset (= today's config values).
+    # voice: may also be a Kokoro voice id and music: track names, exactly as before.
+    header = {k: meta.get(k) or "" for k in ("language", "voice", "speed", "captions", "art_style", "music")}
     try:
-        meta["speed"] = float(meta.get("speed") or C.KOKORO_SPEED)
+        chosen, p_over, p_err = presets.resolve(header, char)
+        for m in p_err:
+            err(1, m)
+        voice, speed, meta["voice_from"] = presets.voice_settings(chosen, header, char)
+    except presets.PresetError as e:   # a broken preset file
+        err(1, str(e))
+        chosen, p_over = dict(presets.DEFAULT_CHOSEN), {}
+        voice, speed, meta["voice_from"] = meta.get("voice") or C.KOKORO_VOICE, meta.get("speed") or "", []
+    meta["presets"], meta["preset_overrides"] = chosen, p_over
+    if char and header["art_style"]:
+        warn(1, f"art_style applies to [ai:]/[stock:] only; [act:] keeps the character style "
+                f"({char['name']}'s STYLE), and so do the presenter thumbnails")
+    if header["music"].lower() in presets.ids("music"):
+        meta["music"] = ""            # a music preset, not a track name
+    meta["music_off"] = header["music"].strip().lower() in ("none", "off", "no")
+    if meta["music_off"]:
+        meta["music"] = ""            # music: none = a video without background music
+    sfx_mode = (meta.get("sfx") or "script").strip().lower()
+    if sfx_mode not in ("script", "auto", "off"):
+        err(1, f"sfx must be script (only the [sfx:] tags, the default), auto (Video Studio adds effects) or off, "
+               f"got '{sfx_mode}'")
+        sfx_mode = "script"
+    meta["sfx"] = sfx_mode
+    try:
+        meta["speed"] = float(speed or C.KOKORO_SPEED)
     except ValueError:
         err(1, "speed must be a number like 1.0")
         meta["speed"] = 1.0
-    meta["voice"] = meta.get("voice") or C.KOKORO_VOICE
+    meta["voice"] = voice
     # ---------------------------------------------------------------- video type
     vtype = (meta.get("type") or "full").strip().lower()
     if vtype not in C.TYPES:
@@ -407,13 +432,30 @@ def parse(text: str) -> dict:
             warn(seg["line"], "abbreviations like e.g. / vs. sound odd when spoken; write them out")
 
     counts = {k: sum(1 for s in shots if s["type"] == k) for k in VISUAL}
-    sfx_files = list_audio(C.SFX_DIR)
+    sfx_all = sfx_files()
+    sfx_cues, sfx_missing = [], []
+    if meta["sfx"] == "off":
+        for seg in segments:
+            seg["sfx"] = []
+    elif meta["sfx"] == "auto" and not clip:
+        sfx_cues, sfx_missing = sfx.auto_cues(segments, shots, chapters, sfx_all)
     for seg in segments:
         for cue in seg["sfx"]:
-            if not best_match(cue, sfx_files):
-                warn(seg["line"], f"no sound effect matches '{cue}' in assets/audio/sfx (it will be skipped)")
-    if meta.get("music") and not best_match(meta["music"], list_audio(C.BGM_DIR, 60)):
-        warn(1, f"no music track matches '{meta['music']}'; a random track will be used")
+            if not best_match(cue, sfx_all):
+                warn(seg["line"], f"no sound effect matches '{cue}' (it will be skipped). Add one to "
+                                  f"assets/library/sfx/<kind>/")
+    tracks = music_files(60)
+    music_items = [n.strip() for n in (meta.get("music") or "").split(",") if n.strip()]
+    if meta.get("music") and not tracks:
+        warn(1, "there are no music tracks yet (1 minute or longer): the video will have no music. Upload "
+                "some to assets/library/music/<mood>/")
+    elif len(music_items) <= 1:
+        if meta.get("music") and not best_match(meta["music"], tracks):
+            warn(1, f"no music track matches '{meta['music']}'; a random track will be used")
+    else:
+        for item in music_items:
+            if not best_match(item, tracks):
+                warn(1, f"no music track matches '{item}'; a random track will be used in its place")
     if chapters and not P["chapters"]:
         warn(chapters[0]["line"], "Shorts have no chapters; the ## headings are ignored")
     elif chapters:
@@ -481,6 +523,9 @@ def parse(text: str) -> dict:
         "character_share": round(100 * char_secs / max(1.0, total)) if char else 0,
         "presenter_seconds": round(talk_secs),
         "type": vtype, "type_label": P["label"], "clip": clip,
+        "sfx": {"mode": meta["sfx"], "script": sum(len(s["sfx"]) for s in segments), "auto": len(sfx_cues),
+                "cues": sfx_cues, "missing": sfx_missing},
+        "music": {"off": meta["music_off"], "items": music_items, "tracks_available": len(tracks)},
     }
     if clip:
         stats.update(est_draft_seconds=round(10 + total * 0.4), est_final_seconds=round(15 + total * 1.2))

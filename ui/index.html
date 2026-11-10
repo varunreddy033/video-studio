@@ -128,6 +128,42 @@ video { width: 100%; border-radius: var(--radius); background: #000; display: bl
 .thumbs img { width: 100%; border-radius: 8px; display: block; aspect-ratio: 16/9; object-fit: cover; border: 1px solid var(--line); }
 .thumbs.vert { grid-template-columns: repeat(auto-fill, minmax(160px, 220px)); }
 .thumbs.vert img { aspect-ratio: 9/16; }
+.styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.style { border: 1px solid var(--line); border-radius: 8px; padding: 8px; cursor: pointer; display: flex;
+  flex-direction: column; gap: 3px; background: var(--panel); }
+.style:hover { border-color: var(--muted); }
+.style.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: var(--soft); }
+.style .pv { aspect-ratio: 16/9; border-radius: 6px; background: var(--bg); display: flex; align-items: center;
+  justify-content: center; overflow: hidden; margin-bottom: 4px; }
+.style .pv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.style b { font-size: 14px; }
+.style span { font-size: 12px; color: var(--muted); }
+.style small { font-size: 11px; color: var(--warn); }
+.style .pv video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ltabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 14px; border-bottom: 1px solid var(--line); }
+.ltab { border: 0; background: none; color: var(--ink); border-radius: 0; padding: 8px 12px 9px; cursor: pointer; text-align: left; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; display: flex; flex-direction: column; gap: 1px; min-width: 96px; }
+.ltab b { font-size: 14px; }
+.ltab span { font-size: 12px; color: var(--muted); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ltab:hover b { color: var(--accent); }
+.ltab.on { border-bottom-color: var(--accent); }
+.ltab.on b { color: var(--accent); }
+.vfilters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.vchip { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 12px;
+  font-size: 13px; cursor: pointer; }
+.vchip.on { border-color: var(--accent); background: var(--soft); color: var(--accent); font-weight: 600; }
+.voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: 8px; }
+.vrow { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.vrow > div { min-width: 0; display: flex; flex-direction: column; }
+.play { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); color: var(--accent);
+  cursor: pointer; flex: none; font-size: 13px; line-height: 1; padding: 0; }
+.play:hover { border-color: var(--accent); }
+.play.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.mood { margin: 14px 0 6px; display: flex; gap: 10px; align-items: center; }
+.mood b { text-transform: capitalize; }
+.cues { margin: 6px 0 0; padding: 0; list-style: none; font-size: 13px; }
+.cues li { padding: 3px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
+.cues li span:first-child { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 40px; }
 .newbtns { display: grid; gap: 8px; }
 .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
 .choice { text-align: left; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
@@ -329,6 +365,7 @@ function report(r, onJump) {
     h("div", { class: "stat" }, h("b", {}, s.shots ?? 0), h("span", {}, `shots · one every ${s.avg_shot_seconds ?? 0} s`)),
     h("div", { class: "stat" }, h("b", {}, s.ai_images ?? 0), h("span", {}, `AI images (~${health.seconds_per_image || 25} s each)`)),
     h("div", { class: "stat" }, h("b", {}, s.graphics ?? 0), h("span", {}, "cards, numbers, quotes, charts (instant)")),
+    r.art_style ? h("div", { class: "stat" }, h("b", {}, r.art_style.label), h("span", {}, `Art style · ${r.art_style.images.new} of ${r.art_style.images.total} AI images still to make`)) : null,
     h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_draft_seconds)), h("span", {}, "draft render")),
     h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_final_seconds)), h("span", {}, "final render"))));
   const item = (m, cls) => h("li", { class: cls, onclick: () => onJump && onJump(m.line) }, h("span", { class: "ln" }, `line ${m.line}`), h("span", {}, m.msg));
@@ -357,6 +394,202 @@ function jumpTo(ta, line) {
   for (let i = 0; i < Math.min(line - 1, lines.length); i++) pos += lines[i].length + 1;
   ta.focus(); ta.setSelectionRange(pos, pos + (lines[line - 1] || "").length);
   const lh = parseFloat(getComputedStyle(ta).lineHeight) || 20; ta.scrollTop = Math.max(0, (line - 4) * lh);
+}
+
+// ------------------------------------------------------------- art styles
+let artStyles = null;
+async function loadStyles(force = false) { if (!artStyles || force) artStyles = await api("/api/art_styles"); return artStyles; }
+function setHeaderKey(text, key, value) {
+  // put 'key: value' in the script header (replace the line if there is one); value null = remove the line
+  const re = new RegExp(`^${key}\\s*:.*$`, "m"), reLine = new RegExp(`^${key}\\s*:.*(\\r?\\n|$)`, "m");
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return value === null ? text : `---\n${key}: ${value}\n---\n` + text;
+  const head = m[1];
+  let nh;
+  if (value === null) nh = head.replace(reLine, "").replace(/\n$/, "");
+  else nh = re.test(head) ? head.replace(re, `${key}: ${value}`) : head + `\n${key}: ${value}`;
+  return m[0].replace(head, nh) + text.slice(m[0].length);
+}
+function headerValue(text, key) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/); if (!m) return null;
+  const v = m[1].match(new RegExp(`^${key}\\s*:\\s*(.*)$`, "m")); return v ? v[1].trim() : null;
+}
+function setArtStyle(text, id) { return setHeaderKey(text, "art_style", id); }
+
+// ------------------------------------- look & sound: one card with a tab per choice (each writes a header line)
+let lookTab = "captions";
+const lookData = {};
+async function lookList(name, url, force = false) { if (!lookData[name] || force) lookData[name] = await api(url); return lookData[name]; }
+const isClip = (r) => !!(r.stats || {}).clip;
+// one shared player for voice samples and music: starting a sound stops the one before
+const player = new Audio(); let playingBtn = null;
+function stopSound() { player.pause(); if (playingBtn) { playingBtn.textContent = "▶"; playingBtn.classList.remove("on"); playingBtn = null; } }
+player.addEventListener("ended", stopSound);
+function playBtn(url, label) {
+  const b = h("button", { class: "play", type: "button", title: "Listen", "aria-label": "Play " + label, onclick: async (e) => {
+    e.stopPropagation();
+    if (playingBtn === b) { stopSound(); return; }
+    stopSound(); playingBtn = b; b.classList.add("on"); b.textContent = "…";
+    player.src = url;
+    try { await player.play(); if (playingBtn === b) b.textContent = "■"; }
+    catch (err) { if (playingBtn === b) { stopSound(); toast("Couldn't play that sound (see output/server.log)"); } }
+  } }, "▶");
+  return b;
+}
+let voiceFilter = "all";
+function voicePane(r, getText, setText, recheck) {
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading voices…"));
+  (async () => {
+    let list; try { list = await lookList("voices", "/api/voices"); } catch (e) { box.firstChild.textContent = e.message; return; }
+    const cur = (r.voice || {}).preset;
+    const fits = (v, f) => f === "all" || v.gender === f || v.accent === f;
+    const pick = (v) => { if (v.id === cur) return; stopSound(); setText(setHeaderKey(getText(), "voice", v.id)); recheck(); };
+    const draw = () => {
+      box.replaceChildren(
+        h("p", { class: "hint", style: "margin-top:0" }, "The narrator (Kokoro, runs on this Mac). ▶ plays a sample; click a voice to put voice: in the script header. "
+          + "The grade is Kokoro's own rating of each voice (A is best)."
+          + ((r.stats || {}).character ? ` A voice picked here replaces ${r.stats.character}'s own voice.` : "")
+          + (headerValue(getText(), "speed") ? " The script's speed: line still sets the pace." : "")),
+        h("div", { class: "vfilters" }, [["all", "All"], ["male", "Male"], ["female", "Female"], ["US", "American"], ["UK", "British"]].map(([f, l]) =>
+          h("button", { class: "vchip" + (voiceFilter === f ? " on" : ""), type: "button", onclick: () => { voiceFilter = f; draw(); } }, `${l} ${list.filter(v => fits(v, f)).length}`))),
+        h("div", { class: "voices" }, list.filter(v => fits(v, voiceFilter)).map(v => tile(v.id === cur, () => pick(v), "Use this voice",
+          h("div", { class: "vrow" }, playBtn(v.preview_url, v.label),
+            h("div", {}, h("b", {}, v.label + (v.id === cur ? " ✓" : "")),
+              h("span", {}, `${v.accent === "US" ? "American" : "British"} · ${v.gender} · grade ${v.grade}`)))))));
+    };
+    draw();
+  })();
+  return box;
+}
+function musicPane(r, getText, setText, recheck) {
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading music…"));
+  (async () => {
+    let lib; try { lib = await lookList("music", "/api/music", true); } catch (e) { box.firstChild.textContent = e.message; return; }
+    const m = (r.stats || {}).music || { items: [], off: false };
+    const known = new Set(lib.moods.flatMap(g => [g.id, ...g.tracks.map(t => t.value)]));
+    const typed = m.items.map(x => x.toLowerCase());
+    const items = typed.filter(x => known.has(x));      // names typed by hand that aren't a listed track are replaced by a pick
+    const write = (list) => { stopSound(); setText(setHeaderKey(getText(), "music", list === null ? null : list.join(", "))); recheck(); };
+    const toggle = (v) => write(items.includes(v) ? (items.length > 1 ? items.filter(x => x !== v) : null) : (m.off ? [v] : [...items, v]));
+    const full = (r.stats || {}).type !== "short";
+    const kids = [h("p", { class: "hint", style: "margin-top:0" }, "Background music, kept quiet under the voice. ▶ plays a track; click to choose. "
+        + (full ? "Choose several and a full video uses one per chapter, in the order you picked them." : "A Short uses one track.")),
+      typed.length > items.length ? h("p", { class: "hint" }, `The script says music: ${typed.filter(x => !known.has(x)).join(", ")} (matched by name words; no track is called exactly that). Picking below replaces it.`) : null,
+      h("div", { class: "voices" },
+        tile(!m.off && !typed.length, () => write(null), "Let Video Studio pick", h("b", {}, "Random track" + (!m.off && !typed.length ? " ✓" : "")), h("span", {}, "Any track of the library; the same one in draft and final.")),
+        tile(m.off, () => write(["none"]), "No background music", h("b", {}, "No music" + (m.off ? " ✓" : "")), h("span", {}, "Voice and sound effects only.")))];
+    if (!lib.count) kids.push(h("div", { class: "banner warn", style: "margin-top:12px" }, "No music tracks yet. Upload MP3s of 1 minute or longer to assets/library/music/<mood>/ "
+      + "on GitHub (see assets/library/README.md), then git pull on this Mac and press Check again."));
+    for (const mood of lib.moods) {
+      if (!mood.tracks.length) continue;
+      const anySel = items.includes(mood.id);
+      kids.push(h("div", { class: "mood" }, h("b", {}, mood.id === "other" ? "Other tracks" : mood.id), h("span", { class: "hint" }, `${mood.tracks.length} track${mood.tracks.length > 1 ? "s" : ""}`),
+        mood.id !== "other" ? h("button", { class: "vchip" + (anySel ? " on" : ""), type: "button", onclick: () => toggle(mood.id) }, (anySel ? "✓ " : "") + `Any ${mood.id} track`) : null));
+      kids.push(h("div", { class: "voices" }, mood.tracks.map(t => { const sel = items.includes(t.value);
+        return tile(sel, () => toggle(t.value), "Use this track", h("div", { class: "vrow" }, playBtn(t.url, t.label),
+          h("div", {}, h("b", {}, t.label + (sel ? ` ✓${items.length > 1 ? " " + (items.indexOf(t.value) + 1) : ""}` : "")), h("span", {}, ts(t.seconds))))); })));
+    }
+    box.replaceChildren(...kids.filter(Boolean));
+  })();
+  return box;
+}
+function sfxPane(r, getText, setText, recheck) {
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading sound effects…"));
+  (async () => {
+    let kinds; try { kinds = await lookList("sfx", "/api/sfx", true); } catch (e) { box.firstChild.textContent = e.message; return; }
+    const s = (r.stats || {}).sfx || { mode: "script", script: 0, auto: 0, cues: [], missing: [] };
+    const set = (mode) => { if (mode === s.mode) return; stopSound(); setText(setHeaderKey(getText(), "sfx", mode === "script" ? null : mode)); recheck(); };
+    const opt = (mode, title, text) => tile(s.mode === mode, () => set(mode), title, h("b", {}, title + (s.mode === mode ? " ✓" : "")), h("span", {}, text));
+    const kids = [h("p", { class: "hint", style: "margin-top:0" }, "Short sounds on cuts and key moments. Auto follows fixed rules (no AI), so the same script always gets the same effects."),
+      h("div", { class: "voices" },
+        opt("script", "Script only", `Only the [sfx: ...] tags written in the script (${s.mode === "off" ? "ignored now" : s.script + " in this one"}).`),
+        opt("auto", "Auto", "Video Studio adds effects: whoosh on title cards and chapters, ding on numbers, typing on quotes, and words like “crashed” or “suddenly”."),
+        opt("off", "Off", "No sound effects at all, even where the script has tags."))];
+    if (s.mode === "auto") {
+      kids.push(h("div", { class: "mood" }, h("b", {}, `${s.auto} automatic effect${s.auto === 1 ? "" : "s"}`), h("span", { class: "hint" }, s.script ? `plus ${s.script} from the script's own tags` : "")));
+      if (s.missing.length) kids.push(h("p", { class: "hint" }, "No sound yet for: " + s.missing.join(", ") + " (add a file to assets/library/sfx/<kind>/)."));
+      kids.push(h("ul", { class: "cues" }, s.cues.map(c => h("li", {}, h("span", {}, ts(c.at)), h("b", {}, c.kind), h("span", {}, c.why)))));
+    }
+    kids.push(h("div", { class: "mood" }, h("b", {}, "Sounds in the library"), h("span", { class: "hint" }, "“starter” sounds are simple generated ones; a file you add to the same folder is used instead")));
+    kids.push(h("div", { class: "voices" }, kinds.map(k => h("div", { class: "style", style: "cursor:default" }, h("div", { class: "vrow" }, playBtn(k.files[0].url, k.kind),
+      h("div", {}, h("b", {}, k.kind), h("span", {}, k.starter_only ? "starter sound" : `${k.files.filter(f => !f.starter).length} of your own`)))))));
+    box.replaceChildren(...kids);
+  })();
+  return box;
+}
+const sfxSummary = (r) => { const s = (r.stats || {}).sfx; return !s ? "" : s.mode === "auto" ? `Auto · ${s.auto} effects` : s.mode === "off" ? "Off" : `Script only · ${s.script}`; };
+const musicSummary = (r) => { const m = (r.stats || {}).music; return !m ? "" : m.off ? "No music" : m.items.length ? m.items.join(", ") : "Random track"; };
+const PANES = {
+  music: { label: "Music", show: (r) => !isClip(r), summary: musicSummary, build: musicPane },
+  sfx: { label: "Sound effects", show: (r) => !isClip(r), summary: sfxSummary, build: sfxPane },
+  voice: { label: "Voice", show: (r) => !isClip(r), summary: (r) => (r.voice || {}).label, build: voicePane },
+  captions: { label: "Captions", summary: (r) => (r.captions || {}).label, build: captionsPane },
+  style: { label: "Art style", show: (r) => r.art_style && !isClip(r), summary: (r) => (r.art_style || {}).label,
+           build: (r, g, s, c) => styleCard(r, g, s, c, true) },
+};
+const PANE_ORDER = ["voice", "music", "captions", "sfx", "style"];
+function lookCard(r, getText, setText, recheck) {
+  const ids = PANE_ORDER.filter(id => PANES[id] && (!PANES[id].show || PANES[id].show(r)));
+  if (!ids.includes(lookTab)) lookTab = ids.includes("captions") ? "captions" : ids[0];
+  const card = h("div", { class: "card", id: "look" });
+  const draw = () => {
+    stopSound();
+    card.replaceChildren(h("h3", {}, "Look & sound"),
+      h("div", { class: "ltabs", role: "tablist" }, ids.map(id => h("button", { class: "ltab" + (id === lookTab ? " on" : ""), role: "tab",
+          "aria-selected": String(id === lookTab), "data-tab": id, onclick: () => { lookTab = id; draw(); } },
+        h("b", {}, PANES[id].label), h("span", {}, PANES[id].summary(r) || "")))),
+      PANES[lookTab].build(r, getText, setText, recheck));
+  };
+  draw();
+  return card;
+}
+function tile(sel, onPick, title, ...kids) {
+  return h("div", { class: "style" + (sel ? " sel" : ""), role: "button", tabindex: "0", title, onclick: onPick,
+    onkeydown: (e) => { if (e.key === "Enter") onPick(); } }, ...kids);
+}
+function captionsPane(r, getText, setText, recheck) {
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading caption styles…"));
+  (async () => {
+    let list; try { list = await lookList("captions", "/api/captions"); } catch (e) { box.firstChild.textContent = e.message; return; }
+    const cur = (r.captions || {}).id || list[0].id;
+    const pick = (c) => { if (c.id === cur) return; setText(setHeaderKey(getText(), "captions", c.id === list[0].id ? null : c.id)); recheck(); };
+    box.replaceChildren(
+      h("p", { class: "hint", style: "margin-top:0" }, "How the words on screen look. Each clip is drawn by the same code as the real video. "
+        + "Click a style to put captions: in the script header."),
+      h("div", { class: "styles" }, list.map(c => {
+        const v = h("video", { src: c.preview_url, loop: true, playsinline: true, preload: "auto", "aria-label": c.label + " preview" });
+        v.muted = true; v.autoplay = true;
+        v.addEventListener("canplay", () => v.play().catch(() => {}), { once: true });
+        return tile(c.id === cur, () => pick(c), "Use this caption style",
+          h("div", { class: "pv" }, v), h("b", {}, c.label + (c.id === cur ? " ✓" : "")), h("span", {}, c.description));
+      })));
+  })();
+  return box;
+}
+function styleCard(r, getText, setText, recheck, bare = false) {
+  const box = h("div", { class: bare ? "" : "card" }, bare ? null : h("h3", {}, "Art style"), h("p", { class: "hint" }, "Loading styles…"));
+  (async () => {
+    let list; try { list = await loadStyles(); } catch (e) { box.lastChild.textContent = e.message; return; }
+    const cur = r.art_style && r.art_style.id;
+    const pick = (s) => { if (s.id === cur) return; setText(setArtStyle(getText(), s.id)); recheck(); };
+    const grid = h("div", { class: "styles" }, list.map(s => {
+      const pv = s.preview_url ? h("img", { src: s.preview_url, alt: s.label + " preview", loading: "lazy" })
+        : h("button", { class: "btn small", onclick: async (e) => {
+            e.stopPropagation(); const b = e.currentTarget; b.disabled = true; b.textContent = "Making preview…";
+            try { await api(`/api/art_styles/${s.id}/preview`, { method: "POST" }); await loadStyles(true);
+              box.replaceWith(styleCard(r, getText, setText, recheck, bare));
+            } catch (err) { toast(err.message); b.disabled = false; b.textContent = "Make preview (~25 s)"; } } }, "Make preview (~25 s)");
+      return h("div", { class: "style" + (s.id === cur ? " sel" : ""), role: "button", tabindex: "0", title: "Use this art style",
+          onclick: () => pick(s), onkeydown: (e) => { if (e.key === "Enter") pick(s); } },
+        h("div", { class: "pv" }, pv), h("b", {}, s.label + (s.id === cur ? " ✓" : "")), h("span", {}, s.description),
+        s.realistic ? h("small", {}, "Realistic: tick the AI-content box when you upload") : null);
+    }));
+    box.replaceChildren(...[bare ? null : h("h3", {}, "Art style"),
+      h("p", { class: "hint", style: bare ? "margin-top:0" : "margin-top:-4px" }, "Used for every [ai:] and [stock:] image and the 2 AI thumbnails. "
+        + "Click a style to put art_style: in the script header." + (r.stats && r.stats.character ? " Character scenes ([act:]) keep the character's own style." : "")),
+      grid].filter(Boolean));
+  })();
+  return box;
 }
 
 // ------------------------------------------------------------- new video
@@ -448,7 +681,8 @@ function showNew(kind = "full") {
   const doCheck = async () => {
     if (!newText.trim()) { toast("Paste a script first"); return; }
     try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: withType(newText, kind) }) });
-      out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln))));
+      out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln))),
+        lookCard(r, () => newText, (t) => { newText = t; ta.value = t; }, doCheck));
       createBtn.disabled = !r.ok; if (r.ok) createBtn.focus();
     } catch (e) { toast(e.message); } };
   const fileIn = h("input", { type: "file", accept: ".md,.txt,text/markdown,text/plain", style: "display:none", onchange: async (e) => {
@@ -568,17 +802,20 @@ function editorCard(d, open) {
   if (editText === null) editText = d.script;
   const ta = h("textarea", { class: "script", spellcheck: "false", oninput: (e) => { editText = e.target.value; } });
   ta.value = editText;
-  const out = h("div", { style: "margin-top:14px" }, lastReport ? report(lastReport, (ln) => jumpTo(ta, ln)) : d.check ? report(d.check, (ln) => jumpTo(ta, ln)) : null);
+  const rep = lastReport || d.check;
   const running = ["queued", "rendering"].includes(d.status);
+  const save = async () => {
+    try { const r = await api(`/api/jobs/${d.id}/script`, { method: "PUT", body: JSON.stringify({ text: editText }) });
+      lastReport = r; data.script = editText; data.check = r; toast(r.ok ? "Saved. No errors." : `Saved, ${r.errors.length} error(s) to fix`);
+      const dd = await api("/api/jobs/" + current); data = dd; editText = dd.script; showJob(); loadJobs();
+    } catch (e) { toast(e.message); } };
+  const out = h("div", { style: "margin-top:14px" }, rep ? report(rep, (ln) => jumpTo(ta, ln)) : null,
+    rep && !running ? lookCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null);
   return h("details", { class: "card", open },
     h("summary", {}, "Script"),
     ta,
     h("div", { class: "row", style: "margin-top:12px" },
-      h("button", { class: "btn", disabled: running, onclick: async () => {
-        try { const r = await api(`/api/jobs/${d.id}/script`, { method: "PUT", body: JSON.stringify({ text: editText }) });
-          lastReport = r; data.script = editText; data.check = r; toast(r.ok ? "Saved. No errors." : `Saved, ${r.errors.length} error(s) to fix`);
-          const dd = await api("/api/jobs/" + current); data = dd; editText = dd.script; showJob(); loadJobs();
-        } catch (e) { toast(e.message); } } }, "Check & save"),
+      h("button", { class: "btn", disabled: running, onclick: save }, "Check & save"),
       h("span", { class: "hint" }, running ? "Editing is locked while rendering." : "Saving doesn't re-render; press Make draft or Make final after.")),
     out);
 }

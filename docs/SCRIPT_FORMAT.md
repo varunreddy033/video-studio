@@ -16,14 +16,102 @@ tags: ai bubble, stock market, nvidia         (comma separated)
 type: full                                    (full = 16:9 long video (default), short = 9:16 Short, 15 s-2:00)
 music: misdirection, soaring                  (track names from assets/audio/bgm; full videos: one per
                                                chapter in this order, crossfaded; one name = one track)
-voice: am_michael                             (optional: am_adam, am_eric, bm_george, bm_lewis, af_heart ...)
+voice: am_michael                             (optional: a voice preset id, or a Kokoro voice: am_adam, am_eric,
+                                               bm_george, bm_lewis, af_heart ...)
 speed: 1.0                                    (optional voice speed)
+language: en                                  (optional preset keys, see "Presets" below)
+captions: amber_word
+art_style: doc_photo                          (look of the AI images: pick it in Video Studio after Check)
 thumbnail: THE BUBBLE?                        (big thumbnail text, 2-4 words work best)
 thumbnail_prompt: a giant glowing soap bubble over a city at night
 ---
 ```
 
 `format:` (landscape / vertical) still works for full videos; a Short is always vertical.
+
+### Presets (optional header keys)
+
+Voice, captions, art style and music are presets: JSON files in `presets/<kind>/<id>.json` (the id is the file
+name). Leave a key out and the default preset is used, which is exactly how videos looked before presets existed.
+
+| Key | Folder | Default | Also accepts (old style, still works) |
+|---|---|---|---|
+| `language:` | languages of the voice presets | `en` | |
+| `voice:` | `presets/voices/` | `en_us_michael` | a Kokoro voice id (`bm_george`); `character:` still sets its own voice |
+| `captions:` | `presets/captions/` | `amber_word` | |
+| `art_style:` | `presets/art_styles/` | `doc_photo` | |
+| `music:` | `presets/music/` | `any` | track names from `assets/audio/bgm` (`misdirection, soaring`) |
+
+A preset id that doesn't exist is an error at Check, and the message lists the valid ids. Every render writes
+`output/jobs/<id>/job.json` with the presets it used and anything that overrode them (script, character, .env).
+All of these are picked in Video Studio after **Check**, in the **Look & sound** card (tabs: Voice, Music,
+Captions, Sound effects, Art style). A click writes the header line for you. Check all preset files with
+`bin/python tools/check_presets.py`.
+
+### Voice (`voice:`)
+
+28 English Kokoro voices (20 American, 8 British), each `presets/voices/<id>.json`: `voice: en_us_heart`,
+`voice: en_gb_george`... The Voice tab plays a sample of each (made on first click) and shows Kokoro's own quality
+grade (A is best). A Kokoro id (`voice: bm_george`) still works, `speed:` still sets the pace, and a voice in the
+header replaces a character's own voice.
+
+### Captions (`captions:`)
+
+| id | Look |
+|---|---|
+| `amber_word` (default) | short phrases, the spoken word turns amber |
+| `big_word` | one heavy word at a time, popping in |
+| `red_pop` | two tall words, the spoken one red |
+| `soft_glow` | clean capitals with a soft glow |
+| `karaoke_box` | a violet box jumps from word to word |
+| `italic_punch` | slanted capitals, the spoken word yellow |
+| `comic` | comic lettering, tilted |
+| `serif` | small-caps serif |
+| `pixel` | retro game lettering |
+| `clean_lower` | friendly lowercase |
+| `none` | nothing burned in (the .srt for YouTube is still made) |
+
+Each style is a file in `presets/captions/` (font, colours, words per phrase, sizes for full videos / vertical /
+Shorts); the fonts are in `assets/fonts` (all SIL Open Font License).
+
+### Music (`music:`)
+
+Tracks live in `assets/library/music/<mood>/` (in git; `assets/library/README.md` says how to upload) and in the
+old `assets/audio/bgm`. `music: calm` = a random track of that mood (the same in draft and final), `music: track
+name` = that track, `music: calm, tense, epic` = one per chapter (full videos), `music: none` = no music, no line
+= any track.
+
+### Sound effects (`sfx:`)
+
+`sfx: script` (default) plays only the `[sfx: ...]` tags in the script. `sfx: auto` also places effects by fixed
+rules (pipeline/sfx.py): whoosh on title cards and new chapters, ding / cash on numbers, typing on quotes, riser
+on charts, and narration words like "crashed" (impact), "suddenly" (riser), "hacked" (glitch); at most one per
+shot, at least 3 s apart. `sfx: off` plays none. Sounds are `assets/library/sfx/<kind>/` (13 starter sounds
+included; your own file in a folder replaces the starter one).
+
+### Art style (`art_style:`)
+
+The look of every `[ai:]` and `[stock:]` image and the 2 AI thumbnails. After **Check**, Video Studio shows an
+"Art style" card: click a style and it writes `art_style: <id>` into the header and checks again (on the new-video
+screen and in a video's Script editor). Each tile can make a preview (~25 s, on the Mac, one at a time, not while
+a video renders); previews are kept in `assets/style_previews/`.
+
+| id | Look | Realistic* |
+|---|---|---|
+| `doc_photo` (default) | natural documentary photos (the look before art styles existed) | yes |
+| `cinematic_film` | movie still: shallow depth of field, colour grade, grain | yes |
+| `archival_bw` | old black-and-white press photos | yes |
+| `dark_oil_painting` | moody old-master oil painting | no |
+| `graphic_novel` | inked comic panels, flat shading, halftone | no |
+| `noir_neon` | rainy night, magenta and cyan neon | yes |
+| `isometric_3d` | miniature 3D dioramas | no |
+| `paper_cut` | layered paper craft | no |
+
+*Realistic styles: tick "Altered or synthetic content" in YouTube Studio. With a `character:`, the art style only
+changes `[ai:]`/`[stock:]` shots; `[act:]` scenes and presenter thumbnails keep the character's own STYLE (Check
+warns). A new style means new images, so the first final in it makes every AI image again (Check shows how
+many are still to make). Each style is `presets/art_styles/<id>.json`: `prefix` + your prompt + `stock_suffix`
+(`[stock:]` only) + `suffix`. In `doc_photo`, `.env IMAGE_STYLE` (if set) still replaces the suffix.
 
 ### Short from a video you already made (no body needed)
 ```

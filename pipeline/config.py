@@ -37,7 +37,10 @@ MFLUX_BIN = str(Path(sys.executable).parent / ("mflux-generate-flux2" + (".exe" 
 # the local image model runs on Apple Silicon (MLX). Elsewhere, renders that only reuse cached images still work
 # (clip Shorts, presenter Shorts with talk + graphics); a NEW AI image there stops with a clear message.
 IMAGE_MODEL_AVAILABLE = sys.platform == "darwin" and Path(MFLUX_BIN).exists()
-IMAGE_STYLE = env("IMAGE_STYLE", "cinematic documentary photography, natural light, high detail, no text")
+# words added to every [ai:]/[stock:] prompt in the doc_photo art style (presets/art_styles/doc_photo.json "suffix").
+# Setting IMAGE_STYLE in .env still replaces it (old behaviour); other art styles use their own preset words.
+IMAGE_STYLE_DEFAULT = "cinematic documentary photography, natural light, high detail, no text"
+IMAGE_STYLE = env("IMAGE_STYLE", IMAGE_STYLE_DEFAULT)
 SECONDS_PER_IMAGE = float(env("SECONDS_PER_IMAGE", "25"))   # measured on this M5 Air (12-28 s, depends on heat/RAM)
 PARALLAX = env("PARALLAX", "on").lower() != "off"          # 2.5D depth camera moves on stills in finals
 IMAGE_COOLDOWN = float(env("IMAGE_COOLDOWN", "8"))           # rest after each new image (fanless Mac, avoids throttling)
@@ -66,6 +69,12 @@ JOBS_DIR = BASE_DIR / "output" / "jobs"
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
 SHARED_IMAGE_CACHE = ASSETS / "cache" / "images"      # images reused across videos (character packs, [act:])
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
+# asset library that IS in git (assets/library, uploaded through GitHub; see its README.md):
+#   music/<mood>/<track>.mp3     the folder name is the mood (music: calm)
+#   sfx/<kind>/<sound>.wav       the folder name is the kind ([sfx: whoosh]); starter_*.wav = generated starter pack
+# The old local folders (assets/audio/bgm, assets/audio/sfx; not in git) keep working next to it.
+LIBRARY = ASSETS / "library"
+MUSIC_LIB, SFX_LIB = LIBRARY / "music", LIBRARY / "sfx"
 
 # output sizes. draft = quick check (AI images replaced by labelled placeholders), final = upload quality
 SIZES = {

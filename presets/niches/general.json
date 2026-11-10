@@ -1,0 +1,12 @@
+{
+  "label": "General documentary",
+  "licence": "n/a (bundles the presets below)",
+  "tone": "calm, factual documentary narration",
+  "default_minutes": 10,
+  "language": "en",
+  "voice": "en_us_michael",
+  "captions": "amber_word",
+  "art_style": "doc_photo",
+  "music": "any",
+  "banned_topics": []
+}

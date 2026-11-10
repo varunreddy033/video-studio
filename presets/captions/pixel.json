@@ -1,0 +1,55 @@
+{
+  "label": "Pixel",
+  "description": "Retro game lettering, the spoken word turns cyan.",
+  "licence": "Press Start 2P (SIL Open Font License 1.1, assets/fonts/licences/pressstart2p-OFL.txt)",
+  "highlight": "word",
+  "case": "upper",
+  "font": "Press Start 2P",
+  "font_file": "PressStart2P-Regular.ttf",
+  "bold": false,
+  "italic": false,
+  "text_colour": "#FFFFFF",
+  "highlight_colour": "#4FC3F7",
+  "outline_colour": "#000000",
+  "shadow_colour": "#000000",
+  "shadow_transparency": 150,
+  "outline_ratio": 0.1,
+  "outline_min_px": 2,
+  "position": "bottom-center",
+  "group": {
+    "max_gap_sec": 0.45,
+    "break_after": ".?!:;",
+    "linger_sec": 0.35,
+    "min_word_sec": 0.02
+  },
+  "layouts": {
+    "landscape": {
+      "size": 0.046,
+      "margin_v": 0.075,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 2,
+      "max_chars": 16
+    },
+    "vertical": {
+      "size": 0.026,
+      "margin_v": 0.17,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 2,
+      "max_chars": 11
+    },
+    "short": {
+      "size": 0.036,
+      "margin_v": 0.24,
+      "margin_l": 0.05,
+      "margin_r": 0.15,
+      "max_words": 1,
+      "max_chars": 10
+    }
+  },
+  "srt": {
+    "max_chars": 84,
+    "line_chars": 42
+  }
+}

@@ -111,17 +111,24 @@ def make_character(parsed: dict, job_dir: Path, final_video: Path, frame_time: f
     return out
 
 
+def thumb_prompt(parsed: dict) -> str:
+    """The prompt of the 2 AI thumbnails (before the art style words are added)."""
+    meta = parsed["meta"]
+    prompt = meta.get("thumbnail_prompt") or next(
+        (s.get("prompt") or s.get("query") for s in parsed["shots"] if s["type"] in ("ai", "stock")), meta.get("title"))
+    return f"{prompt}, bold dramatic composition, strong contrast, one clear subject, empty space for text"
+
+
 def make(parsed: dict, job_dir: Path, final_video: Path, frame_time: float):
     meta = parsed["meta"]
     if meta.get("character_data"):
         return make_character(parsed, job_dir, final_video, frame_time)
     text = meta.get("thumbnail") or meta.get("title", "")
-    prompt = meta.get("thumbnail_prompt") or next(
-        (s.get("prompt") or s.get("query") for s in parsed["shots"] if s["type"] in ("ai", "stock")), meta.get("title"))
-    prompt = f"{prompt}, bold dramatic composition, strong contrast, one clear subject, empty space for text"
+    prompt = thumb_prompt(parsed)
     out = []
     for i, side in enumerate(("left", "right"), start=1):
-        bg = _cover(Image.open(ai_image(prompt, TW, TH, job_dir, seed_extra=f"thumb{i}")))
+        bg = _cover(Image.open(ai_image(prompt, TW, TH, job_dir, seed_extra=f"thumb{i}",
+                                        style=meta["presets"]["art_style"])))
         bg = bg.filter(ImageFilter.UnsharpMask(radius=2, percent=60))
         img = _text_block(_shade(bg, side), text, side)
         p = job_dir / f"thumb_{i}.jpg"

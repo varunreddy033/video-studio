@@ -1,0 +1,13 @@
+{
+  "id": "dark_oil_painting",
+  "label": "Dark oil painting",
+  "description": "Moody old-master painting: deep shadows, thick brush strokes, candlelight.",
+  "prefix": "dark oil painting",
+  "suffix": "chiaroscuro, rich deep shadows, visible thick brush strokes, muted earthy palette, dramatic candlelight, old master style, canvas texture, no text",
+  "stock_suffix": "painted from a real-world scene",
+  "realistic": false,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}

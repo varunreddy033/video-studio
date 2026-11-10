@@ -69,8 +69,10 @@ def _still(shot, sp, src_dir: Path):
     """The cached landscape image of an [ai:]/[stock:]/[act:] shot (raises if it was never made)."""
     if shot["type"] == "act":
         return visuals.act_image(shot, sp["meta"]["character_data"], 1920, 1080, src_dir, cached_only=True)
-    prompt = shot["prompt"] if shot["type"] == "ai" else f"{shot['query']}, real-world documentary photograph"
-    return visuals.ai_image(prompt, 1920, 1080, src_dir, cached_only=True)
+    # the SOURCE video's art style (its script header), or its cached images wouldn't be found
+    stock = shot["type"] == "stock"
+    return visuals.ai_image(shot["query"] if stock else shot["prompt"], 1920, 1080, src_dir, cached_only=True,
+                            style=sp["meta"]["presets"]["art_style"], stock=stock)
 
 
 def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
@@ -149,7 +151,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     progress("captions")
     cw = [[w[0], w[1] - a, w[2] - a, w[4]] for w in words if w[1] >= a - 0.01 and w[2] <= b + 0.01]
     ass = job_dir / f"captions_{mode}.ass"
-    captions.write_ass(cw, W, H, ass, dur, style="short")
+    captions.write_ass(cw, W, H, ass, dur, style="short", preset=parsed["meta"]["presets"]["captions"])
     captions.write_srt(cw, job_dir / f"captions_{mode}.srt")
 
     # 4 audio: the source's finished mix for this span

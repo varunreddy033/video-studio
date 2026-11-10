@@ -45,6 +45,33 @@ def _whisper_words(wav: Path, job_dir: Path):
     return words
 
 
+PREVIEWS = C.ASSETS / "voice_previews"          # short samples for the voice picker (not in git)
+
+
+def preview_path(preset: dict) -> Path:
+    text = f"Hello, I'm {preset['label']}. This is how I sound when I narrate your video."
+    return PREVIEWS / f"{preset['id']}_{h(preset['voice'], preset['speed'], text, 'v1')}.wav"
+
+
+def preview(preset: dict) -> Path:
+    """A one-sentence sample of a voice preset, made once and kept. Waits its turn if a render is using Kokoro."""
+    out = preview_path(preset)
+    if out.exists() and out.stat().st_size > 0:
+        return out
+    PREVIEWS.mkdir(parents=True, exist_ok=True)
+    for old in PREVIEWS.glob(f"{preset['id']}_*.wav"):
+        old.unlink(missing_ok=True)
+    text = f"Hello, I'm {preset['label']}. This is how I sound when I narrate your video."
+    chunks = []
+    with _lock:
+        for res in _pipeline(preset["voice"])(text, voice=preset["voice"], speed=preset["speed"]):
+            chunks.append(res.audio.numpy() if hasattr(res.audio, "numpy") else np.asarray(res.audio))
+    if not chunks:
+        raise PipelineError(f"Kokoro returned no audio for the voice {preset['voice']}")
+    sf.write(out, np.concatenate(chunks).astype(np.float32), SR, subtype="PCM_16")
+    return out
+
+
 def synth(text: str, voice: str, speed: float, job_dir: Path):
     """Returns (wav_path, duration_s, words) where words = [[word, start, end, phonemes], ...]
     (phonemes = Kokoro's IPA for that word, used for lip sync; "" when unknown)."""

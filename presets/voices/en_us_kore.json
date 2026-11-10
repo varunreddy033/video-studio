@@ -1,0 +1,16 @@
+{
+  "label": "Kore",
+  "description": "American English, female. Kokoro's own quality grade: C+.",
+  "licence": "Apache-2.0 (Kokoro-82M, hexgrad/Kokoro-82M)",
+  "engine": "kokoro",
+  "model": "hexgrad/Kokoro-82M",
+  "language": "en",
+  "lang": "a",
+  "voice": "af_kore",
+  "speed": 1.0,
+  "wpm": 155,
+  "word_timings": "kokoro (whisper.cpp backup)",
+  "gender": "female",
+  "accent": "US",
+  "grade": "C+"
+}

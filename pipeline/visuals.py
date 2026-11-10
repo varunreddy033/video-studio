@@ -315,10 +315,11 @@ class _ImageWorker:
             self.stop()
             raise PipelineError("image worker did not start (see image_worker.log)")
 
-    def generate(self, prompt, w, h_, seed, out: Path, job_dir: Path, refs=None):
+    def generate(self, prompt, w, h_, seed, out: Path, job_dir: Path, refs=None, steps=None):
         if self.p is None or self.p.poll() is not None:
             self._start(job_dir)
-        req = {"prompt": prompt, "width": w, "height": h_, "steps": C.LOCAL_IMAGE_STEPS, "seed": seed, "out": str(out)}
+        req = {"prompt": prompt, "width": w, "height": h_, "steps": steps or C.LOCAL_IMAGE_STEPS, "seed": seed,
+               "out": str(out)}
         if refs:
             req["refs"] = [str(r) for r in refs]
         self.p.stdin.write(json.dumps(req) + "\n")
@@ -374,6 +375,36 @@ def shared_image(prompt: str, w: int, h_: int, seed: int, log_dir: Path, refs=No
     return out
 
 
+PREVIEW_PROMPT = "an old stone harbour at dawn with fishing boats and gulls"
+PREVIEW_SEED = 1000            # same seed for every style, so the previews differ only by style
+
+
+def make_style_preview(style_id: str) -> Path:
+    """assets/style_previews/<id>.jpg (720 px wide): the fixed test prompt in one art style, 1280x720.
+    Uses the same image worker + lock as renders (never two image models at once) and frees it afterwards."""
+    from . import presets
+    _need_image_model("an art style preview")
+    out = presets.preview_path(style_id)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out.with_suffix(".png")
+    st = presets.load("art_styles", style_id)
+    log_dir = C.BASE_DIR / "output"
+    with _mflux_lock:
+        t0 = time.time()
+        try:
+            _worker.generate(style_prompt(PREVIEW_PROMPT, style_id), 1280, 720, PREVIEW_SEED, tmp, log_dir,
+                             steps=st["steps"])
+        finally:
+            _worker.stop()       # give the ~5 GB back right away
+    if not tmp.exists():
+        raise PipelineError("the image model finished but wrote no preview image")
+    img = Image.open(tmp).convert("RGB")
+    img.resize((720, round(img.height * 720 / img.width)), Image.LANCZOS).save(out, quality=88)
+    tmp.unlink(missing_ok=True)
+    log(log_dir, f"style preview {style_id} in {time.time() - t0:.0f}s")
+    return out
+
+
 def stop_image_worker():
     """Called at the end of every render so the model's ~5 GB goes back to the Mac."""
     with _mflux_lock:
@@ -387,13 +418,37 @@ def _need_image_model(what: str):
                             f"(clip Shorts, [talk:] + graphics).")
 
 
-def ai_image(prompt: str, W: int, H: int, job_dir: Path, seed_extra: str = "", cached_only: bool = False) -> Path:
-    """Generate (or reuse) an image. ~12-25 s on the M5 Air (model stays loaded during a render).
-    cached_only=True: return the cached file or raise (clip Shorts never make new images)."""
+def style_prompt(prompt: str, style_id=None, stock: bool = False) -> str:
+    """The full image prompt for an [ai:] / [stock:] shot or an AI thumbnail in one art style
+    (presets/art_styles/<id>.json): "prefix, prompt, stock_suffix (stock only), suffix" (empty parts left out).
+    style None = doc_photo, whose suffix is config.IMAGE_STYLE (.env can still change it). doc_photo gives
+    byte-for-byte the prompts made before art styles existed, so every cached image is still found."""
+    from . import presets
+    st = presets.load("art_styles", style_id or presets.DEFAULTS["art_styles"])
+    suffix = C.IMAGE_STYLE if st["id"] == "doc_photo" else st["suffix"]
+    parts = [st["prefix"], prompt, st["stock_suffix"] if stock else "", suffix]
+    return ", ".join(p for p in parts if p)
+
+
+def ai_cache_path(prompt: str, W: int, H: int, job_dir: Path, seed_extra: str = "", style=None,
+                  stock: bool = False):
+    """(cached image path, full prompt, generation size, steps) of an AI image; the file may not exist yet.
+    The cache key is the same as before art styles: hash of (full prompt, size, model, steps, seed_extra)."""
+    from . import presets
     gw, gh = (1280, 720) if W >= H else (720, 1280)
-    full = f"{prompt}, {C.IMAGE_STYLE}" if C.IMAGE_STYLE else prompt
-    key = h(full, gw, gh, C.LOCAL_IMAGE_MODEL, C.LOCAL_IMAGE_STEPS, seed_extra)
-    out = job_dir / "cache" / f"ai_{key}.png"
+    full = style_prompt(prompt, style, stock)
+    steps = presets.load("art_styles", style or presets.DEFAULTS["art_styles"])["steps"] or C.LOCAL_IMAGE_STEPS
+    key = h(full, gw, gh, C.LOCAL_IMAGE_MODEL, steps, seed_extra)
+    return job_dir / "cache" / f"ai_{key}.png", full, (gw, gh), steps
+
+
+def ai_image(prompt: str, W: int, H: int, job_dir: Path, seed_extra: str = "", cached_only: bool = False,
+             style=None, stock: bool = False) -> Path:
+    """Generate (or reuse) an image. ~12-25 s on the M5 Air (model stays loaded during a render).
+    prompt = the script's own words; style = art style preset id (None = doc_photo); stock = a [stock:] shot.
+    cached_only=True: return the cached file or raise (clip Shorts never make new images)."""
+    out, full, (gw, gh), steps = ai_cache_path(prompt, W, H, job_dir, seed_extra, style, stock)
+    key = out.stem[3:]
     if out.exists() and out.stat().st_size > 0:
         return out
     if cached_only:
@@ -404,12 +459,12 @@ def ai_image(prompt: str, W: int, H: int, job_dir: Path, seed_extra: str = "", c
     with _mflux_lock:
         t0 = time.time()
         try:
-            _worker.generate(full, gw, gh, seed, out, job_dir)
+            _worker.generate(full, gw, gh, seed, out, job_dir, steps=steps)
         except Exception as e:   # fall back to one CLI call (slower, but independent)
             log(job_dir, f"  image worker failed ({e}); using the mflux command instead")
             _worker.stop()
             run([C.MFLUX_BIN, "--model", C.LOCAL_IMAGE_MODEL, "--base-model", C.LOCAL_IMAGE_BASE,
-                 "--width", gw, "--height", gh, "--steps", C.LOCAL_IMAGE_STEPS, "--seed", seed,
+                 "--width", gw, "--height", gh, "--steps", steps, "--seed", seed,
                  "--prompt", full, "--output", out], job_dir, "AI image")
         log(job_dir, f"  AI image {out.name} in {time.time() - t0:.0f}s")
     if not out.exists():
@@ -417,8 +472,9 @@ def ai_image(prompt: str, W: int, H: int, job_dir: Path, seed_extra: str = "", c
     return out
 
 
-def placeholder_image(label: str, text: str, W: int, H: int, job_dir: Path) -> Path:
-    out = job_dir / "cache" / f"ph_{h(label, text, W, H)}.png"
+def placeholder_image(label: str, text: str, W: int, H: int, job_dir: Path, note: str = "") -> Path:
+    """Draft stand-in for an image: label, the prompt, and an optional note (the art style) under it."""
+    out = job_dir / "cache" / f"ph_{h(label, text, W, H, note) if note else h(label, text, W, H)}.png"
     if out.exists():
         return out
     out.parent.mkdir(exist_ok=True)
@@ -431,6 +487,8 @@ def placeholder_image(label: str, text: str, W: int, H: int, job_dir: Path) -> P
     for ln in lines:
         d.text((W / 2, y), ln, font=f, fill=C.TEXT, anchor="ma")
         y += size * 1.25
+    if note:
+        d.text((W / 2, y + H * 0.03), note, font=font("medium", int(H * 0.04)), fill=C.MUTED, anchor="ma")
     img.save(out)
     return out
 
@@ -520,13 +578,17 @@ def make_shot(shot, idx, dur, W, H, job_dir, mode, warnings, ctx=None):
         else:
             still_motion(act_image(shot, char, W, H, job_dir), dur, idx, W, H, out, job_dir, mode)
         return out
-    if kind == "stock":   # [stock: ...] = a documentary-style photo, made by the AI image model
-        kind, shot = "ai", {**shot, "prompt": f"{shot['query']}, real-world documentary photograph"}
-    if kind == "ai":
-        if mode == "draft":
-            img = placeholder_image("AI IMAGE (made in the final render)", shot["prompt"], W, H, job_dir)
+    if kind in ("ai", "stock"):   # [stock: ...] = an AI image with the art style's stock words (doc_photo: a photo)
+        style = ctx.get("art_style")
+        prompt, stock = (shot["query"], True) if kind == "stock" else (shot["prompt"], False)
+        if mode == "draft":   # the placeholder shows the script's prompt (as before) and the art style under it
+            from . import presets
+            st = presets.load("art_styles", style or presets.DEFAULTS["art_styles"])
+            text = f"{prompt}, {st['stock_suffix']}" if stock and st["stock_suffix"] else prompt
+            img = placeholder_image("AI IMAGE (made in the final render)", text, W, H, job_dir,
+                                    note=f"Art style: {st['label']}")
         else:
-            img = ai_image(shot["prompt"], W, H, job_dir)
+            img = ai_image(prompt, W, H, job_dir, style=style, stock=stock)
         still_motion(img, dur, idx, W, H, out, job_dir, mode)
         return out
     graphic_clip(shot, dur, W, H, out, job_dir, mode, safe=ctx.get("safe"))

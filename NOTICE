@@ -2,9 +2,12 @@ Video Studio
 Copyright (c) 2026 Varun Reddy. The code is released under the MIT License (see LICENSE).
 
 NOT INCLUDED: each user supplies their own
-- Music and sound effects (assets/audio/bgm, assets/audio/sfx). None are in this repository. Download your own,
-  for example from the YouTube Audio Library, and follow each track's licence and attribution terms
-  (Video Studio writes the track name into metadata.txt for the description).
+- Music and sound effects (assets/audio/bgm, assets/audio/sfx, or assets/library/music and assets/library/sfx).
+  No music is in this repository. Download your own, for example from the YouTube Audio Library, and follow each
+  track's licence and attribution terms (Video Studio writes the track name into metadata.txt).
+  The only sounds included are the 13 starter sound effects in assets/library/sfx/*/starter_*.wav: they are
+  synthesised from noise and sine waves by tools/make_starter_sfx.py (no samples, no third-party licence) and
+  are covered by this repository's MIT License. Any sound you add to the same folders is used instead.
 - Generated character packs (assets/characters/<name>/ images). Only pack.json and contact_sheet.jpg of the
   example character are included. Each user generates their own pack with tools/make_character_pack.py from a
   character file in docs/characters/.

@@ -12,6 +12,7 @@ Run:  ~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py
 import re
 import secrets
 import shutil
+import threading
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlparse
@@ -19,9 +20,9 @@ from urllib.parse import urlparse
 from flask import Flask, abort, jsonify, redirect, request, send_file, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from pipeline import auth, encoder, jobs, script_parser
+from pipeline import auth, captions, encoder, jobs, presets, script_parser, visuals, voice
 from pipeline import config as C
-from pipeline.util import list_audio
+from pipeline.util import audio_duration, h as short_hash, is_starter, library_group, music_files, sfx_files
 
 app = Flask(__name__)
 # The tunnel (Tailscale Funnel / cloudflared) runs on this Mac and adds X-Forwarded-* headers.
@@ -34,6 +35,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=14),
     MAX_CONTENT_LENGTH=2 * 1024 * 1024,          # scripts are text; nothing big is ever uploaded
 )
+MEDIA_PREVIEW = ("/preview.mp4", "/preview.wav", "/audio")
 FILE_RE = re.compile(r"(draft|final|short)\.mp4|thumb_[1-3]\.jpg|(short_)?metadata\.txt|script\.md|"
                      r"captions_(draft|final)\.(ass|srt)|upload_pack\.zip")
 OPEN = {"/login", "/setup", "/api/login", "/api/setup", "/favicon.ico"}
@@ -77,7 +79,9 @@ def headers(resp):
                                                "media-src 'self' blob:; frame-ancestors 'none'; form-action 'self'")
     if request.scheme == "https":
         resp.headers["Strict-Transport-Security"] = "max-age=31536000"
-    if request.path.startswith("/api/") or request.path in ("/login", "/setup", "/"):
+    if request.path.endswith(MEDIA_PREVIEW) and resp.status_code in (200, 206, 304):
+        resp.headers["Cache-Control"] = "private, max-age=3600"     # preview clips / sounds: the ?v= changes with them
+    elif request.path.startswith("/api/") or request.path in ("/login", "/setup", "/"):
         resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -216,8 +220,8 @@ def health():
         "local_image_model": C.IMAGE_MODEL_AVAILABLE,
         "seconds_per_image": C.SECONDS_PER_IMAGE,
         "voice": C.KOKORO_VOICE,
-        "music_tracks": len(list_audio(C.BGM_DIR, 60)),
-        "sfx_files": len(list_audio(C.SFX_DIR)),
+        "music_tracks": len(music_files(60)),
+        "sfx_files": len(sfx_files()),
         "queue_busy": any(j.get("status") == "rendering" for j in jobs.list_jobs()),
     })
 
@@ -227,6 +231,148 @@ def health():
 def check():
     text = (request.get_json(force=True) or {}).get("text", "")
     return jsonify(jobs.check_summary(script_parser.parse(text)))
+
+
+_preview_lock = threading.Lock()   # one art style preview at a time
+_caption_lock = threading.Lock()
+
+
+def _audio_key(p):
+    return short_hash("audio", p.resolve())
+
+
+def _track_value(p):
+    """What goes into the script's music: line for this file (its name words)."""
+    return re.sub(r"\s+", " ", re.sub(r"[^A-Za-z0-9']+", " ", p.stem)).strip().lower()
+
+
+@app.get("/api/music")
+def music_library():
+    """Music tracks (1 minute or longer) grouped by mood folder; 'other' = the old local folder / no mood."""
+    groups = {}
+    for p in music_files(60):
+        groups.setdefault(library_group(p) or "other", []).append(
+            {"label": p.stem, "value": _track_value(p), "seconds": round(audio_duration(p)),
+             "url": f"/api/audio/{_audio_key(p)}/audio"})
+    moods = sorted(d.name for d in C.MUSIC_LIB.iterdir() if d.is_dir()) if C.MUSIC_LIB.exists() else []
+    return jsonify({"moods": [{"id": m, "tracks": groups.get(m, [])} for m in moods if m in groups or m != "other"]
+                    + ([{"id": "other", "tracks": groups["other"]}] if "other" in groups else []),
+                    "count": sum(len(v) for v in groups.values())})
+
+
+@app.get("/api/sfx")
+def sfx_library():
+    """Sound-effect kinds (folders of assets/library/sfx) with their files; 'other' = the old local folder."""
+    groups = {}
+    for p in sfx_files():
+        groups.setdefault(library_group(p) or "other", []).append(
+            {"label": p.stem, "starter": is_starter(p), "url": f"/api/audio/{_audio_key(p)}/audio"})
+    return jsonify([{"kind": k, "files": v, "starter_only": all(f["starter"] for f in v)}
+                    for k, v in sorted(groups.items(), key=lambda kv: (kv[0] == "other", kv[0]))])
+
+
+@app.get("/api/audio/<key>/audio")
+def library_audio(key):
+    """Plays one music / sound-effect file of the library (only files the two lists above contain)."""
+    for p in music_files(0) + sfx_files():
+        if _audio_key(p) == key:
+            return send_file(p, conditional=True)
+    abort(404)
+
+
+GRADES = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F+", "F"]
+
+
+@app.get("/api/voices")
+def voices():
+    """Voice presets (presets/voices): default first, then best grade first. preview_url plays a sample."""
+    out = presets.list("voices")
+    rank = lambda v: (v["id"] != presets.DEFAULTS["voices"],
+                      GRADES.index(v["grade"]) if v.get("grade") in GRADES else len(GRADES), v["label"])
+    for v in out:
+        p = presets.load("voices", v["id"])
+        v["preview_url"] = f"/api/voices/{v['id']}/preview.wav?v={voice.preview_path(p).stem[-12:]}"
+    return jsonify(sorted(out, key=rank))
+
+
+@app.get("/api/voices/<vid>/preview.wav")
+def voice_preview(vid):
+    if vid not in presets.ids("voices"):
+        abort(404)
+    try:
+        f = voice.preview(presets.load("voices", vid))     # first time: a few seconds (Kokoro speaks one sentence)
+    except Exception as e:
+        return jsonify({"error": f"voice sample failed: {e}"}), 500
+    return send_file(f, mimetype="audio/wav", conditional=True)
+
+
+@app.get("/api/captions")
+def caption_styles():
+    """Caption styles (presets/captions) with the address of each one's preview clip."""
+    out = []
+    for c in presets.list("captions"):
+        try:
+            c["preview_url"] = f"/api/captions/{c['id']}/preview.mp4?v={captions.preview_path(c['id']).stem[-10:]}"
+        except presets.PresetError:
+            continue
+        out.append(c)
+    return jsonify(out)
+
+
+@app.get("/api/captions/<cid>/preview.mp4")
+def caption_preview(cid):
+    if cid not in presets.ids("captions"):
+        abort(404)
+    try:
+        with _caption_lock:
+            f = captions.make_preview(cid)      # made once per style (about a second), then served from disk
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return send_file(f, mimetype="video/mp4", conditional=True)
+
+
+@app.get("/api/art_styles")
+def art_styles():
+    return jsonify(presets.list("art_styles"))
+
+
+@app.post("/api/art_styles/<sid>/preview")
+def make_style_preview(sid):
+    if sid not in presets.ids("art_styles"):
+        return jsonify({"error": f"no art style '{sid}'"}), 404
+    if presets.preview_path(sid).exists():          # made before: never regenerate
+        return jsonify({"id": sid, "made": False, "preview_url": _preview_url(sid)})
+    if not C.IMAGE_MODEL_AVAILABLE:
+        return jsonify({"error": "Previews need the local image model (mflux), which only runs on an Apple "
+                                 "Silicon Mac. Make them in Video Studio on the Mac."}), 400
+    if any(j.get("status") in ("queued", "rendering") for j in jobs.list_jobs()):
+        return jsonify({"error": "a video is rendering; make previews when it has finished"}), 409
+    if not _preview_lock.acquire(blocking=False):
+        return jsonify({"error": "another preview is being made; wait for it to finish"}), 409
+    try:
+        visuals.make_style_preview(sid)
+    except Exception as e:
+        return jsonify({"error": f"preview failed: {e}"}), 500
+    finally:
+        _preview_lock.release()
+    return jsonify({"id": sid, "made": True, "preview_url": _preview_url(sid)})
+
+
+def _preview_url(sid):
+    return next((s["preview_url"] for s in presets.list("art_styles") if s["id"] == sid), None)
+
+
+@app.get("/api/art_styles/<sid>/preview.jpg")
+def style_preview_file(sid):
+    if sid not in presets.ids("art_styles") or not presets.preview_path(sid).exists():
+        abort(404)
+    return send_file(presets.preview_path(sid), mimetype="image/jpeg", max_age=0)
+
+
+@app.get("/api/presets")
+def list_presets():
+    """{kind: [{id, label}]} for every preset folder (presets/<kind>/*.json)."""
+    return jsonify({kind: presets.list(kind) for kind in presets.KINDS})
 
 
 @app.get("/api/jobs")

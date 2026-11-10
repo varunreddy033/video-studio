@@ -24,7 +24,7 @@ import soundfile as sf
 
 from . import config as C
 from . import captions, encoder, visuals, voice
-from .util import PipelineError, best_match, fmt_ts, list_audio, log, media_duration, run
+from .util import PipelineError, best_match, fmt_ts, log, media_duration, music_files, run, sfx_files
 
 SR = voice.SR
 
@@ -74,7 +74,9 @@ def _shot_spans(parsed, tl, total):
 
 def music_tracks(meta, rng):
     """music: one name, or several separated by commas (full videos: one per chapter, in order, repeating)."""
-    files = list_audio(C.BGM_DIR, 60)
+    if meta.get("music_off"):                        # music: none
+        return []
+    files = music_files(60)
     if C.BGM_FILE and (C.BGM_DIR / C.BGM_FILE).exists():
         return [C.BGM_DIR / C.BGM_FILE]
     names = [n.strip() for n in (meta.get("music") or "").split(",") if n.strip()] or [""]
@@ -105,7 +107,7 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
     P = C.TYPES[parsed["meta"].get("type", "full")]
     tracks = music_tracks(parsed["meta"], rng)
     bgm = tracks[0] if tracks else None
-    sfx_files = list_audio(C.SFX_DIR)
+    sfx_all = sfx_files()
     inputs = ["-i", voice_wav]
     fc = ["[0:a]aresample=48000,aformat=channel_layouts=mono,asplit=2[voice][key]"]
     mix = ["[voice]"]
@@ -143,11 +145,12 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
         mix.append("[bgm]")
     else:
         fc[0] = "[0:a]aresample=48000,aformat=channel_layouts=mono[voice]"
-        warnings.append("no music files (>= 60 s) in assets/audio/bgm")
+        if not parsed["meta"].get("music_off"):
+            warnings.append("no music files (>= 60 s) in assets/library/music or assets/audio/bgm")
     used = []
     for seg, s in zip(parsed["segments"], tl):
         for cue in seg["sfx"]:
-            f = best_match(cue, sfx_files, rng=rng)
+            f = best_match(cue, sfx_all, rng=rng)
             if not f:
                 continue
             ms = int(max(0, s["start"] - 0.15) * 1000)
@@ -157,6 +160,18 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
                       f"adelay={ms}|{ms}[s{k}]")
             mix.append(f"[s{k}]")
             used.append(f"{cue} -> {f.name}")
+            k += 1
+        for a in seg.get("sfx_auto") or []:              # sfx: auto (pipeline/sfx.py)
+            f = best_match(a["kind"], sfx_all, rng=rng)
+            if not f:
+                continue
+            ms = int(max(0, s["start"] - a["lead"]) * 1000)
+            inputs += ["-i", f]
+            fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{C.SFX_MAX_SEC},"
+                      f"afade=t=out:st={max(0.0, C.SFX_MAX_SEC - 0.5)}:d=0.5,volume={C.SFX_VOLUME * a['gain']:.3f},"
+                      f"adelay={ms}|{ms}[s{k}]")
+            mix.append(f"[s{k}]")
+            used.append(f"auto {a['kind']} -> {f.name}")
             k += 1
     fc.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:normalize=0,"
               f"aformat=channel_layouts=stereo[aout]")
@@ -224,7 +239,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     with ThreadPoolExecutor(max_workers=3) as pool:
         futs = {pool.submit(visuals.make_shot, parsed["shots"][i], i, spans[i][1], W, H, job_dir, mode,
                             warnings, {"character": char, "words": all_words, "t0": spans[i][0],
-                                       "safe": P.get("safe")}): i for i in order}
+                                       "safe": P.get("safe"),
+                                       "art_style": meta["presets"]["art_style"]}): i for i in order}
         for f in as_completed(futs):
             clips[futs[f]] = f.result()
             done += 1
@@ -242,7 +258,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         for wd in s["words"]:
             words.append([wd[0], s["start"] + wd[1], s["start"] + wd[2], si])
     ass = job_dir / f"captions_{mode}.ass"
-    captions.write_ass(words, W, H, ass, total, style=P["captions"])
+    captions.write_ass(words, W, H, ass, total, style=P["captions"], preset=meta["presets"]["captions"])
     captions.write_srt(words, job_dir / f"captions_{mode}.srt")
 
     # 5 audio

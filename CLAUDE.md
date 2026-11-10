@@ -47,9 +47,11 @@ pipeline/
   voice.py          Kokoro-82M (am_michael) per segment, word timings from Kokoro (whisper.cpp backup), cached
   visuals.py        one clip per shot, cut exactly where its narration starts:
                       [ai: ...]     FLUX.2 klein (image_worker.py) + 8 alternating camera moves (draft: placeholder)
-                      [stock: ...]  same as ai, styled as a documentary photo (no stock service)
+                                    prompt = style_prompt(prompt, art_style) (presets/art_styles, default doc_photo)
+                      [stock: ...]  same as ai + the style's stock_suffix (doc_photo: a documentary photo)
                       [card] [number] [quote] [chart]  Pillow/matplotlib frames, animated in, then held
-  captions.py       word-by-word highlighted .ass captions (amber current word)
+  captions.py       word-by-word .ass captions in the caption style (presets/captions; default amber_word)
+  sfx.py            sfx: auto = rule-based sound effects per shot (no AI)
   assemble.py       timeline -> clips (3 parallel) -> join -> voice + ducked BGM (full: per chapter, crossfaded)
                     + SFX -> loudnorm -14 LUFS (2-pass, linear) -> burn captions (bundled font) -> encoder.py
   clip.py           clip Shorts: source job's voice cache + cached images, 9:16 re-frame, Short captions, no new AI
@@ -57,6 +59,8 @@ pipeline/
   thumbnails.py     3 options 1280x720: 2 AI images (thumbnail_prompt) + 1 video frame, big text
   jobs.py           output/jobs/<id>/state.json, one-at-a-time render queue, progress, resume via cache/
   config.py / util.py  settings from .env, shared helpers
+  presets.py        presets/<kind>/<id>.json (voices, captions, art_styles, music, niches): list/load/schema check,
+                    script header -> preset ids, output/jobs/<id>/job.json (resolved presets) on every render
 ```
 Draft = 960x540, AI images as placeholders (30 s video renders in ~5-15 s).
 Final = 1920x1080 10 Mbps, real AI images, thumbnails, metadata.txt (title, description, chapters,
@@ -82,6 +86,63 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - Character packs move between machines with tools/export_character_pack.py <id> -> output/character_packs/*.zip
   and tools/import_character_pack.py <zip> (SHA-256 per file, completeness vs pack.json, character file must
   match unless --force, existing pack moved to assets/characters/_backup/ only with --force).
+
+## Presets (P0, BUILT 2026-11-09, docs/SCRIPT_FORMAT.md "Presets")
+- presets/{voices,captions,art_styles,music,niches}/<id>.json, every file has "label" + "licence". Defaults:
+  voice en_us_michael (Kokoro am_michael 1.0, 155 wpm), captions amber_word (all captions.py values),
+  art_style doc_photo (IMAGE_STYLE + stock suffix + model/steps), music any (library, by name else random,
+  volume 0.18, duck, -14 LUFS), niche general (bundles the other four; no header key yet).
+- Header keys: language, voice, captions, art_style, music. Missing = default. Unknown id = Check ERROR (line 1)
+  listing the valid ids. Old values keep working with the same priority: voice: <Kokoro id> (script > character >
+  .env), music: <track names>. A voice preset id gives that preset's voice + speed (speed: still wins).
+- Every render writes output/jobs/<id>/job.json: type, format, language, the full preset files, overrides
+  (script/character/.env values that differ from the presets), output size. GET /api/presets = {kind: [{id, label}]}.
+- Used by the render: art style (F6), captions, voice, music/sfx choices (Look & sound, below). Defaults must equal
+  the original values: `bin/python tools/check_presets.py` (must say "presets: clean"; checks doc_photo prompts
+  and that amber_word writes the original caption file byte for byte, against a frozen copy of the old code).
+
+## Look & sound (BUILT 2026-11-10): voice, music, captions, sound effects in Video Studio
+- DECIDED 2026-11-10: assets/library/ IS in git (I upload music/SFX through GitHub): music/<mood>/, sfx/<kind>/,
+  README.md = what to upload. Folder name = how a file is found. assets/audio/ stays local + ignored and still works.
+  13 starter SFX are synthesised by tools/make_starter_sfx.py (no licence; my own files in a folder win).
+  No music tracks uploaded yet (2026-11-10): videos have no music until I add some.
+- UI: one "Look & sound" card after Check (new-video screen + Script editor), tabs Voice / Music / Captions /
+  Sound effects / Art style; every click writes a header line (voice:, music:, captions:, sfx:, art_style:).
+  Clip Shorts show only Captions.
+- Captions (F4): 11 presets (amber_word default, big_word, red_pop, soft_glow, karaoke_box, italic_punch, comic,
+  serif, pixel, clean_lower, none). captions.write_ass(preset=...); highlight word / box / none; box = the word
+  drawn again under the text as a fat blob (libass has no per-word box). Fonts: Barlow, Anton, Bangers, Poppins,
+  Cormorant SC, Press Start 2P (OFL, assets/fonts/licences). Preview clips: GET /api/captions/<id>/preview.mp4
+  (same code + libass, cached in assets/caption_previews).
+- Voices (F2, English only): 28 presets en_us_* / en_gb_* from Kokoro's VOICES.md (gender, accent, grade).
+  GET /api/voices/<id>/preview.wav speaks one sentence once (assets/voice_previews). Other languages = F3, not done
+  (needs lang codes in voice.py, fonts, word counting).
+- Music (F5, library part): music: <mood> | <track words> | a, b, c | none. GET /api/music, /api/sfx,
+  /api/audio/<key>/audio. Matching: most name words (synonyms), then exact cue words, then own files before
+  starter_*; old flat folders match as before.
+- SFX: header sfx: script (default) | auto | off. Auto cues are seg["sfx_auto"] (kind, lead, gain 0.8); whoosh
+  starts 0.28 s before the cut, riser 1.2 s. Check stats list each cue and why.
+- Tested 2026-11-10 (cloud copy): parser output identical on all 5 scripts; draft with music: calm + sfx: auto +
+  voice: en_us_heart + captions: red_pop = -14.1 LUFS; all tabs driven in a headless browser. Not yet run on
+  the Mac.
+
+## Art styles (F6, BUILT 2026-11-09)
+- presets/art_styles/<id>.json: id, label, description, prefix, suffix, stock_suffix, realistic, lora (null only:
+  the worker can't load LoRAs), lora_scale, steps (null = 4), licence. 8 styles: doc_photo (default), cinematic_film,
+  archival_bw, dark_oil_painting, graphic_novel, noir_neon, isometric_3d, paper_cut. Prompt words are my own text
+  (I wrote them; the brief's table didn't come through), adapted from twri/sdxl_prompt_styler (MIT).
+- ONE function visuals.style_prompt(prompt, style, stock) = "prefix, prompt, stock_suffix ([stock:] only), suffix".
+  Used by [ai:]/[stock:] shots, the 2 AI thumbnails (thumbnails.thumb_prompt) and clip.py (with the SOURCE job's
+  style). doc_photo suffix = config.IMAGE_STYLE (.env IMAGE_STYLE still overrides) -> byte-for-byte the old
+  prompts, same cache keys (checked: 132 prompts/cache names of all 5 scripts identical to the old code).
+- [act:] / [talk:] / character packs / presenter thumbnails keep the character's STYLE; character script +
+  art_style: = Check warning. Draft placeholders print "Art style: <label>" under the prompt.
+- Check summary: art_style {id, label, realistic, images: {total, new}} (new = not in the job's cache yet).
+- API: GET /api/art_styles, POST /api/art_styles/<id>/preview (fixed prompt "an old stone harbour at dawn with
+  fishing boats and gulls", seed 1000, 1280x720 -> assets/style_previews/<id>.jpg 720 px; 409 while a video
+  renders or another preview runs; 400 off the Mac; never regenerates), GET /api/art_styles/<id>/preview.jpg.
+- UI: "Art style" card after Check on the new-video screen and in the job's Script editor (tiles + preview
+  button; a click writes art_style: into the header and re-checks / re-saves).
 
 ## Presenter videos (DECIDED 2026-11-08, docs/PRESENTER_PLAN.md)
 - Script header `character: sterling` loads docs/characters/sterling.md (CHARACTER, STYLE, SEED 1000, voice
@@ -148,6 +209,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - Unused now: RENDER_TOKEN, FAL_KEY lines in .env (harmless). Backups: output/.env.backup-20261108(b).
 
 ## Assets
+- assets/library/ (in git, 2026-11-10): music/<mood>/ and sfx/<kind>/, see assets/library/README.md.
 - assets/audio/bgm = music beds (only files >= 60 s are used). `music:` in script.md matches file-name words.
 - assets/audio/sfx = short effects, matched to [sfx: word] by file-name words, capped at 2.5 s.
 - Cleaned 2026-11-08: 17 files moved to assets/audio/_unused (9 choir *patrikios* tracks, 4 duplicates, 4 non-music
@@ -217,6 +279,21 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       38 s, rendered in 40 s, 0 new images. Earlier CLI clip 1:03-1:58: 55 s in 35 s, -14.0 LUFS.
       Full-video music per chapter + forced libx264 tested on the sample (-14.1 LUFS). Pack export 137 MB zip
       (112 files) in <1 s; import into a fresh copy at another path renders talk + card with libx264.
+- [x] P0 presets layer (2026-11-09, cloud test copy on Linux, libx264, no music files there): parser output identical
+      to before on all 5 scripts; sample draft before/after: 30.1 s, 7 shots, same shot timings, same captions file,
+      -14.3 LUFS both (voice only, no music); with the same voice cache the audio is bit-identical and the picture
+      differs only by encoder noise (61.0 dB PSNR vs 60.8 dB between two runs of the OLD code). job.json written,
+      `captions: nope` = line-1 error with the valid ids, Sterling script passes Check, /api/presets 401 logged out.
+- [ ] P0 on the Mac: draft + final of docs/sample_script.md in the browser (finals need mflux; music there), check
+      -14.0 LUFS and job.json, compare render.log with an earlier sample job.
+- [x] F6 art styles (2026-11-09, cloud test copy on Linux): default prompts + cache keys identical to the old code,
+      `art_style: nope` = line-1 error listing the 8 ids, Sterling + art_style = warning with [act:]/[talk:] shots
+      unchanged, dark_oil_painting draft shows the style under each placeholder, picker tested in a headless
+      browser (8 tiles, pick writes the header on both screens), preview API rules (400 off-Mac, 409 while
+      rendering / second preview, a second click doesn't regenerate).
+- [ ] F6 on the Mac: make the 8 previews from the UI; finals of the sample in doc_photo, dark_oil_painting,
+      graphic_novel (3 different looks, -14.0 +-0.2 LUFS each); re-make an old final and a clip Short and check
+      render.log says 0 new AI images (needs a job that already has a final on this Mac).
 - [ ] Windows Legion setup not done or tested on Windows itself (setup.sh is Mac/Homebrew; needs Python 3.11,
       ffmpeg with libass, espeak-ng, the pip packages minus mflux). New AI images there need a diffusers backend.
 - Later: YouTube API audit + automatic upload.
@@ -231,6 +308,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   `python tools/import_character_pack.py sterling-pack-<date>.zip` (add `--force` to replace an existing pack)
 - Save + upload a finished change: `cd ~/youtube-pipeline && git add -A && bash tools/check_secrets.sh && git commit -m "..." && git push`
 - Secret check before every commit (must say "clean"): `bash tools/check_secrets.sh`
+- Preset check (must say "presets: clean"): `bin/python tools/check_presets.py`
 - GitHub login (gh CLI, account varunreddy033): `gh auth status`. Commits use the no-reply email
   150993157+varunreddy033@users.noreply.github.com.
 - Start Video Studio, then open http://localhost:8765 : `~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py`

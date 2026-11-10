@@ -1,0 +1,13 @@
+{
+  "label": "Any library track (by name, else random)",
+  "licence": "YouTube Audio Library tracks in assets/audio/bgm (credit line written to metadata.txt)",
+  "mode": "library",
+  "folder": "assets/audio/bgm",
+  "min_track_sec": 60,
+  "match": "words from the script's music: line against file names; no match = a random track picked from the title",
+  "volume": 0.18,
+  "duck": {"threshold": 0.03, "ratio": 6, "attack_ms": 15, "release_ms": 350},
+  "fade_in_sec": 1.5,
+  "chapter_crossfade_sec": 3.0,
+  "loudness_lufs": -14
+}

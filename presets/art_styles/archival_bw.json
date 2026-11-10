@@ -1,0 +1,13 @@
+{
+  "id": "archival_bw",
+  "label": "Archival black & white",
+  "description": "Old black-and-white press photos, for history topics.",
+  "prefix": "vintage black and white archival photograph",
+  "suffix": "1950s press photo, silver gelatin print, film grain, soft focus edges, faded contrast, monochrome, no text",
+  "stock_suffix": "historical documentary photograph",
+  "realistic": true,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text (prompt words adapted from twri/sdxl_prompt_styler, MIT)"
+}
