@@ -329,6 +329,11 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         generated in 88 s (29-32 s each incl. cool-down), whole final 114 s; same final again 19 s, 0 generated.
         Remotion draws plates dimmed toward the palette with a slow drift. Lesson: the server must be restarted
         after code changes (a render ran the old code once).
+  - [ ] Phase 6 Sterling Flat: benchmark DONE (2026-11-10, docs/presenter_bench/RESULTS_FLAT.md + flat_contact_sheet.jpg,
+        tools/flat_bench.py, docs/characters/sterling_flat.md SEED 2000): 4 masters on-model, poses A 7/7 (id 0.97-1.00),
+        poses B = edit of master 7/7 (id 0.98-1.00, most consistent), all 6 mouths + blink first try with 0.7-1.0%
+        change outside the mouth/eyes; 25 images in 19 min on battery. WAITING FOR VARUN'S APPROVAL before the full
+        pack (~1 h 40 min, plugged in) and in-scene lip-sync in Remotion.
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:
