@@ -247,6 +247,9 @@ def _run(job_id: str, mode: str):
 
     if parsed["meta"].get("clip"):
         result = clip.render(parsed, d, mode, progress)
+    elif parsed["meta"].get("style") == "motion":
+        from . import motion
+        result = motion.render(parsed, d, mode, progress)
     else:
         result = assemble.render(parsed, d, mode, progress)
     thumbs = []

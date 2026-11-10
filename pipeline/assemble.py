@@ -218,6 +218,13 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     log(job_dir, f"=== {mode.upper()} render: '{meta.get('title')}'  {len(parsed['segments'])} segments, "
                  f"{len(parsed['shots'])} shots, {W}x{H}")
 
+    stages, t_stage = {}, time.time()        # per-stage seconds, shown on the job page (timing only)
+
+    def lap(name):
+        nonlocal t_stage
+        stages[name] = round(time.time() - t_stage, 1)
+        t_stage = time.time()
+
     # 1 voice + timeline
     tl, total = _timeline(parsed, job_dir, progress)
     P = C.TYPES[meta.get("type", "full")]
@@ -226,6 +233,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
                             f"{P['label']}; cut some lines")
     voice_wav = _voice_track(tl, total, job_dir)
     log(job_dir, f"voice done: {fmt_ts(total)} ({total:.1f} s) in {time.time() - t_start:.0f}s")
+    lap("voice")
 
     # 2 visuals
     spans = _shot_spans(parsed, tl, total)
@@ -250,6 +258,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     # 3 join
     video = work / "video.mp4"
     join_clips(clips, video, job_dir)
+    lap("visuals")
 
     # 4 captions
     progress("captions")
@@ -260,16 +269,19 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     ass = job_dir / f"captions_{mode}.ass"
     captions.write_ass(words, W, H, ass, total, style=P["captions"], preset=meta["presets"]["captions"])
     captions.write_srt(words, job_dir / f"captions_{mode}.srt")
+    lap("captions")
 
     # 5 audio
     progress("audio mix")
     norm, bgm, sfx_used, loud_in, music = _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng)
+    lap("audio mix")
 
     # 6 encode
     progress("encoding")
     out = job_dir / f"{mode}.mp4"
     final_encode(video, norm, ass, out, mode, total, job_dir)
     dur = media_duration(out)
+    lap("encode")
 
     chapters = []
     for c in parsed["chapters"]:
@@ -286,4 +298,4 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "render_seconds": round(secs), "width": W, "height": H, "bgm": bgm.name if bgm else None,
             "sfx_used": sfx_used, "chapters": chapters, "warnings": warnings, "music": music,
             "type": meta.get("type", "full"), "encoder": encoder.name(),
-            "loudness_before": loud_in, "loudness_target": C.TARGET_LUFS}
+            "loudness_before": loud_in, "loudness_target": C.TARGET_LUFS, "stages": stages, "style": "classic"}

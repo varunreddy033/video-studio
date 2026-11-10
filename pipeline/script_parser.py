@@ -45,7 +45,7 @@ NUM_RE = re.compile(r"^[-+]?\d[\d,]*(\.\d+)?$")
 BAD_AI_WORDS = re.compile(r"\b(text|words?|logo|sign(age)?|caption|letters?|written|headline|label)\b", re.I)
 META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed", "thumbnail", "thumbnail_prompt",
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
-             "language", "captions", "art_style", "sfx"}     # + voice / music: preset ids (presets/), see presets.py
+             "language", "captions", "art_style", "sfx", "style", "palette"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -364,6 +364,23 @@ def parse(text: str) -> dict:
         meta["format"] = "vertical"
     elif not fmt_given:
         meta["format"] = P["format"]
+    # ---------------------------------------------------------------- style (classic = default, untouched)
+    vstyle = (meta.get("style") or "classic").strip().lower()
+    if vstyle not in C.STYLES:
+        err(1, f"style must be classic or motion, got '{vstyle}'")
+        vstyle = "classic"
+    meta["style"] = vstyle
+    if vstyle == "motion":
+        pal = (meta.get("palette") or "navy").strip().lower()
+        if pal not in C.PALETTES:
+            err(1, f"palette must be one of {', '.join(C.PALETTES)}, got '{pal}'")
+        meta["palette"] = pal
+        if vtype == "short":
+            err(1, "motion Shorts aren't built yet (motion plan phase 8); use style: classic for Shorts")
+        if meta["format"] != "landscape":
+            err(1, "style: motion is landscape (16:9) for now")
+    elif meta.get("palette"):
+        warn(1, "palette: only applies to style: motion")
     clip = None
     if meta.get("clip_from") or meta.get("clip_start") or meta.get("clip_end"):
         if vtype != "short":
@@ -522,7 +539,7 @@ def parse(text: str) -> dict:
         "character": char["name"] if char else None,
         "character_share": round(100 * char_secs / max(1.0, total)) if char else 0,
         "presenter_seconds": round(talk_secs),
-        "type": vtype, "type_label": P["label"], "clip": clip,
+        "type": vtype, "type_label": P["label"], "clip": clip, "style": vstyle,
         "sfx": {"mode": meta["sfx"], "script": sum(len(s["sfx"]) for s in segments), "auto": len(sfx_cues),
                 "cues": sfx_cues, "missing": sfx_missing},
         "music": {"off": meta["music_off"], "items": music_items, "tracks_available": len(tracks)},

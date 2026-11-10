@@ -56,6 +56,8 @@ pipeline/
                     + SFX -> loudnorm -14 LUFS (2-pass, linear) -> burn captions (bundled font) -> encoder.py
   clip.py           clip Shorts: source job's voice cache + cached images, 9:16 re-frame, Short captions, no new AI
   encoder.py        auto-detects h264_videotoolbox (Mac) / h264_nvenc (NVIDIA) / libx264 (VIDEO_ENCODER= forces)
+  motion.py         style: motion -> timeline.json (docs/MOTION_TIMELINE.md) -> Remotion (motion/) picture -> classic mix
+motion/             Remotion 4 project (React/TS, pinned): MotionVideo renders any timeline; Demo = phase-1 look test
   thumbnails.py     3 options 1280x720: 2 AI images (thumbnail_prompt) + 1 video frame, big text
   jobs.py           output/jobs/<id>/state.json, one-at-a-time render queue, progress, resume via cache/
   config.py / util.py  settings from .env, shared helpers
@@ -279,7 +281,19 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         words with label tags + word-by-word headline pill; line chart draws while -5.5% counts, calendar page flips,
         shake on "slammed"; push-from-right with shadow band; zoom-through into the chart's red end dot; doors with
         "?" bubbles, coin pile, dashed arrow. Render: Remotion 16.4 s, total 19 s (concurrency 4). -14.0 LUFS.
-        WAITING FOR VARUN'S APPROVAL of the look before phase 2.
+        Approved by Varun 2026-11-10.
+  - [x] Phase 2 bridge (2026-11-10): `style: motion` in the header -> pipeline/motion.py (jobs.py routes it; classic
+        untouched apart from per-stage timings). Contract docs/MOTION_TIMELINE.md + motion/src/motion/types.ts:
+        scenes (from/frames/transition/background/headline), elements with enter/exit cues = word index + frame.
+        Python makes voice, FLUX images (same cache keys as classic), [talk:] clips, then STOPS the image worker,
+        writes timeline.json, runs `remotion render ... Motion --props --public-dir --concurrency` (video only),
+        mixes audio with the classic _mix_audio + loudnorm, muxes without re-encoding. Job page shows time per stage
+        (classic too). Interim adapter: one scene per classic shot (phase 3's v3 tags replace it).
+        Test, sample with style: motion: draft 35 s (Remotion 25 s at half size), final 106 s = 3 new AI images 58 s
+        + Remotion 44 s for 903 frames + audio 3 s + mux 1 s; -14.1 LUFS; FLUX and Remotion never overlapped
+        (checked every second). Concurrency on the M5 Air (825-frame demo): 2 tabs 23 s, 4 tabs 17 s, 6 tabs 17 s,
+        8 tabs 18 s -> MOTION_CONCURRENCY=4 default. Classic re-check: sample passes Check, draft 13 s, old job's
+        final 10 s with 0 new AI images, -14.1 LUFS.
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:

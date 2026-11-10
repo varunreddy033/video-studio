@@ -81,7 +81,11 @@ SIZES = {
     ("landscape", "final"): (1920, 1080), ("landscape", "draft"): (960, 540),
     ("vertical", "final"): (1080, 1920), ("vertical", "draft"): (540, 960),
 }
-VIDEO_BITRATE = {"final": "10M", "draft": "2500k"}     # YouTube recommends ~8 Mbps for 1080p30
+VIDEO_BITRATE = {"final": "10M", "draft": "2500k"}
+# style: motion (Remotion). Browser tabs rendering frames in parallel; 4 keeps the fanless Air cool enough.
+MOTION_CONCURRENCY = int(env("MOTION_CONCURRENCY", "4"))
+STYLES = ("classic", "motion")
+PALETTES = ("navy",)     # YouTube recommends ~8 Mbps for 1080p30
 
 VIDEO_ENCODER = env("VIDEO_ENCODER")                   # empty = auto (videotoolbox / nvenc / libx264), see encoder.py
 
