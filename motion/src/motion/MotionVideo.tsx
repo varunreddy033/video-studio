@@ -27,7 +27,7 @@ const SceneView: React.FC<{sc: Scene; p: Palette}> = ({sc, p: base}) => {
   const p = (sc.palette && PALETTES[sc.palette]) || base;       // [scene: ... | palette=light] overrides
   return (
   <AbsoluteFill>
-    <Background p={p} tint={sc.background?.tint} />
+    <Background p={p} tint={sc.background?.tint} plate={sc.background?.plate} />
     {sc.elements.map((el) => <ElementView key={el.id} el={el} p={p} sceneFrames={sc.frames} />)}
     {sc.headline ? <HeadlinePill p={p} appear={sc.headline.appear}
       words={sc.headline.words.map((w) => ({text: w.text, at: w.frame}))} /> : null}

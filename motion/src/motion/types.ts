@@ -19,7 +19,7 @@ export type Transition =
   | {type: 'iris' | 'whip' | 'fade'; frames: number};
 export type Scene = {
   id: string; from: number; frames: number; transition: Transition | null;
-  background?: {tint?: string; name?: string};
+  background?: {tint?: string; name?: string; plate?: string};
   name?: string; line?: number; palette?: string;
   headline?: {appear: number; words: {text: string; word?: number; frame: number}[]};
   elements: Element[];

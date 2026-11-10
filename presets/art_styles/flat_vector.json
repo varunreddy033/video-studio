@@ -1,0 +1,15 @@
+{
+  "id": "flat_vector",
+  "label": "Flat vector (motion)",
+  "description": "Flat 2D vector illustration in the motion style's look: clean shapes, few colours, no gradients. Used for [+ gen: ...] props and scene plates in style: motion videos.",
+  "prefix": "flat 2D vector illustration",
+  "suffix": "clean geometric shapes, bold simple forms, limited colour palette of deep navy, warm amber, teal, coral and cream, soft flat shading, no gradients, no outlines, no text, no letters, no logos",
+  "stock_suffix": "",
+  "prop_suffix": "a single isolated object, centred, front three-quarter view, the whole object visible with a small margin, on a plain flat pure white background, no shadow on the ground, no other objects",
+  "plate_suffix": "wide empty background scene for an animated explainer, nobody in it, no people, no animals, open uncluttered middle and lower third for characters and objects, calm, slightly muted colours",
+  "realistic": false,
+  "lora": null,
+  "lora_scale": 1.0,
+  "steps": null,
+  "licence": "own text"
+}

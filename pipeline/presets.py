@@ -65,6 +65,8 @@ OPTIONAL = {
     "captions": {"enabled": bool, "blur_ratio": NUM, "shadow_ratio": NUM, "spacing_ratio": NUM, "angle": NUM,
                  "pop": bool, "box_colour": "colour", "box_pad_ratio": NUM},
     "voices": {"description": str, "gender": str, "accent": str, "grade": str},
+    # motion style (pipeline/props_gen.py): words for a cut-out prop and for a background set plate
+    "art_styles": {"prop_suffix": str, "plate_suffix": str},
 }
 CHOICES = {("captions", "highlight"): ("word", "box", "none"), ("captions", "case"): ("as_is", "upper", "lower")}
 

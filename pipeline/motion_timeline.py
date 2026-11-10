@@ -259,7 +259,8 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
         scenes.append({"id": f"s{k}", "from": begin, "frames": nxt - begin, "transition": tr,
                        **({"palette": sc_pal} if sc_pal else {}),
                        "name": sh.get("name"), "line": sh.get("line"),
-                       "background": {"tint": TINTS.get(sc_pal or palette, TINTS["navy"])[k % 6], "name": sh.get("name")},
+                       "background": {"tint": TINTS.get(sc_pal or palette, TINTS["navy"])[k % 6], "name": sh.get("name"),
+                                      **({"plate": assets["plates"][k]["src"]} if k in (assets.get("plates") or {}) else {})},
                        **({"headline": headline} if headline else {}), "elements": elements})
         prev_elements = elements
     return {"version": 1, "fps": FPS, "width": W, "height": H, "durationFrames": dur_frames, "palette": palette,

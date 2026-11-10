@@ -1,11 +1,25 @@
 import React from 'react';
-import {AbsoluteFill, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
 import {Palette} from '../lib/theme';
 
+/** A generated flat set plate behind the scene: slow drift, dimmed toward the palette so props stay readable. */
+export const Plate: React.FC<{p: Palette; src: string}> = ({p, src}) => {
+  const f = useCurrentFrame();
+  const z = 1.04 + 0.03 * Math.sin(f / 240);
+  return (
+    <AbsoluteFill style={{overflow: 'hidden'}}>
+      <Img src={staticFile(src)} style={{width: '100%', height: '100%', objectFit: 'cover',
+        transform: `scale(${z}) translateX(${Math.sin(f / 300) * 1.2}%)`}} />
+      <AbsoluteFill style={{background: `linear-gradient(180deg, ${p.bg}55 0%, ${p.bg}22 45%, ${p.bg}88 100%)`}} />
+    </AbsoluteFill>
+  );
+};
+
 /** Flat plate: soft vertical gradient + a subtle dashed texture that drifts slowly (never fully still). */
-export const Background: React.FC<{p: Palette; tint?: string; drift?: number}> = ({p, tint, drift = 0.25}) => {
+export const Background: React.FC<{p: Palette; tint?: string; drift?: number; plate?: string}> = ({p, tint, drift = 0.25, plate}) => {
   const f = useCurrentFrame();
   const off = (f * drift) % 48;
+  if (plate) return <Plate p={p} src={plate} />;
   return (
     <AbsoluteFill style={{background: `linear-gradient(180deg, ${tint ?? p.bg2} 0%, ${p.bg} 78%)`}}>
       <svg width="100%" height="100%" style={{position: 'absolute', inset: 0}}>

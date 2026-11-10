@@ -91,7 +91,38 @@ def _assets(parsed, tl, spans, all_words, job_dir: Path, public: Path, mode: str
         out[i] = {"type": "image", "src": f"assets/{dst.name}"}
     progress("images + presenter", len(need), len(need))
     out["chars"] = character_cutouts(parsed, public)
+    out.update(generated(parsed, public, job_dir, make=(mode == "final"), progress=progress))
     visuals.stop_image_worker()        # frees ~5 GB and the GPU before Remotion starts
+    return out
+
+
+def generated(parsed, public: Path, log_dir: Path, make: bool, progress=None) -> dict:
+    """[+ gen: ...] props and scene plates (pipeline/props_gen.py). make=True (finals) generates what's missing,
+    one image at a time; otherwise only cached ones are used and the rest are drawn as placeholders."""
+    from . import props_gen as PG
+    gens, plates = PG.wanted(parsed)
+    out = {"gens": {}, "plates": {}}
+    total = len(gens) + len(plates)
+    n = 0
+    for text in gens:
+        if progress:
+            progress("props + plates", n, total)
+        path = PG.make_prop(text, log_dir) if make else (PG.prop_path(text) if PG.prop_path(text).exists() else None)
+        n += 1
+        if path:
+            dst = public / "assets" / f"gen_{path.name}"
+            _link(path, dst)
+            out["gens"][text] = {"src": f"assets/{dst.name}"}
+    for k, name, custom in plates:
+        if progress:
+            progress("props + plates", n, total)
+        pp = PG.plate_path(name, custom)
+        path = PG.make_plate(name, custom, log_dir) if make else (pp if pp.exists() else None)
+        n += 1
+        if path:
+            dst = public / "assets" / f"plate_{path.name}"
+            _link(path, dst)
+            out["plates"][k] = {"src": f"assets/{dst.name}"}
     return out
 
 
@@ -250,6 +281,7 @@ def preview(parsed: dict, out_dir: Path) -> list:
             _link(Path(img), dst)
             assets[k] = {"type": "image", "src": f"assets/{dst.name}"}
     assets["chars"] = character_cutouts(parsed, public)
+    assets.update(generated(parsed, public, work, make=False))       # previews never generate
     tl = MT.build(parsed, MT.EstimateTiming(segs), spans, total, assets, palette=parsed["meta"].get("palette") or "navy")
     frames = []
     for k, sc in enumerate(tl["scenes"]):

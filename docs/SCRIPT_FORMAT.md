@@ -238,7 +238,19 @@ by `kind: text` (`door: fund`), or by an id you give: `[+ door: FUND #fund | ...
 - **signs**: `arrow`, `arrow_up`, `arrow_down`, `check`, `cross`, `warning`
 
 Props take a colour: `[+ house | left | color=teal]` (accent, teal, sky, coral, good, bad, or a #hex). Any other kind is drawn as a
-labelled placeholder, and `[+ gen: ...]` makes a new one with the image model (motion phase 5).
+labelled placeholder.
+
+**Generated props** `[+ gen: a pair of white wired earphones | right | slide]`: anything not in the library is drawn by
+the local image model in the `flat_vector` art style (presets/art_styles/flat_vector.json) on a white background, cut
+out with rembg, and kept in `assets/library/props/` (in git). It is made once, in the first final that needs it
+(about 30 s), and reused by every later video and draft. Check shows how many are still to be made. Until then,
+drafts and previews show a labelled placeholder. Describe one object, no text or logos: "a gold padlock", not
+"the Apple logo".
+
+**Set plates** (flat background scenes, also made once and kept in `assets/library/plates/`): a scene named one of
+`city_night`, `city_day`, `ocean`, `stage`, `office`, `street`, `trading_floor`, `server_room`, `factory_floor`, `bank_hall`, `home`, `classroom`, `newsroom`, `space`, `desert`, `port`, `farm`
+gets a plate behind it; any scene can have its own with `[scene: name | plate=a rainy harbour at dusk]`, and
+`plate=no` turns it off. Other scene names use the plain code background.
 
 **Data components** (in-scene, with a place at the end):
 | Tag | Example |

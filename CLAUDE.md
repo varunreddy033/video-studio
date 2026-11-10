@@ -320,6 +320,15 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         output/motion_library.mp4 (75 s: 3 prop pages, 7 data pages incl. light palette, 9 transitions), rendered
         in 39-41 s. Motion sample final 55 s (Remotion 50 s warm), -14.0 LUFS; classic draft 13 s, classic parse
         identical.
+  - [x] Phase 5 flat art style (2026-11-10): presets/art_styles/flat_vector.json (+ optional prop_suffix /
+        plate_suffix fields in presets.py). pipeline/props_gen.py: [+ gen: text] -> FLUX.2 klein 1024x1024 in
+        flat_vector on white -> rembg u2net cut-out, trimmed -> assets/library/props/<slug>-<key>.png (+ .json);
+        scene plates for 17 known names (city_night, office, trading_floor, server_room...) or | plate=<desc>
+        -> 1280x720 -> assets/library/plates/. Both in git, made once in the first final, reused everywhere
+        (drafts/previews never generate; Check counts what's missing for its estimate). Test: 2 props + 1 plate
+        generated in 88 s (29-32 s each incl. cool-down), whole final 114 s; same final again 19 s, 0 generated.
+        Remotion draws plates dimmed toward the palette with a slow drift. Lesson: the server must be restarted
+        after code changes (a render ran the old code once).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:

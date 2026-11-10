@@ -554,9 +554,11 @@ def parse(text: str) -> dict:
     if is_motion and segments:
         from . import script_v3
         scenes = script_v3.check(meta, segments, shots, warn, err, wps)
-        gens = sum(1 for sh in shots for e in sh.get("events", []) if e.get("op") == "add" and e.get("kind") == "gen")
+        from . import props_gen
+        gens, plates = props_gen.missing({"shots": shots})      # only ones not cached yet
         pics = sum(1 for sh in shots if sh["type"] in ("ai", "stock"))
-        stats.update(scenes=scenes, motion_elements=sum(sc["elements"] for sc in scenes), ai_images=gens + pics,
+        stats.update(scenes=scenes, motion_elements=sum(sc["elements"] for sc in scenes), ai_images=gens + plates + pics,
+                     new_props=gens, new_plates=plates,
                      est_draft_seconds=round(15 + total * 1.0),
                      est_final_seconds=round(20 + total * 1.6 + (gens + pics) * C.SECONDS_PER_IMAGE))
         errors.sort(key=lambda e: e["line"])
