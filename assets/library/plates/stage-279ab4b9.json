@@ -1,0 +1,9 @@
+{
+ "scene": "the_list",
+ "description": "an empty theatre stage with red curtains and one soft spotlight",
+ "prompt": "flat 2D vector illustration of an empty theatre stage with red curtains and one soft spotlight, wide empty background scene for an animated explainer, nobody in it, no people, no animals, open uncluttered middle and lower third for characters and objects, calm, slightly muted colours, clean geometric shapes, bold simple forms, limited colour palette of deep navy, warm amber, teal, coral and cream, soft flat shading, no gradients, no outlines, no text, no letters, no logos",
+ "style": "flat_vector",
+ "model": "Runpod/FLUX.2-klein-4B-mflux-4bit",
+ "version": "v1",
+ "made": "2026-11-10 21:14"
+}

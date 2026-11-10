@@ -129,6 +129,31 @@ def generated(parsed, public: Path, log_dir: Path, make: bool, progress=None) ->
 PUPPET_H = 1000                    # px height of the puppet frames (the tallest a presenter is drawn in a scene)
 
 
+PUPPET_VERSION = "2"               # bump to rebuild every pack's puppet frames (2 = edge clean-up)
+
+
+def _clean_edge(im, cut: int = 3):
+    """Remove the light rim a cut-out carries from its old (light grey) background: pull the alpha in by `cut` px,
+    soften it, and repaint the edge pixels with the colour of the character just inside the edge."""
+    import numpy as np
+    from PIL import Image, ImageFilter
+    im = im.convert("RGBA")
+    a = im.split()[-1]
+    inner = a.point(lambda v: 255 if v >= 250 else 0).filter(ImageFilter.MinFilter(2 * cut + 1))
+    r = cut * 3
+    wsum = np.asarray(inner.filter(ImageFilter.GaussianBlur(r)), dtype=np.float32) / 255.0
+    rgb = np.asarray(im.convert("RGB"), dtype=np.float32)
+    m = np.asarray(inner, dtype=np.float32)[..., None] / 255.0
+    spread = np.asarray(Image.fromarray((rgb * m).astype("uint8")).filter(ImageFilter.GaussianBlur(r)), dtype=np.float32)
+    fill = spread / np.maximum(wsum[..., None], 1e-3)
+    edge = (m < 0.5) & (wsum[..., None] > 0.02)                 # outside the safe inner part, but near it
+    out = np.where(edge, np.clip(fill, 0, 255), rgb).astype("uint8")
+    new_a = a.filter(ImageFilter.MinFilter(2 * cut + 1)).filter(ImageFilter.GaussianBlur(1.2))
+    res = Image.fromarray(out, "RGB").convert("RGBA")
+    res.putalpha(new_a)
+    return res
+
+
 def character_cutouts(parsed, public: Path) -> dict:
     """[char: pose] layers = a lip-synced puppet made from the character's pack (the same frames [talk:] uses):
     per pose 6 mouth shapes + the same 6 with eyes shut, cropped to the character. Made once per pack
@@ -150,11 +175,13 @@ def character_cutouts(parsed, public: Path) -> dict:
             continue
         files = {(shp, b): pdir / f"{pose}_{shp}{'_blink' if b else ''}.png" for shp in presenter.SHAPES for b in (0, 1)}
         newest = max(pack_json.stat().st_mtime, (characters.pack_path(name, info["dir"]) / "closed_cut.png").stat().st_mtime)
-        if not all(f.exists() and f.stat().st_mtime >= newest for f in files.values()):
+        stamp = pdir / f"{pose}.v{PUPPET_VERSION}"
+        if not (stamp.exists() and all(f.exists() and f.stat().st_mtime >= newest for f in files.values())):
             frames, blinks, _ = presenter._pose_frames(name, pose, PUPPET_H)
             pdir.mkdir(parents=True, exist_ok=True)
             for (shp, b), f in files.items():
-                (blinks if b else frames)[shp].save(f)
+                _clean_edge((blinks if b else frames)[shp]).save(f)
+            stamp.write_text("ok", encoding="utf-8")
         entry = {"frames": {}, "blinks": {}}
         for (shp, b), f in files.items():
             dst = public / "assets" / f"char_{f.name}"

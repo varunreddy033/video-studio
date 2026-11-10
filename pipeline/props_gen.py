@@ -69,12 +69,20 @@ def prop_path(text: str) -> Path:
     return PROPS_DIR / f"{_slug(text)}-{h(prop_prompt(text), VERSION)[:8]}.png"
 
 
+def _plate_key(name: str, custom: str = ""):
+    """`plate=home` (a known name) on any scene = that known plate, shared by every scene and video that uses it."""
+    known = (custom or "").strip().lower().replace(" ", "_")
+    return (known, "") if known in PLATES else (name, custom)
+
+
 def plate_desc(name: str, custom: str = "") -> str:
+    name, custom = _plate_key(name, custom)
     return custom or PLATES.get(name, "")
 
 
 def plate_path(name: str, custom: str = "") -> Path:
     desc = plate_desc(name, custom)
+    name, _ = _plate_key(name, custom)
     return PLATES_DIR / f"{_slug(name)}-{h(plate_prompt(desc), VERSION)[:8]}.png"
 
 
@@ -153,4 +161,4 @@ def missing(parsed):
     """How many props/plates a final would have to generate (for Check's time estimate)."""
     gens, plates = wanted(parsed)
     return (sum(1 for g in gens if not prop_path(g).exists()),
-            sum(1 for _, n, c in plates if not plate_path(n, c).exists()))
+            len({plate_path(n, c) for _, n, c in plates if not plate_path(n, c).exists()}))

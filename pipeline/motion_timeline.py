@@ -122,8 +122,8 @@ def _box(ev, placed, auto_i, char_side=None):
         cell = W * span / cols
         x = W * lo + cell * (i % cols + 0.5)
         if kind == "card":
-            bw = min(cell * 0.9, 640)
-            bh = min(bw * 0.52, 290)
+            bw = min(cell * 0.94, 640)
+            bh = min(bw * (0.52 if bw > 480 else 0.74), 290)     # narrow tiles are taller, so the words stay big
             y_bottom = (400 + (i // cols) * 340 if cols < n else 580) + bh / 2
         elif bw > cell * (lim := 1.3 if kind == "number" else 0.96):    # a number's digits fill ~2/3 of its box
             f = cell * lim / bw

@@ -9,6 +9,11 @@ import {Compare, Pie, Ranking, WorldMap} from '../library/Data';
 
 const MOVES = [[1, 1.1, 0, 0], [1.08, 1.08, -0.03, 0], [1.1, 1, 0, 0], [1.08, 1.08, 0.03, 0], [1, 1.1, -0.02, -0.015], [1.08, 1.08, 0, 0.025]];
 
+/** A soft navy edge on full-frame pictures and presenter clips: the same deep blue as the animated scenes. */
+const Vignette: React.FC = () => (
+  <AbsoluteFill style={{background: 'radial-gradient(ellipse 78% 78% at 50% 46%, rgba(13,22,48,0) 58%, rgba(13,22,48,0.5) 100%)'}} />
+);
+
 /** Full-frame still with a slow camera move across the scene (draft placeholders and FLUX images). */
 const ImageEl: React.FC<{el: Element; frames: number}> = ({el, frames}) => {
   const f = useCurrentFrame();
@@ -20,12 +25,14 @@ const ImageEl: React.FC<{el: Element; frames: number}> = ({el, frames}) => {
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Img src={staticFile(el.props.src)} style={{width: '100%', height: '100%', objectFit: el.props.fit ?? 'cover',
         transform: `scale(${z}) translate(${px * (e - 0.5) * 2 * 100}%, ${py * (e - 0.5) * 2 * 100}%)`}} />
+      <Vignette />
     </AbsoluteFill>
   );
 };
 
 const VideoEl: React.FC<{el: Element}> = ({el}) => (
-  <AbsoluteFill><OffthreadVideo src={staticFile(el.props.src)} muted style={{width: '100%', height: '100%', objectFit: 'cover'}} /></AbsoluteFill>
+  <AbsoluteFill><OffthreadVideo src={staticFile(el.props.src)} muted style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+    <Vignette /></AbsoluteFill>
 );
 
 const CardEl: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
@@ -58,7 +65,7 @@ const TileEl: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
   const longest = Math.max(...lines.map((l) => l.length), 3);
   const fs = Math.min((w - 56) / (longest * 0.8), (h * 0.5) / lines.length, 96);
   const sub: string = el.props.sub ?? '';
-  const ss = Math.max(22, Math.min(34, fs * 0.5));
+  const ss = Math.max(26, Math.min(36, fs * 0.5));
   return (
     <div style={{position: 'absolute', left: x, top: y + bob(f, (x + y) % 80, 4, 84), width: w, height: h, boxSizing: 'border-box',
       transform: `scale(${s})`, opacity: Math.min(1, s * 2), background: p.bg2, borderRadius: 26,

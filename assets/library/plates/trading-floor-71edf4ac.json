@@ -1,0 +1,9 @@
+{
+ "scene": "trading_down",
+ "description": "a stock trading floor with rows of desks and big wall screens showing abstract charts",
+ "prompt": "flat 2D vector illustration of a stock trading floor with rows of desks and big wall screens showing abstract charts, wide empty background scene for an animated explainer, nobody in it, no people, no animals, open uncluttered middle and lower third for characters and objects, calm, slightly muted colours, clean geometric shapes, bold simple forms, limited colour palette of deep navy, warm amber, teal, coral and cream, soft flat shading, no gradients, no outlines, no text, no letters, no logos",
+ "style": "flat_vector",
+ "model": "Runpod/FLUX.2-klein-4B-mflux-4bit",
+ "version": "v1",
+ "made": "2026-11-10 21:16"
+}

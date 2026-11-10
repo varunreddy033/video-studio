@@ -342,6 +342,13 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         the classic job) + Remotion 530 s for 16,064 frames + audio 26 s + mux 5 s; -14.0 LUFS; on battery.
         WAITING FOR VARUN'S FEEDBACK on this video. Known weak spots: thin white rim around the 3D cut-out on navy,
         scenes are navy-only (no plates used), [talk:] shots are the classic studio look.
+  - [x] Weak-spot fixes for the EarPods motion video (2026-11-10, previews checked, FINAL NOT RE-RENDERED YET: battery
+        was 13%): puppet cut-outs get a clean edge (motion._clean_edge, PUPPET_VERSION 2, no white rim) + a soft glow
+        behind the presenter; `plate=<known name>` works on any scene and shares one plate; 7 plates in
+        assets/library/plates (city_night, city_day, home, stage, office, street, trading_floor), drawn blurred and
+        dimmed; navy vignette on full-frame [talk:]/[ai:]/[act:] shots; narrow tiles taller; script got plates on 14
+        scenes and pose switches/labels in slow stretches (Check: 1 pacing warning left, bose). Still to do: render
+        the final plugged in and look at it; unbothered scene label touches the quote's last word.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

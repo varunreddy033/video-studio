@@ -118,6 +118,8 @@ export const CharView: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
     <div style={{width: '100%', height: '100%', position: 'relative', transformOrigin: '50% 100%',
       transform: `translateY(${nod}px) rotate(${sway}deg) scaleY(${breathe})`,
       filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.35))'}}>
+      <div style={{position: 'absolute', left: '-22%', right: '-22%', top: '-6%', bottom: '4%', borderRadius: '50%',
+        background: `radial-gradient(closest-side, ${p.sky}47 0%, ${p.sky}1F 55%, transparent 100%)`}} />
       {all.map((src) => <Img key={src} src={staticFile(src)} style={{...layer, opacity: src === want ? 1 : 0}} />)}
     </div>
   );
