@@ -1,0 +1,33 @@
+Video Studio
+Copyright (c) 2026 Varun Reddy. The code is released under the MIT License (see LICENSE).
+
+NOT INCLUDED: each user supplies their own
+- Music and sound effects (assets/audio/bgm, assets/audio/sfx). None are in this repository. Download your own,
+  for example from the YouTube Audio Library, and follow each track's licence and attribution terms
+  (Video Studio writes the track name into metadata.txt for the description).
+- Generated character packs (assets/characters/<name>/ images). Only pack.json and contact_sheet.jpg of the
+  example character are included. Each user generates their own pack with tools/make_character_pack.py from a
+  character file in docs/characters/.
+- AI models. setup.sh downloads them from their publishers; they are not part of this repository and keep their
+  own licences.
+
+THE STERLING CHARACTER
+"Sterling" (the grey-and-white cat presenter in a navy blazer: docs/characters/sterling.md, its contact sheet and
+the example frames in docs/images/) is the visual identity of the author's YouTube channel. They are included as
+an example of what the pipeline makes. Please don't publish videos as Sterling or with his look; build your own
+character (miso, biscuit, nova, or one you write).
+
+THIRD-PARTY COMPONENTS
+Included in this repository:
+- Barlow and Barlow Condensed fonts (assets/fonts), SIL Open Font License 1.1, see assets/fonts/OFL.txt.
+Downloaded by setup.sh / on first use (not included):
+- FLUX.2 [klein] 4B, 4-bit MLX build (Runpod/FLUX.2-klein-4B-mflux-4bit), Apache-2.0. Not the 9B model,
+  which is non-commercial.
+- Kokoro-82M text-to-speech (hexgrad/Kokoro-82M), Apache-2.0.
+- whisper.cpp (MIT) with the ggml-small model (OpenAI Whisper, MIT).
+- Depth Anything V2 Small (depth-anything/Depth-Anything-V2-Small-hf), Apache-2.0. Base/Large are
+  non-commercial and are not used.
+- rembg (MIT) with the u2net model (Apache-2.0).
+- FFmpeg (installed separately; LGPL/GPL depending on the build), mflux (MIT), PyTorch, transformers, OpenCV,
+  Pillow, matplotlib, Flask and the other Python packages in setup.sh, each under its own licence.
+AI-generated pictures may need to be disclosed as "altered or synthetic content" when you upload to YouTube.

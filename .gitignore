@@ -1,0 +1,33 @@
+# --- Python environment (this project folder is also the venv) ---
+bin/
+lib/
+include/
+share/
+pyvenv.cfg
+__pycache__/
+*.pyc
+
+# --- secrets: never commit ---
+.env
+.env.*
+!.env.example
+old/n8n_data_backup_*.tar.gz
+data/
+
+# --- generated / large, re-created by setup.sh or the pipeline ---
+output/
+models/
+setup.log
+FastVideo/
+
+# --- licensed media (YouTube Audio Library): keep on this Mac, don't redistribute ---
+assets/audio/
+
+# --- macOS ---
+.DS_Store
+
+# generated character packs + shared image cache (re-made by tools/make_character_pack.py; pack.json + sheet are kept)
+assets/cache/
+assets/characters/*/*
+!assets/characters/*/pack.json
+!assets/characters/*/contact_sheet.jpg

@@ -1,0 +1,1078 @@
+{
+ "character": "sterling",
+ "doc": "/Users/varunreddy/youtube-pipeline/docs/characters/sterling.md",
+ "seed": 1000,
+ "size": 1024,
+ "poses": {
+  "neutral": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/96300afd2f6a.png",
+     "identity": 0.79,
+     "pose_change": 0.343,
+     "score": 0.79
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/32e0c1cc5eb2.png",
+     "identity": 0.959,
+     "pose_change": 0.352,
+     "score": 0.959
+    },
+    "M": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/44ddac5492f1.png",
+     "identity": 1.0,
+     "pose_change": 0.0,
+     "score": 1.0
+    }
+   },
+   "pick": "M",
+   "override": "master",
+   "mouth_box": [
+    342,
+    369,
+    684,
+    553
+   ],
+   "eye_box": [
+    253,
+    242,
+    773,
+    426
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/f62df52d24d1.png",
+       "seed": 3000,
+       "inside": 0.108,
+       "outside": 0.004,
+       "score": 0.089
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/8ca3b797bd28.png",
+       "seed": 3001,
+       "inside": 0.07,
+       "outside": 0.004,
+       "score": 0.051
+      }
+     ],
+     "pick": 0
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/ea2b42b2db14.png",
+       "seed": 3010,
+       "inside": 0.229,
+       "outside": 0.007,
+       "score": 0.196
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/250e383a80b1.png",
+       "seed": 3011,
+       "inside": 0.151,
+       "outside": 0.005,
+       "score": 0.126
+      }
+     ],
+     "pick": 0
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/26fda40b2098.png",
+       "seed": 3020,
+       "inside": 0.022,
+       "outside": 0.004,
+       "score": 0.004
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/97c715163ace.png",
+       "seed": 3021,
+       "inside": 0.07,
+       "outside": 0.004,
+       "score": 0.049
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/4de7e592f8f9.png",
+       "seed": 3030,
+       "inside": 0.156,
+       "outside": 0.005,
+       "score": 0.13
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/21712cbdaeb5.png",
+       "seed": 3031,
+       "inside": 0.103,
+       "outside": 0.002,
+       "score": 0.092
+      }
+     ],
+     "pick": 0
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/9e721c7217ff.png",
+       "seed": 3040,
+       "inside": 0.022,
+       "outside": 0.006,
+       "score": -0.038
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/efac1d9ccf5f.png",
+       "seed": 3041,
+       "inside": 0.04,
+       "outside": 0.004,
+       "score": -0.039
+      }
+     ],
+     "pick": 0
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/24a378841ac1.png",
+       "seed": 3050,
+       "inside": 0.204,
+       "outside": 0.007,
+       "score": 0.171
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e4cd9c30ebb4.png",
+       "seed": 3051,
+       "inside": 0.193,
+       "outside": 0.005,
+       "score": 0.169
+      }
+     ],
+     "pick": 0
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_neutral"
+  },
+  "pointing": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/ad10eb2c73e5.png",
+     "identity": 0.978,
+     "pose_change": 0.219,
+     "score": 0.978
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/5b7fc7baae33.png",
+     "identity": 0.998,
+     "pose_change": 0.079,
+     "score": 0.998
+    }
+   },
+   "pick": "B",
+   "override": null,
+   "mouth_box": [
+    341,
+    369,
+    681,
+    551
+   ],
+   "eye_box": [
+    252,
+    243,
+    770,
+    425
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/87329593c3f7.png",
+       "seed": 3000,
+       "inside": 0.112,
+       "outside": 0.002,
+       "score": 0.103
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/fd814463e6d0.png",
+       "seed": 3001,
+       "inside": 0.075,
+       "outside": 0.002,
+       "score": 0.064
+      }
+     ],
+     "pick": 0
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/d981cf60d814.png",
+       "seed": 3010,
+       "inside": 0.264,
+       "outside": 0.004,
+       "score": 0.242
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/bf4984fd4d35.png",
+       "seed": 3011,
+       "inside": 0.154,
+       "outside": 0.003,
+       "score": 0.14
+      }
+     ],
+     "pick": 0
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/df4a9f6ff8e1.png",
+       "seed": 3020,
+       "inside": 0.024,
+       "outside": 0.002,
+       "score": 0.014
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/6cdcb9f8ca36.png",
+       "seed": 3021,
+       "inside": 0.072,
+       "outside": 0.003,
+       "score": 0.058
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/891a98348832.png",
+       "seed": 3030,
+       "inside": 0.168,
+       "outside": 0.005,
+       "score": 0.141
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/5c2b1773f25d.png",
+       "seed": 3031,
+       "inside": 0.115,
+       "outside": 0.001,
+       "score": 0.108
+      }
+     ],
+     "pick": 0
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/0b0d9a7ed3ce.png",
+       "seed": 3040,
+       "inside": 0.019,
+       "outside": 0.002,
+       "score": -0.02
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/7aeebc0f0b6d.png",
+       "seed": 3041,
+       "inside": 0.032,
+       "outside": 0.002,
+       "score": -0.026
+      }
+     ],
+     "pick": 0
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e0ad6a628995.png",
+       "seed": 3050,
+       "inside": 0.197,
+       "outside": 0.004,
+       "score": 0.176
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/8d74f3be51a7.png",
+       "seed": 3051,
+       "inside": 0.178,
+       "outside": 0.002,
+       "score": 0.167
+      }
+     ],
+     "pick": 0
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_pointing"
+  },
+  "shrug": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e4851fb56d20.png",
+     "identity": 0.949,
+     "pose_change": 0.242,
+     "score": 0.949
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e055b7e8376c.png",
+     "identity": 0.997,
+     "pose_change": 0.225,
+     "score": 0.997
+    }
+   },
+   "pick": "B",
+   "override": null,
+   "mouth_box": [
+    380,
+    387,
+    646,
+    529
+   ],
+   "eye_box": [
+    310,
+    288,
+    716,
+    430
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/931fcf029416.png",
+       "seed": 3000,
+       "inside": 0.098,
+       "outside": 0.002,
+       "score": 0.086
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/f1e7ea61dcf2.png",
+       "seed": 3001,
+       "inside": 0.116,
+       "outside": 0.003,
+       "score": 0.103
+      }
+     ],
+     "pick": 1
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/3a02e928412d.png",
+       "seed": 3010,
+       "inside": 0.287,
+       "outside": 0.006,
+       "score": 0.257
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/cdd8dea52e2c.png",
+       "seed": 3011,
+       "inside": 0.199,
+       "outside": 0.003,
+       "score": 0.182
+      }
+     ],
+     "pick": 0
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/7330b7a99b23.png",
+       "seed": 3020,
+       "inside": 0.041,
+       "outside": 0.003,
+       "score": 0.026
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/8fdcb050056d.png",
+       "seed": 3021,
+       "inside": 0.073,
+       "outside": 0.002,
+       "score": 0.061
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/8b5aa8c2f34c.png",
+       "seed": 3030,
+       "inside": 0.187,
+       "outside": 0.004,
+       "score": 0.166
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e712c4825efc.png",
+       "seed": 3031,
+       "inside": 0.191,
+       "outside": 0.003,
+       "score": 0.179
+      }
+     ],
+     "pick": 1
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/5d634c22c1bf.png",
+       "seed": 3040,
+       "inside": 0.02,
+       "outside": 0.003,
+       "score": -0.025
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/67765a2a12a6.png",
+       "seed": 3041,
+       "inside": 0.049,
+       "outside": 0.003,
+       "score": -0.037
+      }
+     ],
+     "pick": 0
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/3304cd1d74a2.png",
+       "seed": 3050,
+       "inside": 0.254,
+       "outside": 0.004,
+       "score": 0.232
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/6fcb086e3111.png",
+       "seed": 3051,
+       "inside": 0.244,
+       "outside": 0.003,
+       "score": 0.228
+      }
+     ],
+     "pick": 0
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_shrug"
+  },
+  "shocked": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/f7eafc5a8bc9.png",
+     "identity": 0.938,
+     "pose_change": 0.248,
+     "score": 0.938
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/cedf8fa8d379.png",
+     "identity": 0.993,
+     "pose_change": 0.188,
+     "score": 0.993
+    }
+   },
+   "pick": "B",
+   "override": null,
+   "mouth_box": [
+    385,
+    378,
+    723,
+    560
+   ],
+   "eye_box": [
+    297,
+    253,
+    811,
+    435
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/644ce934e48a.png",
+       "seed": 3000,
+       "inside": 0.054,
+       "outside": 0.002,
+       "score": 0.042
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/c655aa382df4.png",
+       "seed": 3001,
+       "inside": 0.051,
+       "outside": 0.002,
+       "score": 0.04
+      }
+     ],
+     "pick": 0
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/dc420b8b87c8.png",
+       "seed": 3010,
+       "inside": 0.089,
+       "outside": 0.003,
+       "score": 0.077
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e4e71a9511cc.png",
+       "seed": 3011,
+       "inside": 0.063,
+       "outside": 0.002,
+       "score": 0.051
+      }
+     ],
+     "pick": 0
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/df2d9ca4db3f.png",
+       "seed": 3020,
+       "inside": 0.037,
+       "outside": 0.002,
+       "score": 0.025
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/e9fe659f5de6.png",
+       "seed": 3021,
+       "inside": 0.044,
+       "outside": 0.002,
+       "score": 0.034
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/285e911aa4b9.png",
+       "seed": 3030,
+       "inside": 0.094,
+       "outside": 0.004,
+       "score": 0.076
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/9d3a3387ca3d.png",
+       "seed": 3031,
+       "inside": 0.082,
+       "outside": 0.002,
+       "score": 0.074
+      }
+     ],
+     "pick": 0
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/a31c71a8790a.png",
+       "seed": 3040,
+       "inside": 0.076,
+       "outside": 0.002,
+       "score": -0.048
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/0ba02ff0b915.png",
+       "seed": 3041,
+       "inside": 0.073,
+       "outside": 0.003,
+       "score": -0.049
+      }
+     ],
+     "pick": 0
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/2c3842491f8a.png",
+       "seed": 3050,
+       "inside": 0.185,
+       "outside": 0.009,
+       "score": 0.138
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/6f2513da5ef1.png",
+       "seed": 3051,
+       "inside": 0.164,
+       "outside": 0.007,
+       "score": 0.128
+      }
+     ],
+     "pick": 0
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_shocked"
+  },
+  "thinking": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/d12d0dae824a.png",
+     "identity": 0.972,
+     "pose_change": 0.157,
+     "score": 0.972
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/de6150ecddd9.png",
+     "identity": 0.998,
+     "pose_change": 0.074,
+     "score": 0.998
+    }
+   },
+   "pick": "B",
+   "override": null,
+   "mouth_box": [
+    341,
+    370,
+    689,
+    558
+   ],
+   "eye_box": [
+    249,
+    240,
+    781,
+    428
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/8a70fa5376c1.png",
+       "seed": 3000,
+       "inside": 0.094,
+       "outside": 0.002,
+       "score": 0.083
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/a9e8aae97b5c.png",
+       "seed": 3001,
+       "inside": 0.088,
+       "outside": 0.002,
+       "score": 0.076
+      }
+     ],
+     "pick": 0
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/bd32a98e8a0a.png",
+       "seed": 3010,
+       "inside": 0.229,
+       "outside": 0.004,
+       "score": 0.209
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/d44b0ce23051.png",
+       "seed": 3011,
+       "inside": 0.216,
+       "outside": 0.003,
+       "score": 0.201
+      }
+     ],
+     "pick": 0
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/cd703bd87297.png",
+       "seed": 3020,
+       "inside": 0.025,
+       "outside": 0.002,
+       "score": 0.014
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/574b6f4482fb.png",
+       "seed": 3021,
+       "inside": 0.064,
+       "outside": 0.003,
+       "score": 0.049
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/545c9b0d8d46.png",
+       "seed": 3030,
+       "inside": 0.135,
+       "outside": 0.005,
+       "score": 0.11
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/4edc27513888.png",
+       "seed": 3031,
+       "inside": 0.115,
+       "outside": 0.002,
+       "score": 0.107
+      }
+     ],
+     "pick": 0
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/500e08db48b4.png",
+       "seed": 3040,
+       "inside": 0.025,
+       "outside": 0.003,
+       "score": -0.028
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/d7de68c66075.png",
+       "seed": 3041,
+       "inside": 0.034,
+       "outside": 0.002,
+       "score": -0.027
+      }
+     ],
+     "pick": 1
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/ef7e128e5e22.png",
+       "seed": 3050,
+       "inside": 0.186,
+       "outside": 0.005,
+       "score": 0.162
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/b9c13d77e796.png",
+       "seed": 3051,
+       "inside": 0.171,
+       "outside": 0.002,
+       "score": 0.159
+      }
+     ],
+     "pick": 0
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_thinking"
+  },
+  "serious": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/b125c15cc338.png",
+     "identity": 0.781,
+     "pose_change": 0.215,
+     "score": 0.781
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/4fa51bf0e8a3.png",
+     "identity": 0.996,
+     "pose_change": 0.123,
+     "score": 0.996
+    }
+   },
+   "pick": "B",
+   "override": null,
+   "mouth_box": [
+    351,
+    375,
+    675,
+    549
+   ],
+   "eye_box": [
+    267,
+    255,
+    759,
+    429
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/01818b766639.png",
+       "seed": 3000,
+       "inside": 0.114,
+       "outside": 0.003,
+       "score": 0.102
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/912ccd332919.png",
+       "seed": 3001,
+       "inside": 0.073,
+       "outside": 0.004,
+       "score": 0.055
+      }
+     ],
+     "pick": 0
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/db2b1c2f6177.png",
+       "seed": 3010,
+       "inside": 0.238,
+       "outside": 0.008,
+       "score": 0.198
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/b3de9de91b7b.png",
+       "seed": 3011,
+       "inside": 0.159,
+       "outside": 0.004,
+       "score": 0.138
+      }
+     ],
+     "pick": 0
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/07d52c4d9cc5.png",
+       "seed": 3020,
+       "inside": 0.039,
+       "outside": 0.002,
+       "score": 0.028
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/b1b538cd823a.png",
+       "seed": 3021,
+       "inside": 0.08,
+       "outside": 0.003,
+       "score": 0.065
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/1b1e76e0a895.png",
+       "seed": 3030,
+       "inside": 0.164,
+       "outside": 0.004,
+       "score": 0.143
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/1ffe07834a98.png",
+       "seed": 3031,
+       "inside": 0.129,
+       "outside": 0.002,
+       "score": 0.121
+      }
+     ],
+     "pick": 0
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/4abc8b489b4d.png",
+       "seed": 3040,
+       "inside": 0.018,
+       "outside": 0.002,
+       "score": -0.021
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/eff3cf4db580.png",
+       "seed": 3041,
+       "inside": 0.033,
+       "outside": 0.003,
+       "score": -0.03
+      }
+     ],
+     "pick": 0
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/8b917aa5eb86.png",
+       "seed": 3050,
+       "inside": 0.2,
+       "outside": 0.008,
+       "score": 0.158
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/47440300af17.png",
+       "seed": 3051,
+       "inside": 0.18,
+       "outside": 0.003,
+       "score": 0.165
+      }
+     ],
+     "pick": 1
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_serious"
+  },
+  "laughing": {
+   "candidates": {
+    "A": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/4e55ef072256.png",
+     "identity": 0.304,
+     "pose_change": 0.253,
+     "score": 0.304
+    },
+    "B": {
+     "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/5a9e868b925e.png",
+     "identity": 0.995,
+     "pose_change": 0.177,
+     "score": 0.995
+    }
+   },
+   "pick": "B",
+   "override": null,
+   "mouth_box": [
+    304,
+    326,
+    820,
+    604
+   ],
+   "eye_box": [
+    169,
+    52,
+    955,
+    330
+   ],
+   "shapes": {
+    "slight": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/3429fca8052a.png",
+       "seed": 3000,
+       "inside": 0.015,
+       "outside": 0.003,
+       "score": 0.0
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/5ca7ef142970.png",
+       "seed": 3001,
+       "inside": 0.014,
+       "outside": 0.002,
+       "score": 0.004
+      }
+     ],
+     "pick": 1
+    },
+    "wide": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/d8b50f86bebd.png",
+       "seed": 3010,
+       "inside": 0.039,
+       "outside": 0.003,
+       "score": 0.026
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/1e5db1a91756.png",
+       "seed": 3011,
+       "inside": 0.058,
+       "outside": 0.003,
+       "score": 0.044
+      }
+     ],
+     "pick": 1
+    },
+    "o": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/d98a26b26d96.png",
+       "seed": 3020,
+       "inside": 0.037,
+       "outside": 0.002,
+       "score": 0.026
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/55c6143731d5.png",
+       "seed": 3021,
+       "inside": 0.037,
+       "outside": 0.002,
+       "score": 0.027
+      }
+     ],
+     "pick": 1
+    },
+    "e": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/ae9045933880.png",
+       "seed": 3030,
+       "inside": 0.035,
+       "outside": 0.002,
+       "score": 0.023
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/1be184d57dbb.png",
+       "seed": 3031,
+       "inside": 0.031,
+       "outside": 0.003,
+       "score": 0.018
+      }
+     ],
+     "pick": 0
+    },
+    "mbp": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/7caae6b99d90.png",
+       "seed": 3040,
+       "inside": 0.035,
+       "outside": 0.003,
+       "score": -0.03
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/cache/images/98e993a2024e.png",
+       "seed": 3041,
+       "inside": 0.031,
+       "outside": 0.002,
+       "score": -0.028
+      }
+     ],
+     "pick": 1
+    },
+    "blink": {
+     "candidates": [
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_laughing/closed.png",
+       "seed": 3050,
+       "inside": 0.0,
+       "outside": 0.0,
+       "score": 0.0
+      },
+      {
+       "file": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_laughing/closed.png",
+       "seed": 3051,
+       "inside": 0.0,
+       "outside": 0.0,
+       "score": 0.0
+      }
+     ],
+     "pick": 0
+    }
+   },
+   "dir": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/pose_laughing"
+  }
+ },
+ "sets": {
+  "studio": {
+   "candidates": [
+    "/Users/varunreddy/youtube-pipeline/assets/cache/images/8b316c46272b.png",
+    "/Users/varunreddy/youtube-pipeline/assets/cache/images/8d4aea401604.png"
+   ],
+   "centre_busyness": [
+    9.58,
+    10.64
+   ],
+   "pick": 0,
+   "file": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/set_studio.png"
+  },
+  "stage": {
+   "candidates": [
+    "/Users/varunreddy/youtube-pipeline/assets/cache/images/b37424ba04e8.png",
+    "/Users/varunreddy/youtube-pipeline/assets/cache/images/c1ec50e1f77d.png"
+   ],
+   "centre_busyness": [
+    5.6,
+    6.87
+   ],
+   "pick": 0,
+   "file": "/Users/varunreddy/youtube-pipeline/assets/characters/sterling/set_stage.png"
+  }
+ },
+ "built": "2026-11-09 09:57",
+ "timings_seconds": {
+  "master reference": 0,
+  "poses (7 x 2 candidates)": 0,
+  "mouth shapes + blink (7 poses x 6 x 2 seeds)": 5,
+  "cutouts (rembg u2net)": 8,
+  "sets": 158
+ },
+ "total_seconds": 172
+}

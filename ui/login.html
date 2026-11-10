@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Video Studio</title>
+<style>
+:root { --bg: #f6f5f2; --panel: #fff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc; --accent: #c2410c;
+  --accent-ink: #fff; --bad: #b91c1c; --bad-soft: #fdecec; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #151517; --panel: #1f1f22; --ink: #ececee;
+  --muted: #9a9aa2; --line: #313136; --accent: #f97316; --accent-ink: #111; --bad: #f87171; --bad-soft: #2c1717; } }
+:root[data-theme="dark"] { --bg: #151517; --panel: #1f1f22; --ink: #ececee; --muted: #9a9aa2; --line: #313136;
+  --accent: #f97316; --accent-ink: #111; --bad: #f87171; --bad-soft: #2c1717; }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; }
+main { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+form { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 26px; }
+h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+input { width: 100%; font: inherit; color: inherit; border: 1px solid var(--line); background: var(--bg);
+  border-radius: 8px; padding: 9px 11px; outline: none; }
+input:focus { border-color: var(--accent); }
+button { width: 100%; margin-top: 18px; font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-ink);
+  border: 0; border-radius: 8px; padding: 10px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: wait; }
+.err { display: none; margin-top: 14px; padding: 8px 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-size: 14px; }
+.hint { font-weight: 400; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <form id="f" autocomplete="on">
+    <h1 id="title">Video Studio</h1>
+    <p id="sub">Log in to continue.</p>
+    <div id="codeRow" hidden>
+      <label for="code">Setup code <span class="hint">(from the setup link)</span></label>
+      <input id="code" autocomplete="off" spellcheck="false">
+    </div>
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="password">Password <span class="hint" id="pwHint"></span></label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <div id="confirmRow" hidden>
+      <label for="password2">Type the password again</label>
+      <input id="password2" type="password" autocomplete="new-password">
+    </div>
+    <button id="go" type="submit">Log in</button>
+    <div class="err" id="err"></div>
+  </form>
+</main>
+<script>
+const setup = location.pathname === "/setup";
+const $ = (id) => document.getElementById(id);
+if (setup) {
+  $("title").textContent = "Create your login";
+  $("sub").textContent = "First run: choose the username and password you'll use to open Video Studio from anywhere.";
+  $("codeRow").hidden = false; $("confirmRow").hidden = false;
+  $("code").value = new URLSearchParams(location.search).get("code") || "";
+  $("password").autocomplete = "new-password";
+  $("pwHint").textContent = "(at least 10 characters)";
+  $("go").textContent = "Create login";
+  history.replaceState(null, "", "/setup");   // keep the code out of the address bar
+}
+$("username").focus();
+$("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("err"); err.style.display = "none";
+  if (setup && $("password").value !== $("password2").value) { err.textContent = "The two passwords don't match."; err.style.display = "block"; return; }
+  $("go").disabled = true;
+  try {
+    const body = { username: $("username").value.trim().toLowerCase(), password: $("password").value };
+    if (setup) body.code = $("code").value.trim();
+    const r = await fetch(setup ? "/api/setup" : "/api/login", { method: "POST",
+      headers: { "Content-Type": "application/json", "X-VS": "1" }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `Error ${r.status}`);
+    location.replace("/");
+  } catch (ex) { err.textContent = ex.message; err.style.display = "block"; $("go").disabled = false; }
+});
+</script>
+</body>
+</html>
