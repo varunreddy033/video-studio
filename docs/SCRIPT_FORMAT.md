@@ -202,7 +202,7 @@ It is opt-in per script; nothing changes for scripts without `style: motion`.
 ```
 style: motion            (classic | motion)
 palette: navy            (the colour set; one palette per channel keeps the look consistent)
-character: sterling      (the presenter for [char:] and [talk:]; Sterling Flat comes with motion phase 6)
+character: sterling      (the presenter for [char:], [talk:] and [act:]; the normal 3D character pack is used)
 ```
 Motion videos are landscape (16:9) for now; motion Shorts arrive later.
 
@@ -215,7 +215,7 @@ Motion videos are landscape (16:9) for now; motion Shorts arrive later.
 | `[+ kind: text \| place \| animation \| size]` | Adds an element **at the next spoken word**. Example: `[+ door: FUND \| 1 of 4 \| grow]`. |
 | `[- kind]` or `[- kind: text]` | Removes that element at the next word (`[- char]` removes the presenter). |
 | `[label: TEXT \| element]` | A white tag that points at an element: `[label: WORST DAY IN 19 MONTHS \| number]`. |
-| `[char: pose \| place \| size]` | The presenter in the scene (`thinking`, `pointing`, `shrug`, ...). He stays in the next scenes until `[- char]`. Lip-sync is automatic once Sterling Flat is built (until then: the pose cut-out). |
+| `[char: pose \| place \| size]` | The presenter in the scene (`thinking`, `pointing`, `shrug`, ...). He stays in the next scenes until `[- char]`. He is lip-synced to the voice and blinks (the character pack's mouth and blink pictures, same timing as `[talk:]`); a second `[char: pose]` in a scene switches his pose on that word. |
 | `[number: ...]` `[chart: ...]` `[quote: ...]` `[card: ...]` | The classic data tags, as elements inside the current scene. Add a place at the end: `[number: 5.5 \| label \| suffix=% \| right]`. |
 | `[+ gen: a pair of white wired earphones \| right \| slide]` | A prop drawn by the AI image model in the flat style, cut out and cached for later videos (motion phase 5; until then a labelled placeholder). |
 | `[talk: pose \| set]` | Sterling full screen, as its own scene, for punchy moments. |
@@ -271,6 +271,17 @@ the occasional whip pan or iris.
 
 **Palettes**: `palette: navy` (default) or `palette: light`, for the whole video; one scene can differ with
 `[scene: name | palette=light]`.
+
+### Layout notes (motion)
+- `[act: ...]`, `[talk: ...]`, `[ai: ...]` work in motion scripts as full-frame scenes, with the same transitions.
+- `n of m` slots share the free width (the presenter's side stays clear). Anything wider than its slot shrinks to fit.
+  Small cards (`[card: TITLE | sub | 1 of 4 | small]`) become list tiles: one row, or a 2 x 2 grid for four.
+- `[+ check | over x]` / `[+ cross | over x]` stamp ON the prop; other things placed `over x` sit above it.
+- A label goes above its target; when something is already there it hangs below it. Labels never leave the frame.
+- A prop without text can still carry an id: `[+ earphones #pods | center | drop | large]`.
+- `x%, y%` = the centre of the thing, as a share of the frame (use it when slots don't fit).
+- Number captions: write only the words under the number (`[number: 249 | AirPods Pro 3 | prefix=$ | 1 of 2]`).
+- Library props added for this channel: `earphones` (white wired pair), `earbuds` (wireless case with two buds).
 
 ### Motion pacing rules (Check enforces them)
 - Something new every ~3 s: an element, a label or a scene change (Check warns at 3.5 s).

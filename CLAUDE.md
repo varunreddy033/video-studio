@@ -329,11 +329,20 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         generated in 88 s (29-32 s each incl. cool-down), whole final 114 s; same final again 19 s, 0 generated.
         Remotion draws plates dimmed toward the palette with a slow drift. Lesson: the server must be restarted
         after code changes (a render ran the old code once).
-  - [ ] Phase 6 Sterling Flat: benchmark DONE (2026-11-10, docs/presenter_bench/RESULTS_FLAT.md + flat_contact_sheet.jpg,
-        tools/flat_bench.py, docs/characters/sterling_flat.md SEED 2000): 4 masters on-model, poses A 7/7 (id 0.97-1.00),
-        poses B = edit of master 7/7 (id 0.98-1.00, most consistent), all 6 mouths + blink first try with 0.7-1.0%
-        change outside the mouth/eyes; 25 images in 19 min on battery. WAITING FOR VARUN'S APPROVAL before the full
-        pack (~1 h 40 min, plugged in) and in-scene lip-sync in Remotion.
+  - [x] Phase 6 = 3D Sterling inside motion scenes (DECIDED by Varun 2026-11-10: no 2D conversion; quality first).
+        [char:] is the normal 3D pack, lip-synced + blinking in Remotion (Placed.tsx CharView, pack mouth pictures,
+        Kokoro phoneme timings), pose switches mid-scene; [act:]/[talk:]/[ai:] are full-frame motion scenes.
+        Sterling Flat is PARKED (benchmark passed: docs/presenter_bench/RESULTS_FLAT.md, docs/characters/sterling_flat.md,
+        tools/flat_bench.py, assets/characters/sterling_flat; ask before deleting).
+        Layout rules added: slots shrink things to fit, small cards = tiles (2 x 2 for four), check/cross stamp on
+        the prop, labels flip under a target when the top is taken, bigger numbers. New SVG props earphones, earbuds
+        (the FLUX "gen" earphone cut-out came out as a white blob; SVG props are sharper and instant).
+        First full motion video: scripts/2026-11-10-earpods-motion.md, job 20261110-205101-d56969: 8:55, 66 shots
+        (29 scenes, 21 talk, 10 act, 6 ai), final 635 s = images/presenter 73 s (0 new AI images, cache seeded from
+        the classic job) + Remotion 530 s for 16,064 frames + audio 26 s + mux 5 s; -14.0 LUFS; on battery.
+        WAITING FOR VARUN'S FEEDBACK on this video. Known weak spots: thin white rim around the 3D cut-out on navy,
+        scenes are navy-only (no plates used), [talk:] shots are the classic studio look.
+  - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:

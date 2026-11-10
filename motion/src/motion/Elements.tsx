@@ -46,15 +46,42 @@ const CardEl: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
   );
 };
 
+/** A small card placed in a scene (a list item): a tile with a title and a line under it, drawn at box size. */
+const TileEl: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
+  const f = useCurrentFrame();
+  const {x, y, w, h} = el.box;
+  const s = pop(f, 0, 30, 11, 190);
+  const text: string = (el.props.text ?? '').toUpperCase();
+  const words = text.split(/\s+/);
+  const half = Math.ceil(words.length / 2);
+  const lines = text.length > 9 && words.length > 1 ? [words.slice(0, half).join(' '), words.slice(half).join(' ')] : [text];
+  const longest = Math.max(...lines.map((l) => l.length), 3);
+  const fs = Math.min((w - 56) / (longest * 0.8), (h * 0.5) / lines.length, 96);
+  const sub: string = el.props.sub ?? '';
+  const ss = Math.max(22, Math.min(34, fs * 0.5));
+  return (
+    <div style={{position: 'absolute', left: x, top: y + bob(f, (x + y) % 80, 4, 84), width: w, height: h, boxSizing: 'border-box',
+      transform: `scale(${s})`, opacity: Math.min(1, s * 2), background: p.bg2, borderRadius: 26,
+      border: `3px solid ${p.ink}22`, boxShadow: `0 12px 0 ${p.shadow}`, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', padding: '14px 20px', fontFamily: FONT, textAlign: 'center'}}>
+      <div style={{fontWeight: 900, fontSize: fs, lineHeight: 1.04, color: p.ink}}>{lines.map((l) => <div key={l}>{l}</div>)}</div>
+      <div style={{width: Math.min(120, w * 0.3) * ease(f, 6, 12), height: 7, borderRadius: 4, background: p.accent, margin: `${fs * 0.22}px 0`}} />
+      {sub ? <div style={{fontWeight: 700, fontSize: ss, lineHeight: 1.15, color: p.ink, opacity: 0.82 * ease(f, 8, 12)}}>{sub}</div> : null}
+    </div>
+  );
+};
+
 const NumberEl: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
   const f = useCurrentFrame();
   const v = el.props.value as number;
+  const chars = `${el.props.prefix ?? ''}${Math.round(Math.abs(v))}${el.props.suffix ?? ''}`.length + (el.props.decimals ? 2 : 0) + (v < 0 ? 1 : 0);
+  const size = Math.min(340, 1240 / (Math.max(chars, 2) * 0.7));        // fills the 1300-wide design, never wider
   return (
     <AbsoluteFill>
       <BigNumber x={960} y={470} value={v} from={0} to={el.props.countFrames ?? 45} decimals={el.props.decimals ?? 0}
-                 prefix={el.props.prefix ?? ''} suffix={el.props.suffix ?? ''} color={v < 0 ? p.bad : p.accent} size={260} appear={0} />
-      <div style={{position: 'absolute', top: 650, left: 200, right: 200, textAlign: 'center', fontFamily: FONT, fontWeight: 700,
-        fontSize: 52, color: p.ink, opacity: ease(f, 10, 14)}}>{el.props.label}</div>
+                 prefix={el.props.prefix ?? ''} suffix={el.props.suffix ?? ''} color={v < 0 ? p.bad : p.accent} size={size} appear={0} />
+      <div style={{position: 'absolute', top: 650, left: 330, right: 330, textAlign: 'center', fontFamily: FONT, fontWeight: 700,
+        fontSize: 60, lineHeight: 1.2, color: p.ink, opacity: ease(f, 10, 14)}}>{el.props.label}</div>
     </AbsoluteFill>
   );
 };
@@ -136,6 +163,7 @@ export const ElementView: React.FC<{el: Element; p: Palette; sceneFrames: number
   let body: React.ReactNode = null;
   if (el.type === 'image') body = <ImageEl el={el} frames={frames} />;
   else if (el.type === 'video') body = <VideoEl el={el} />;
+  else if (el.type === 'card' && el.box.w < 900) body = <TileEl el={el} p={p} />;
   else if (el.type === 'card') body = <Fit el={el}><CardEl el={el} p={p} /></Fit>;
   else if (el.type === 'number') body = <Fit el={el}><NumberEl el={el} p={p} /></Fit>;
   else if (el.type === 'quote') body = <Fit el={el}><QuoteEl el={el} p={p} /></Fit>;

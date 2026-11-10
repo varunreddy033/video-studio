@@ -57,7 +57,7 @@ def _assets(parsed, tl, spans, all_words, job_dir: Path, public: Path, mode: str
     style = (meta.get("presets") or {}).get("art_style")
     out = {}
     shots = parsed["shots"]
-    need = [i for i, s in enumerate(shots) if s["type"] in ("ai", "stock", "talk")]
+    need = [i for i, s in enumerate(shots) if s["type"] in ("ai", "stock", "talk", "act")]
     for n, i in enumerate(need):
         progress("images + presenter", n, len(need))
         sh, (t0, dur) = shots[i], spans[i]
@@ -126,25 +126,69 @@ def generated(parsed, public: Path, log_dir: Path, make: bool, progress=None) ->
     return out
 
 
+PUPPET_H = 1000                    # px height of the puppet frames (the tallest a presenter is drawn in a scene)
+
+
 def character_cutouts(parsed, public: Path) -> dict:
-    """[char: pose] layers: until Sterling Flat's puppet exists (motion phase 6), a character with a finished pack
-    is shown as that pose's cut-out (no lip-sync yet). Without a pack: no src -> the renderer draws a placeholder."""
+    """[char: pose] layers = a lip-synced puppet made from the character's pack (the same frames [talk:] uses):
+    per pose 6 mouth shapes + the same 6 with eyes shut, cropped to the character. Made once per pack
+    (assets/characters/<name>/puppet/), then linked into the render's public dir. Remotion picks the frame from
+    timeline["mouth"] / ["blinks"]. Without a finished pack: no src -> the renderer draws a placeholder."""
     from . import characters, presenter
     char = parsed["meta"].get("character_data")
     poses = {e["pose"] for sh in parsed["shots"] for e in sh.get("events", []) if e.get("op") == "char"}
     out = {}
     if not char or not poses or not presenter.pack_ready(char["name"]):
         return out
-    pack = json.loads((characters.pack_dir(char["name"]) / "pack.json").read_text(encoding="utf-8"))
-    for pose in poses:
+    name = char["name"]
+    pack_json = characters.pack_dir(name) / "pack.json"
+    pack = json.loads(pack_json.read_text(encoding="utf-8"))
+    pdir = characters.pack_dir(name) / "puppet"
+    for pose in sorted(poses):
         info = pack["poses"].get(pose)
-        if info and "dir" in info:
-            src = characters.pack_path(char["name"], info["dir"]) / "closed_cut.png"
-            if src.exists():
-                dst = public / "assets" / f"char_{pose}.png"
-                _link(src, dst)
-                out[pose] = {"src": f"assets/{dst.name}"}
+        if not info or "dir" not in info:
+            continue
+        files = {(shp, b): pdir / f"{pose}_{shp}{'_blink' if b else ''}.png" for shp in presenter.SHAPES for b in (0, 1)}
+        newest = max(pack_json.stat().st_mtime, (characters.pack_path(name, info["dir"]) / "closed_cut.png").stat().st_mtime)
+        if not all(f.exists() and f.stat().st_mtime >= newest for f in files.values()):
+            frames, blinks, _ = presenter._pose_frames(name, pose, PUPPET_H)
+            pdir.mkdir(parents=True, exist_ok=True)
+            for (shp, b), f in files.items():
+                (blinks if b else frames)[shp].save(f)
+        entry = {"frames": {}, "blinks": {}}
+        for (shp, b), f in files.items():
+            dst = public / "assets" / f"char_{f.name}"
+            _link(f, dst)
+            entry["blinks" if b else "frames"][shp] = f"assets/{dst.name}"
+        entry["src"] = entry["frames"]["closed"]
+        from PIL import Image
+        with Image.open(files[("closed", 0)]) as im:
+            entry["aspect"] = round(im.width / im.height, 4)
+        out[pose] = entry
     return out
+
+
+def mouth_track(all_words, total: float, seed: str) -> dict:
+    """The presenter's mouth for the whole video, from Kokoro's phonemes (presenter.mouth_cues, as in [talk:]):
+    {"mouth": [[frame, shape], ...] (shape holds until the next entry), "blinks": [start frames, 4 frames each]}."""
+    from . import presenter
+    mouth, last = [], "closed"
+    end_prev = 0.0
+    for s, e, shp in presenter.mouth_cues(all_words, 0.0, total):
+        if s - end_prev > 0.05 and last != "closed":
+            mouth.append([round(end_prev * FPS), "closed"])
+            last = "closed"
+        if shp != last:
+            mouth.append([round(s * FPS), shp])
+            last = shp
+        end_prev = e
+    mouth.append([round(end_prev * FPS), "closed"])
+    rng = random.Random(seed)
+    blinks, t = [], rng.uniform(0.8, 2.5)
+    while t < total:
+        blinks.append(round(t * FPS))
+        t += rng.uniform(2.0, 6.0)
+    return {"mouth": mouth, "blinks": blinks}
 
 
 # -------------------------------------------------------------------------------------- the render ---
@@ -203,6 +247,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
                  for st, en in [(seg["start"] + wd[1], seg["start"] + wd[2])]]
     timeline = MT.build(parsed, MT.RealTiming(parsed["segments"], tl), spans, total, assets, words_out,
                         palette=meta.get("palette") or "navy")
+    if assets.get("chars"):
+        timeline.update(mouth_track(all_words, total, f"{meta.get('character')}|{meta.get('title')}"))
     tpath = work / "timeline.json"
     tpath.write_text(json.dumps(timeline), encoding="utf-8")
     (job_dir / f"motion_timeline_{mode}.json").write_text(json.dumps(timeline, indent=1), encoding="utf-8")
@@ -274,8 +320,8 @@ def preview(parsed: dict, out_dir: Path) -> list:
         spans.append((start, max(0.5, end - start)))
     assets = {}
     for k, sh in enumerate(shots):
-        if sh["type"] in ("ai", "stock", "talk"):
-            label = {"talk": f"PRESENTER: {sh.get('pose', '')}", "ai": "AI IMAGE", "stock": "AI PHOTO"}[sh["type"]]
+        if sh["type"] in ("ai", "stock", "talk", "act"):
+            label = {"talk": f"PRESENTER: {sh.get('pose', '')}", "ai": "AI IMAGE", "stock": "AI PHOTO", "act": "CHARACTER SCENE"}[sh["type"]]
             img = visuals.placeholder_image(label, sh.get("prompt") or sh.get("query") or "", W // 2, H // 2, work)
             dst = public / "assets" / f"img_{k:03d}.png"
             _link(Path(img), dst)

@@ -51,3 +51,10 @@ Element types in version 1 (phase 2; the v3 tags and the prop library in phases 
 Render: `npx remotion render src/index.ts Motion <out.mp4> --props=<timeline.json> --public-dir=<dir>
 --concurrency=<MOTION_CONCURRENCY>`; video only. Python then muxes the classic audio mix (voice + ducked music +
 sfx, two-pass loudnorm to -14 LUFS).
+
+## Presenter puppet and labels (added 2026-11-10)
+- `char` elements: `props.frames` = the pose's pictures (closed, slight, wide, o, e, mbp, blink; paths under the public
+  dir), `props.mouth` = [[frame, shape], ...] from Kokoro's phoneme timings (scene-relative), `props.blinks` = [frame, ...],
+  `props.poses` = [[frame, pose], ...] for pose switches inside a scene. Remotion stacks the pictures and shows one.
+- `label` elements: `props.pointer` = "up" when the tag hangs under its target (default "down" = above it).
+- `card` elements with a box narrower than 900 px are drawn as list tiles at box size (no scaling).

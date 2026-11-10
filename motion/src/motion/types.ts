@@ -27,5 +27,5 @@ export type Scene = {
 export type Word = {w: string; s: number; e: number; seg: number; frame: number};
 export type Timeline = {
   version: 1; fps: number; width: number; height: number; durationFrames: number; palette: string;
-  words: Word[]; captions: {show: boolean; style: string}; scenes: Scene[];
+  words: Word[]; mouth?: [number, string][]; blinks?: number[]; captions: {show: boolean; style: string}; scenes: Scene[];
 };

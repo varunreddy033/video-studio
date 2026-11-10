@@ -218,6 +218,37 @@ export const PROPS: Record<string, Draw> = {
   warning: ({p, f}) => <>
     <path d="M50 6 L96 90 L4 90 Z" fill={p.accent} strokeLinejoin="round" opacity={0.85 + 0.15 * Math.sin(f / 5)} />
     <rect x={45} y={34} width={10} height={32} rx={4} fill={p.onPanel} /><circle cx={50} cy={76} r={6} fill={p.onPanel} /></>,
+  earphones: ({f}) => {
+    const sw = Math.sin(f / 28) * 2.2;                       // the cable sways a little
+    const bud = (x: number, flip: number) => <g transform={`translate(${x} 0) scale(${flip} 1)`}>
+      <rect x={-4} y={22} width={8} height={30} rx={4} fill="#E3E7EE" />
+      <ellipse cx={-3} cy={19} rx={14} ry={13} fill="#FFFFFF" />
+      <ellipse cx={-3} cy={19} rx={14} ry={13} fill="none" stroke="#C4CBD8" strokeWidth={1.6} />
+      <ellipse cx={-9} cy={18} rx={4.5} ry={6.5} fill="#8E98AB" />
+      <path d="M2 10 Q8 14 8 22" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" opacity={0.9} /></g>;
+    const cable = (d: string) => <><path d={d} fill="none" stroke="#C4CBD8" strokeWidth={4.4} strokeLinecap="round" />
+      <path d={d} fill="none" stroke="#FFFFFF" strokeWidth={2.8} strokeLinecap="round" /></>;
+    return <>
+      {cable(`M27 50 C27 70 ${46 + sw} 62 ${50 + sw} 78`)}
+      {cable(`M73 50 C73 70 ${54 + sw} 62 ${50 + sw} 78`)}
+      {cable(`M${50 + sw} 78 C${50 + sw} 88 ${50 - sw} 90 50 99`)}
+      <rect x={69.5} y={52} width={7} height={15} rx={3.5} fill="#FFFFFF" stroke="#C4CBD8" strokeWidth={1.4} />
+      <rect x={45.5 + sw} y={75} width={9} height={7} rx={3} fill="#E3E7EE" stroke="#C4CBD8" strokeWidth={1.2} />
+      {bud(27, 1)}{bud(73, -1)}</>;
+  },
+  earbuds: ({p, f}) => {
+    const lift = 2 + 1.5 * Math.sin(f / 22);                 // the two buds hover in the open case
+    return <>
+      {[38, 62].map((x, i) => <g key={x} transform={`translate(0 ${-lift * (i ? 1 : 0.6)})`}>
+        <rect x={x - 3.5} y={24} width={7} height={26} rx={3.5} fill="#E3E7EE" />
+        <ellipse cx={x} cy={22} rx={9.5} ry={9} fill="#FFFFFF" stroke="#C4CBD8" strokeWidth={1.5} />
+        <ellipse cx={x + (i ? 3 : -3)} cy={22} rx={3} ry={4.5} fill="#8E98AB" /></g>)}
+      <rect x={20} y={42} width={60} height={56} rx={17} fill="#FFFFFF" stroke="#C4CBD8" strokeWidth={1.8} />
+      <path d="M21 58 L79 58" stroke="#C4CBD8" strokeWidth={1.6} />
+      <path d="M28 50 Q32 46 40 46" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" />
+      <circle cx={50} cy={68} r={2.4} fill={Math.sin(f / 9) > 0.2 ? p.good : '#B9E8E2'} />
+      <rect x={44} y={90} width={12} height={2.4} rx={1.2} fill="#D5DAE3" /></>;
+  },
 };
 
 // where each drawing actually sits inside its 100x100 canvas (minX, minY, maxX, maxY): the viewBox is cropped to
@@ -232,7 +263,7 @@ const BOUNDS: Record<string, [number, number, number, number]> = {
   hourglass: [17, 3, 83, 97], shield: [11, 3, 89, 97], lock: [16, 3, 84, 97], crown: [7, 12, 93, 93],
   trophy: [9, 8, 91, 100], globe: [7, 7, 93, 93], flag: [17, 3, 95, 100], megaphone: [7, 16, 97, 84],
   arrow_up: [9, -2, 91, 97], arrow_down: [9, 3, 91, 102], check: [5, 5, 95, 95], cross: [5, 5, 95, 95],
-  warning: [3, 4, 97, 92],
+  warning: [3, 4, 97, 92], earphones: [9, 4, 91, 100], earbuds: [18, 9, 82, 99],
 };
 
 /** Draw a library prop inside a box of w x h px. Returns null for kinds that aren't in PROPS. */

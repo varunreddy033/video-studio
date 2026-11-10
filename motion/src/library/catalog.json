@@ -11,6 +11,8 @@
     "laptop":      {"w": 380, "h": 260, "rest": "stand", "anim": "pop",   "group": "tech"},
     "chip":        {"w": 260, "h": 260, "rest": "float", "anim": "pop",   "group": "tech"},
     "battery":     {"w": 160, "h": 300, "rest": "float", "anim": "pop",   "group": "tech"},
+    "earphones":   {"w": 320, "h": 370, "rest": "float", "anim": "drop",  "group": "tech"},
+    "earbuds":     {"w": 260, "h": 360, "rest": "float", "anim": "pop",   "group": "tech"},
     "gear":        {"w": 240, "h": 240, "rest": "float", "anim": "pop",   "group": "tech"},
     "rocket":      {"w": 200, "h": 360, "rest": "float", "anim": "slide", "group": "tech"},
     "lightbulb":   {"w": 200, "h": 280, "rest": "float", "anim": "pop",   "group": "ideas"},
@@ -59,7 +61,7 @@
   },
   "special": {
     "gen":   {"w": 420, "h": 420, "rest": "float", "anim": "pop"},
-    "char":  {"w": 420, "h": 620, "rest": "stand", "anim": "slide"},
+    "char":  {"w": 560, "h": 800, "rest": "stand", "anim": "slide"},
     "label": {"w": 300, "h": 80,  "rest": "float", "anim": "pop"}
   }
 }

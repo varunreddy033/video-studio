@@ -6,6 +6,7 @@ import {CalendarPage, Coin, DashedArrow, Door, QuestionBubble} from '../componen
 import {LabelTag} from '../components/LabelTag';
 import {Element} from './types';
 import {LibraryProp, PROPS} from '../library/Props';
+import {TalkCtx, blinkingAt, shapeAt} from './ctx';
 
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
 const colorOf = (p: Palette, c?: string) => (c && (p as Record<string, string>)[c]) || c || p.accent;
@@ -91,18 +92,36 @@ export const GenView: React.FC<{el: Element; p: Palette}> = ({el, p}) =>
   el.props.src ? <Img src={staticFile(el.props.src)} style={{width: '100%', height: '100%', objectFit: 'contain'}} />
     : <Placeholder p={p} title="AI PROP" text={el.props.text} w={el.box.w} h={el.box.h} />;
 
-/** The presenter inside a scene: a pose cut-out (lip-sync arrives with Sterling Flat in phase 6), or a placeholder. */
+/** The presenter inside a scene: a lip-synced puppet. Every mouth frame of the pose is stacked and only the one
+ *  for this frame is visible (all are loaded before the render, so the mouth never flickers). The mouth follows
+ *  the video's mouth track by absolute frame, so he keeps talking across scene changes; he blinks, breathes and
+ *  sways a little, and dips slightly on open vowels. Works at any position and size (the box). */
 export const CharView: React.FC<{el: Element; p: Palette}> = ({el, p}) => {
   const f = useCurrentFrame();
-  const breathe = 1 + 0.012 * Math.sin(f / 18);
-  if (el.props.src) return (
-    <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center'}}>
-      <Img src={staticFile(el.props.src)} style={{maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
-        transform: `scaleY(${breathe})`, transformOrigin: '50% 100%', filter: 'drop-shadow(0 12px 0 rgba(0,0,0,0.25))'}} />
+  const talk = React.useContext(TalkCtx);
+  const frames: Record<string, string> | undefined = el.props.frames;
+  if (!el.props.src) return <Placeholder p={p} title="PRESENTER" text={el.props.pose} w={el.box.w} h={el.box.h} />;
+  const abs = talk.sceneFrom + el.enter.frame + f;
+  const ph = (hash(el.props.pose ?? 'x') % 60) / 10;
+  const breathe = 1 + 0.012 * Math.sin((abs / 30) * (2 * Math.PI / 3.6) + ph);
+  const sway = 0.5 * Math.sin((abs / 30) * (2 * Math.PI / 6.3) + ph);
+  const shape = frames ? shapeAt(talk.mouth, abs) : 'closed';
+  const blink = frames ? blinkingAt(talk.blinks, abs) : false;
+  const open = shape === 'wide' || shape === 'o' || shape === 'e' ? 1 : 0;
+  const prevOpen = ['wide', 'o', 'e'].includes(shapeAt(talk.mouth, abs - 2)) ? 1 : 0;
+  const nod = (open + prevOpen) * 1.2;
+  const layer: React.CSSProperties = {position: 'absolute', left: 0, bottom: 0, width: '100%', height: '100%',
+    objectFit: 'contain', objectPosition: '50% 100%'};
+  const want = (blink ? el.props.blinks : frames)?.[shape] ?? el.props.src;
+  const all: string[] = frames ? [...Object.values(frames), ...Object.values(el.props.blinks as Record<string, string>)] : [el.props.src];
+  return (
+    <div style={{width: '100%', height: '100%', position: 'relative', transformOrigin: '50% 100%',
+      transform: `translateY(${nod}px) rotate(${sway}deg) scaleY(${breathe})`,
+      filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.35))'}}>
+      {all.map((src) => <Img key={src} src={staticFile(src)} style={{...layer, opacity: src === want ? 1 : 0}} />)}
     </div>
   );
-  return <Placeholder p={p} title="PRESENTER" text={el.props.pose} w={el.box.w} h={el.box.h} />;
 };
 
 export const LabelView: React.FC<{el: Element; p: Palette}> = ({el, p}) =>
-  <LabelTag p={p} text={el.props.text} x={el.box.x} y={el.box.y} at={0} size={32} phase={hash(el.id) % 60} />;
+  <LabelTag p={p} text={el.props.text} x={el.box.x} y={el.box.y} at={0} size={32} phase={hash(el.id) % 60} pointer={el.props.pointer ?? 'down'} />;

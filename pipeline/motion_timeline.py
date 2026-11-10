@@ -114,9 +114,21 @@ def _box(ev, placed, auto_i, char_side=None):
     pl = ev.get("place") or {}
     y_bottom = FLOOR if rest == "stand" else 560 + bh / 2
     if "slot" in pl:
-        # slots share the free width: the presenter's side is kept clear
-        lo, span = (0.36, 0.56) if char_side == "left" else (0.08, 0.56) if char_side == "right" else (0.14, 0.72)
-        x = W * (lo + span * (pl["slot"] - 0.5) / pl["of"])
+        # slots share the free width (the presenter's side is kept clear); a box wider than its slot shrinks to fit.
+        # Small cards are list tiles: one row, or a 2 x 2 grid for four.
+        lo, span = (0.35, 0.62) if char_side == "left" else (0.03, 0.62) if char_side == "right" else (0.10, 0.80)
+        n, i = max(1, pl["of"]), pl["slot"] - 1
+        cols = 2 if (kind == "card" and n == 4) else n
+        cell = W * span / cols
+        x = W * lo + cell * (i % cols + 0.5)
+        if kind == "card":
+            bw = min(cell * 0.9, 640)
+            bh = min(bw * 0.52, 290)
+            y_bottom = (400 + (i // cols) * 340 if cols < n else 580) + bh / 2
+        elif bw > cell * (lim := 1.3 if kind == "number" else 0.96):    # a number's digits fill ~2/3 of its box
+            f = cell * lim / bw
+            bw, bh = bw * f, bh * f
+            y_bottom = FLOOR if rest == "stand" else 560 + bh / 2
     elif "side" in pl:
         x = W * SIDE_X[pl["side"]]
         if pl["side"].startswith("top") or pl["side"] == "sky":
@@ -125,7 +137,11 @@ def _box(ev, placed, auto_i, char_side=None):
             y_bottom = FLOOR
     elif "over" in pl:
         tgt = _find(placed, pl["over"])
-        if tgt:
+        if tgt and kind in ("cross", "check") and tgt["type"] in ("prop", "gen"):
+            tb = tgt["box"]                        # a tick or a cross is stamped ON the thing, not above it
+            bw = bh = min(bw, max(110, min(tb["w"], tb["h"]) * 0.8))
+            x, y_bottom = tb["x"] + tb["w"] / 2, tb["y"] + tb["h"] / 2 + bh / 2
+        elif tgt:
             x = tgt["box"]["x"] + tgt["box"]["w"] / 2
             y_bottom = tgt["box"]["y"] - 10
         else:
@@ -138,10 +154,47 @@ def _box(ev, placed, auto_i, char_side=None):
             x = W * 0.6
         elif char_side == "right" and kind != "char":
             x = W * 0.4
+    if kind == "char":                 # a waist-up presenter rises from the bottom edge (his cut-off edge is off screen)
+        bx = min(max(x - bw / 2, 20), W - 20 - bw)
+        return {"x": round(bx), "y": round(H + 12 - bh), "w": round(bw), "h": round(bh)}
     bx, by = x - bw / 2, y_bottom - bh
     bx = min(max(bx, 30), W - 30 - bw) if bw < W - 60 else (W - bw) / 2      # keep it inside the frame
     by = min(max(by, 150 if kind not in ("char",) else 60), H - 20 - bh) if bh < H - 170 else by
     return {"x": round(bx), "y": round(by), "w": round(bw), "h": round(bh)}
+
+
+def _label_rect(text, px, py, pointer):
+    w = len(text) * 22 + 44
+    return (px - w / 2, py - 82, px + w / 2, py) if pointer == "down" else (px - w / 2, py, px + w / 2, py + 82)
+
+
+def _label_spot(text, tgt, elements):
+    """Where a label tag goes: above its target, or under it when something is already there (the headline pill,
+    a prop sitting on the target, another label). Always inside the frame. Returns (x, y, pointer)."""
+    if not tgt:
+        return W / 2, 300, "down"
+    tb = tgt["box"]
+    half = (len(text) * 22 + 44) / 2
+    px = min(max(tb["x"] + tb["w"] / 2, 24 + half), W - 24 - half)
+    if tgt["type"] == "label":
+        return px, tb["y"] + 96, "down"
+    busy = []
+    for e in elements:
+        if e is tgt or "exit" in e or e["type"] in ("image", "video"):
+            continue
+        if e["type"] == "label":
+            busy.append(_label_rect(e["props"]["text"], e["box"]["x"], e["box"]["y"], e["props"].get("pointer", "down")))
+        else:
+            b = e["box"]
+            m = 0.12 if e["type"] != "char" else 0.2            # drawings rarely fill their box corners
+            busy.append((b["x"] + b["w"] * m, b["y"] + b["h"] * m, b["x"] + b["w"] * (1 - m), b["y"] + b["h"] * (1 - m)))
+    hit = lambda r: any(r[0] < o[2] and o[0] < r[2] and r[1] < o[3] and o[1] < r[3] for o in busy)  # noqa: E731
+    above, below = (px, tb["y"] - 12, "down"), (px, tb["y"] + tb["h"] + 14, "up")
+    ok_above = above[1] - 82 >= 170 and not hit(_label_rect(text, *above))
+    ok_below = below[1] + 82 <= H - 24 and not hit(_label_rect(text, *below))
+    if ok_above or not ok_below:
+        return px, max(above[1], 252), "down"
+    return below
 
 
 def _find(elements, target: str):
@@ -176,9 +229,9 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
         begin = frm - (tr["frames"] if tr and tr["type"] != "cut" else 0)
         local = lambda sec: max(0, round(sec * FPS) - begin)  # noqa: E731
         elements, headline = [], None
-        if sh["type"] in ("talk", "ai", "stock"):
+        if sh["type"] in ("talk", "ai", "stock", "act"):
             a = assets.get(k) or {"type": "card", "props": {"text": sh["type"].upper(), "sub": "(preview)"}}
-            elements.append({"id": f"s{k}_full", "type": a["type"], "props": {**a.get("props", {}), "move": k},
+            elements.append({"id": f"s{k}_full", "type": a["type"], "props": {**({"src": a["src"]} if a.get("src") else {}), **a.get("props", {}), "move": k},
                              "box": {"x": 0, "y": 0, "w": W, "h": H}, "enter": {"frame": 0, "anim": "none"}})
         auto_i, color_i = 0, 0
         has_head = any(e["op"] == "head" for e in sh.get("events", []))
@@ -236,18 +289,15 @@ def build(parsed, timing, scene_spans, total, assets, words_out=None, palette="n
                     box = _box({**ev, "kind": "char", "place": place}, elements, 0)
                     c = (assets.get("chars") or {}).get(ev["pose"])
                     elements.append({"id": f"s{k}_char_{len(elements)}", "type": "char", "kind": "char", "_place": place,
-                                     "box": box, "props": {"pose": ev["pose"], **({"src": c["src"]} if c else {})},
+                                     "box": box, "props": {"pose": ev["pose"], **(c or {})},
                                      "enter": {**cue, "anim": "none" if cur else "slide"}})
             elif op == "label":
                 tgt = _find(elements, ev["target"]) if ev.get("target") else (elements[-1] if elements else None)
-                if tgt:
-                    bx = tgt["box"]
-                    px, py = bx["x"] + bx["w"] / 2, max(bx["y"] - 12, 235)     # stay under the headline pill
-                else:
-                    px, py = W / 2, 300
+                px, py, pointer = _label_spot(ev["text"], tgt, elements)
                 elements.append({"id": f"s{k}_label_{len(elements)}", "type": "label", "kind": "label",
                                  "box": {"x": round(px), "y": round(py), "w": 0, "h": 0},
-                                 "props": {"text": ev["text"]}, "enter": {**cue, "anim": "pop"}})
+                                 "props": {"text": ev["text"], **({"pointer": pointer} if pointer != "down" else {})},
+                                 "enter": {**cue, "anim": "pop"}})
         live_char = next((e for e in reversed(elements) if e["type"] == "char"), None)
         carried_char = None if (live_char is None or "exit" in live_char) else \
             {kk: vv for kk, vv in live_char.items() if kk not in ("exit",)}

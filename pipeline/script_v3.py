@@ -33,7 +33,7 @@ FROM_DIRS = {"right": "from-right", "left": "from-left", "top": "from-top", "bot
 CATALOG = json.loads((C.BASE_DIR / "motion" / "src" / "library" / "catalog.json").read_text(encoding="utf-8"))
 DATA_KINDS = {"number", "chart", "quote", "card"}                 # classic syntax, as in-scene elements
 NEW_DATA = {"pie", "compare", "ranking", "map"}                   # motion-only data components
-SCENE_SHOTS = {"talk", "ai", "stock"}
+SCENE_SHOTS = {"talk", "ai", "stock", "act"}
 PROPS = set(CATALOG["props"]) | {"label"}
 
 
@@ -128,6 +128,8 @@ def _element(arg: str, line: int, err):
     parts = [x.strip() for x in arg.split("|")]
     head = parts[0]
     m = re.fullmatch(r"([a-z][a-z0-9_-]*)\s*(?::\s*(.*))?", head, re.I | re.S)
+    if not m:                                           # a prop with a name but no text: [+ earphones #pods | left]
+        m = re.fullmatch(r"([a-z][a-z0-9_-]*)(\s+#[A-Za-z0-9_-]+)\s*", head, re.I)
     if not m:
         err(line, f"[+ {arg}]: start with what to add, like [+ door: FUND | 1 of 4 | grow]")
         return None
@@ -330,7 +332,7 @@ def parse_body(lines, start, meta, err, warn):
                     pending_pause += max(0.0, min(5.0, float(arg.rstrip("s"))))
                 except ValueError:
                     err(ln, f"[pause: ...] needs seconds, like [pause: 1.5], got '{arg}'")
-            elif kind in ("act", "card"):
+            elif kind == "card":
                 err(ln, f"[{kind}: ...] is a classic tag; in motion scripts use [+ ...] elements and [scene: ...]")
             else:
                 err(ln, f"unknown tag [{kind}: ...] in a motion script. Use [scene:], [char:], [+ ...], [- ...], "

@@ -13,6 +13,7 @@ import {fade} from '@remotion/transitions/fade';
 import {Captions} from './Captions';
 import {ElementView} from './Elements';
 import {Scene, Timeline, Transition} from './types';
+import {TalkCtx} from './ctx';
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,7 +54,11 @@ export const MotionVideo: React.FC<Timeline> = (tl) => {
                 <TransitionSeries.Transition presentation={presentation(s.transition)}
                   timing={linearTiming({durationInFrames: s.transition.frames, easing: Easing.inOut(Easing.cubic)})} />
               ) : null}
-              <TransitionSeries.Sequence durationInFrames={Math.max(1, len)}><SceneView sc={s} p={p} /></TransitionSeries.Sequence>
+              <TransitionSeries.Sequence durationInFrames={Math.max(1, len)}>
+                <TalkCtx.Provider value={{mouth: tl.mouth ?? [], blinks: tl.blinks ?? [], sceneFrom: s.from}}>
+                  <SceneView sc={s} p={p} />
+                </TalkCtx.Provider>
+              </TransitionSeries.Sequence>
             </React.Fragment>
           );
         })}
