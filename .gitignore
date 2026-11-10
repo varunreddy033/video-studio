@@ -1,8 +1,8 @@
 # --- Python environment (this project folder is also the venv) ---
-bin/
-lib/
-include/
-share/
+/bin/
+/lib/
+/include/
+/share/
 pyvenv.cfg
 __pycache__/
 *.pyc

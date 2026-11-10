@@ -271,6 +271,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - [x] docs/CLAUDE_SCRIPT_PROMPT.md: prompt A = Sterling presents (character:, [talk:], [act:], his persona and
       catchphrases, pacing + today's lessons), prompt B = no presenter. Prompt A's format passes Check clean.
 - [ ] Packs for other characters (docs/characters/biscuit.md, nova.md) when needed (~2 h each, plugged in).
+- [ ] MOTION style (docs/MOTION_PLAN.md, opt-in `style: motion`; classic stays the default and untouched):
+  - [x] Phase 1 look test (2026-11-10): motion/ = Remotion 4.0.539 (React 18.3.1, TS 5.9.3, all pinned, lockfile),
+        Node 22 via Homebrew (setup.sh installs it + npm ci + Remotion's headless browser). Montserrat (OFL) bundled.
+        tools/motion_demo.py: Kokoro bm_george voice -> word timings (motion/src/demo/timing.json) -> Remotion picture
+        -> voice + ducked music -> -14 LUFS -> output/motion_demo.mp4. 27.5 s demo, 3 scenes: 4 doors grow on their
+        words with label tags + word-by-word headline pill; line chart draws while -5.5% counts, calendar page flips,
+        shake on "slammed"; push-from-right with shadow band; zoom-through into the chart's red end dot; doors with
+        "?" bubbles, coin pile, dashed arrow. Render: Remotion 16.4 s, total 19 s (concurrency 4). -14.0 LUFS.
+        WAITING FOR VARUN'S APPROVAL of the look before phase 2.
+        Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:
       Short from scratch (scripts/short_730_billion.md, job 20261109-121112-a44971): 37 s, draft 18 s, final 45 s

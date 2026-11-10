@@ -69,6 +69,17 @@ else
   echo "   WARNING: ffmpeg has no h264_videotoolbox encoder"
 fi
 
+echo "== motion style: Node 22 + Remotion (versions pinned in motion/package.json + package-lock.json)"
+command -v node >/dev/null || brew list node@22 >/dev/null 2>&1 || brew install node@22
+NODE_BIN="$(brew --prefix node@22 2>/dev/null)/bin"
+[ -x "$NODE_BIN/node" ] || NODE_BIN="$(dirname "$(command -v node)")"
+( cd "$P/motion" && PATH="$NODE_BIN:$PATH" npm ci --no-audit --no-fund --loglevel=error ) \
+  && echo "   ok: node $("$NODE_BIN/node" -v), remotion $(cd "$P/motion" && "$NODE_BIN/node" -p "require('remotion/package.json').version")" \
+  || echo "   WARNING: npm ci in motion/ failed; re-run this script"
+# Remotion's headless browser (one-time ~100 MB download, used to draw motion videos)
+( cd "$P/motion" && PATH="$NODE_BIN:$PATH" npx remotion browser ensure >/dev/null 2>&1 ) \
+  && echo "   ok: Remotion headless browser" || echo "   WARNING: Remotion browser download failed; re-run this script"
+
 echo "== check: presenter + parallax libraries import"
 "$PY" - <<'EOF'
 import importlib, sys
