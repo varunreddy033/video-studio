@@ -376,6 +376,14 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         unknown; twemoji (CC BY 4.0) only imports with ALLOW_CC_BY=1 (credit_lines() gives its description line).
         Noto is pinned to 1.2.7 ON PURPOSE: newer packages include files added after upstream replaced the Apache
         licence file with OFL-1.1 (not on the allow-list). Classic sample draft 14 s, presets clean.
+  - [x] Step 2 index (2026-11-11): pipeline/icon_index.py + tools/build_icon_index.py -> assets/library/icons/
+        index.json (14,622 rows: id, set, name, words, category, licence, has_colour, char) + embeddings.npy
+        (11 MB, float16), both NOT in git, rebuilt automatically when the packs change (signature check), 32 s incl.
+        the model download. Model sentence-transformers/all-MiniLM-L6-v2 (Apache-2.0) pinned to revision 1110a243,
+        run with transformers + mean pooling on the CPU (no sentence-transformers package needed). Keywords:
+        emojilib 4.0.3 + unicode-emoji-json 0.9.0 (both MIT) instead of CLDR (Unicode licence isn't on the
+        allow-list). `bin/python tools/icon_search.py "battery dies" [--set fluent_flat] [-n 10]`: low-battery
+        first, 2 s, same result every run. Whole sentences search badly (the picker uses key nouns, step 3).
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

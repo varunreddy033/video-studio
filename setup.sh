@@ -107,6 +107,8 @@ HF="$P/node_modules/.bin/hyperframes"
 export HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_NO_UPDATE_CHECK=1
 echo "== extra: icon packs for motion graphics (pinned @iconify-json packages, licence allow-list)"
 "$PY" "$P/tools/import_icon_packs.py" || echo "   WARNING: an icon pack was refused or failed; see the lines above"
+"$PY" "$P/tools/build_icon_index.py" 2>/dev/null \
+  || echo "   WARNING: the icon search index wasn't built; run: $PY $P/tools/build_icon_index.py"
 "$HF" telemetry disable >/dev/null 2>&1 || true
 "$HF" browser ensure >/dev/null 2>&1 && echo "   ok: HyperFrames $("$HF" --version), Node $(node --version), Chrome for rendering" \
   || echo "   WARNING: HyperFrames couldn't find or download Chrome; run: $HF browser ensure"
