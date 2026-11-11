@@ -8,9 +8,14 @@ palette set, font pairing, icon style) and the icons, templates, palettes, fonts
                              hash of the title). Header lines win: icons:, palette:, fonts:, icon_style:, look: classic.
   recent(title)              what the 5 videos BEFORE this one used (its own entry and later ones never count, so a
                              re-render picks the same icons as the first render).
-  record(title, job, data)   writes / replaces this video's entry (keeps its place in the order).
+  record(title, job, data)   writes / replaces this video's entry (keeps its place in the order), status "done".
+  reserve(meta, title, job)  at the START of every motion render (draft or final): chooses the look and writes the
+                             entry with status "rendering" under a file lock, so videos queued or rendered at the same
+                             time see each other and never take the same look. A reservation that never finished is
+                             ignored after 24 h (STALE). finish_draft() marks a finished draft ("draft", kept).
 """
 
+import contextlib
 import hashlib
 import json
 import time
@@ -21,6 +26,8 @@ from . import design as D
 
 PATH = C.BASE_DIR / "data" / "asset_history.json"
 RECENT = 5
+RECENT_SIMILAR = 10        # videos the similarity check compares with
+STALE = 24 * 3600          # a "rendering" reservation older than this is ignored (the render died)
 CLASSIC = {"icons": "fluent_flat", "palette": "pop", "fonts": "poster", "icon_style": "sticker"}
 
 
@@ -28,11 +35,47 @@ def key_of(title: str) -> str:
     return hashlib.sha1((title or "").strip().lower().encode("utf-8")).hexdigest()[:16]
 
 
-def load() -> list:
+def _load_all() -> list:
     try:
         return json.loads(PATH.read_text(encoding="utf-8")).get("videos", [])
     except (OSError, ValueError):
         return []
+
+
+def _alive(v) -> bool:
+    return v.get("status") != "rendering" or time.time() - float(v.get("started") or 0) < STALE
+
+
+def load() -> list:
+    return [v for v in _load_all() if _alive(v)]
+
+
+@contextlib.contextmanager
+def _locked():
+    """One writer at a time (fcntl lock on data/asset_history.lock; Windows: msvcrt)."""
+    PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(PATH.with_suffix(".lock"), "a+") as fh:
+        try:
+            import fcntl
+            fcntl.flock(fh, fcntl.LOCK_EX)
+        except ImportError:                                      # Windows
+            import msvcrt
+            msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            yield
+        finally:
+            try:
+                import fcntl
+                fcntl.flock(fh, fcntl.LOCK_UN)
+            except ImportError:
+                pass
+
+
+def _write(videos) -> None:
+    tmp = PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"videos": [v for v in videos if _alive(v)]}, indent=1, ensure_ascii=False),
+                   encoding="utf-8")
+    tmp.replace(PATH)
 
 
 def _before(title: str) -> list:
@@ -50,7 +93,8 @@ def entry(title: str):
 
 def recent(title: str) -> dict:
     """{"icons": {id: n}, "templates": {...}, "music": {...}, "sfx": {...}, "looks": [...]} of the last 5 videos."""
-    out = {"icons": {}, "templates": {}, "music": {}, "sfx": {}, "looks": []}
+    out = {"icons": {}, "templates": {}, "music": {}, "sfx": {}, "looks": [],
+           "videos": _before(title)[-RECENT_SIMILAR:]}
     for v in _before(title)[-RECENT:]:
         out["looks"].append(v.get("look") or {})
         for k in ("icons", "templates", "music", "sfx"):
@@ -96,15 +140,41 @@ def choose_look(meta: dict, title: str) -> dict:
 
 
 def record(title: str, job: str, data: dict) -> None:
-    videos, key = load(), key_of(title)
-    row = dict(data, key=key, title=title, job=job, date=time.strftime("%Y-%m-%d %H:%M"))
-    for i, v in enumerate(videos):
-        if v.get("key") == key:
-            videos[i] = row
-            break
-    else:
-        videos.append(row)
-    PATH.parent.mkdir(parents=True, exist_ok=True)
-    tmp = PATH.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"videos": videos}, indent=1, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(PATH)
+    with _locked():
+        videos, key = _load_all(), key_of(title)
+        row = dict(data, key=key, title=title, job=job, status="done", date=time.strftime("%Y-%m-%d %H:%M"))
+        for i, v in enumerate(videos):
+            if v.get("key") == key:
+                videos[i] = row
+                break
+        else:
+            videos.append(row)
+        _write(videos)
+
+
+def reserve(meta: dict, title: str, job: str) -> dict:
+    """Chooses this video's look and reserves it in the history before anything renders (see the module doc)."""
+    with _locked():
+        look = choose_look(meta, title)
+        videos, key = _load_all(), key_of(title)
+        for v in videos:
+            if v.get("key") == key and _alive(v):
+                if v.get("status") != "done":
+                    v.update(look=look, job=job, status="rendering", started=time.time())
+                break
+        else:
+            videos = [v for v in videos if v.get("key") != key]      # a stale reservation of this title
+            videos.append({"key": key, "title": title, "job": job, "status": "rendering", "started": time.time(),
+                           "look": look, "date": time.strftime("%Y-%m-%d %H:%M")})
+        _write(videos)
+    return look
+
+
+def finish_draft(title: str, extra: dict = None) -> None:
+    """A finished draft keeps its reservation (status "draft"), so its final gets the same look."""
+    with _locked():
+        videos, key = _load_all(), key_of(title)
+        for v in videos:
+            if v.get("key") == key and v.get("status") == "rendering":
+                v.update(extra or {}, status="draft")
+        _write(videos)

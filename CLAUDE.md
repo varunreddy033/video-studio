@@ -448,6 +448,17 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       computer chip). Index 54 s; index.json 63 MB + embeddings.npy 255 MB (mmap) + icons 329 MB +
       node_modules/@iconify-json 476 MB, none in git. Licence downloads use curl + jsDelivr's GitHub mirror
       (urllib waited 30 s a file here; raw.githubusercontent throttled to 75 s).
+- [ ] VARIETY PLAN (docs/VARIETY_PLAN.md, build order = its section 8; rendering_method: motion only):
+  - [x] Step 1 (2026-11-11): history.reserve() at the START of every motion render (draft or final) chooses the look
+        and writes the entry with status "rendering" under a file lock (data/asset_history.lock); recent() sees
+        reservations, so videos queued / rendered together never share a look (tested: 3 parallel processes -> 3
+        different icon families; same title again keeps its look). Stale "rendering" entries ignored after 24 h;
+        finished drafts stay as "draft". pipeline/motion_gfx/variety.py = the variety report (scene-type mix, most-used
+        type + layout, transition mix, types, A-B-A-B, longest stretch without data, similarity to the last 10 videos,
+        8 goals) in render.log, the job page and the Check page (Variety card). BASELINE, Windows vs MacBook final
+        20261111-125755-a5e140: 10 types in 194 scenes, figure 43.8 %, kinetic 38.7 %, top layout figure:2 x29,
+        4 transition types (cut 48.5 %), A-B-A-B 89, 91.8 s without a data scene: 0 of 8 goals.
+        Regression: sample_script draft 12 s; motion sample draft 176 s (HyperFrames slower than the 79 s before).
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

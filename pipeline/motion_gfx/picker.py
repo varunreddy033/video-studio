@@ -517,9 +517,12 @@ def check_report(parsed: dict, history: dict = None) -> dict:
     title = meta.get("title", "")
     look = Hs.choose_look(meta, title)
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
-    names, _v, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"]),
-                                     Hs.recent(title) if history is None else history, seed)
+    seen = Hs.recent(title) if history is None else history
+    names, variants, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"]), seen, seed)
     rep = p["report"]
+    from . import compose, variety
+    trans = [compose.transition_for(beats, i) for i in range(len(beats))]
+    rep["variety"] = variety.report(names, variants, trans, beats, seen.get("videos"), look)
     rep["look"] = look
     rep["pool"] = p["pool"]
     rep["nouns"] = p["nouns"]

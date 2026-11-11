@@ -177,6 +177,12 @@ video { width: 100%; border-radius: var(--radius); background: #000; display: bl
 .src .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .timebox { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .timebox .inp { width: 90px; font-family: var(--mono); }
+.bars { display: grid; gap: 4px; margin: 10px 0; }
+.barrow { display: grid; grid-template-columns: 110px 1fr 90px; gap: 8px; align-items: center; font-size: 13px; }
+.barrow i { display: block; height: 10px; border-radius: 5px; background: var(--accent); }
+.barrow b { font-weight: 500; color: var(--muted, inherit); }
+ul.goals { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 12px; font-size: 13px; }
+ul.goals li.ok { color: var(--ok); } ul.goals li.bad { color: var(--bad); }
 .chip.type { background: var(--info-soft); color: var(--info); }
 .icongrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 8px; }
 .icontile { margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
@@ -640,8 +646,33 @@ function iconCard(r, getText, setText, recheck) {
       h("details", {}, h("summary", {}, `Icon per scene (${x.rows.length})`),
         h("div", { class: "icongrid" }, x.rows.filter(y => y.icon).map(y => tile(y.icon, `${ts(y.t)} · ${y.text}`, pins.has(y.icon))))),
       banned.length ? h("p", { class: "hint" }, "Banned (click to allow again): ", ...banned) : null);
+    const old = document.getElementById("variety"), vc = varietyCard(x.variety, true);
+    if (vc) { if (old) old.replaceWith(vc); else card.after(vc); }
   }).catch((e) => card.replaceChildren(h("h3", {}, "Icons"), h("p", { class: "hint" }, e.message)));
   return card;
+}
+
+function varietyCard(v, estimated) {
+  // docs/VARIETY_PLAN.md section 7: scene-type mix, most-used type + layout, transitions, goals
+  if (!v) return null;
+  const G = { max_type_share: "no scene type above 20%", max_type_layout: "no type + layout above 6 uses",
+    min_types: "15+ scene types", min_transitions: "6+ transition types", max_kinetic_share: "kinetic words at most 15%",
+    max_transition_share: "no transition above 35%", no_type_twice: "never the same type twice in a row", no_abab: "no A-B-A-B runs" };
+  const max = Math.max(...Object.values(v.scene_mix), 1);
+  return h("div", { class: "card", id: "variety" }, h("h3", {}, `Variety (${v.goals_met} of ${v.goals_total} goals)`),
+    h("div", { class: "stats" },
+      h("div", { class: "stat" }, h("b", {}, v.types), h("span", {}, `scene types in ${v.scenes} scenes`)),
+      h("div", { class: "stat" }, h("b", {}, `${v.top_type.share}%`), h("span", {}, `most used: ${v.top_type.type} (${v.top_type.count}×)`)),
+      h("div", { class: "stat" }, h("b", {}, `${v.top_layout.count}×`), h("span", {}, `most used layout: ${v.top_layout.layout}`)),
+      h("div", { class: "stat" }, h("b", {}, v.transition_types), h("span", {}, `transition types (top ${v.top_transition_share}%)`)),
+      h("div", { class: "stat" }, h("b", {}, `${v.longest_without_data} s`), h("span", {}, "longest stretch without a data scene")),
+      v.closest ? h("div", { class: "stat" }, h("b", {}, v.closest[0].toFixed(2)), h("span", {}, `similarity to “${v.closest[1]}” (closest recent video)`)) : null),
+    h("div", { class: "bars" }, Object.entries(v.scene_mix).map(([k, n]) => h("div", { class: "barrow" },
+      h("span", {}, k), h("i", { style: `width:${Math.max(2, Math.round(100 * n / max))}%` }), h("b", {}, `${n} · ${v.scene_share[k]}%`)))),
+    h("p", { class: "hint" }, "Transitions: " + Object.entries(v.transition_mix).map(([k, n]) => `${k} ${n}`).join(", ")
+      + `. Same type twice in a row: ${v.same_type_twice}. A-B-A-B runs: ${v.abab}.`),
+    h("ul", { class: "goals" }, Object.entries(v.goals).map(([k, ok]) => h("li", { class: ok ? "ok" : "bad" }, (ok ? "✓ " : "✗ ") + (G[k] || k)))),
+    estimated ? h("p", { class: "hint" }, "Estimated from the script; the render re-plans on the real voice timings.") : null);
 }
 
 function lookCard(r, getText, setText, recheck) {
@@ -932,6 +963,7 @@ function showJob() {
     "\nFix the script below if needed, then press the render button again. Finished voice and AI images are reused."));
   if (running) m.append(progressCard());
   const vc = videoCard(d); if (vc) m.append(vc);
+  { const v = ((d.final || d.draft || {}).motion || {}).variety; const c = varietyCard(v, false); if (c) m.append(c); }
   if (d.files.some(f => f.startsWith("thumb_"))) {
     const isShort = d.type === "short";
     m.append(h("div", { class: "card" }, h("h3", {}, isShort ? "Cover" : "Thumbnails"),

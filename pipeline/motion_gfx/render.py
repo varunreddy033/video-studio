@@ -28,6 +28,7 @@ from .. import config as C
 from ..util import PipelineError, best_match, fmt_ts, log as _log, media_duration, run, sfx_files
 from . import beats as B
 from . import compose, hf, history, picker
+from . import variety as V
 from . import design as D
 from . import templates as T
 
@@ -92,6 +93,9 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     log(f"=== {mode.upper()} render (motion graphics): '{title}'  {len(parsed['shots'])} shots, {W}x{H} -> {OW}x{OH}, "
         f"HyperFrames {tools['hyperframes']}, Node {tools['node']}, encoder {encoder.name()}")
 
+    # 0 reserve this video's look in data/asset_history.json before anything else (videos queued or rendered at the
+    #   same time then never share a look; docs/VARIETY_PLAN.md section 6)
+    look = history.reserve(meta, title, job_dir.name)
     # 1 voice + cut points (identical to the AI-image renderer)
     tl, total = assemble._timeline(parsed, job_dir, progress)
     if P["max_sec"] and total > P["max_sec"]:
@@ -105,7 +109,6 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     progress("visuals", 0, 1)
     beats = B.split(parsed, tl, spans)
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
-    look = history.choose_look(meta, title)                     # one look per video, rotating across videos
     T.set_look(look["fonts"])
     order = D.palette_order(len(beats), seed, D.PALETTE_SETS[look["palette"]])
     seen = history.recent(title)
@@ -159,6 +162,9 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     counts = {n: used_tpl.count(n) for n in sorted(set(used_tpl))}
     log(f"  {len(beats)} scenes (one every {total / max(1, len(beats)):.1f} s): " +
         ", ".join(f"{n} {c}" for n, c in counts.items()))
+    vrep = V.report(used_tpl, [b["variant"] for b in beats], [b["transition"] for b in beats], beats,
+                    seen.get("videos"), look)
+    log("  " + V.log_line(vrep))
 
     # 3 check + look (hyperframes skill)
     progress("checks", 0, 1)
@@ -243,7 +249,9 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "templates": sorted({f"{'title' if n == 'chapter' else n}:{v}" for n, v in zip(used_tpl, variants)}),
             "palettes": sorted({D.PALETTES[k]["name"] for k in order}),
             "fonts": [look["fonts"]], "music": sorted({m["track"] for m in music or []}),
-            "sfx": sorted({u.split(" -> ")[-1] for u in sfx_used})})
+            "sfx": sorted({u.split(" -> ")[-1] for u in sfx_used}), **V.fingerprint(vrep, look)})
+    else:
+        history.finish_draft(title, V.fingerprint(vrep, look))
     secs = time.time() - t_start
     n_sfx = len(sfx_used)
     log(f"sound effects: {n_sfx} ({n_sfx / max(1, total) * 60:.0f} a minute), "
@@ -254,7 +262,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "sfx_used": sfx_used, "chapters": chapters, "warnings": warnings, "music": music,
             "type": meta.get("type", "full"), "encoder": encoder.name(), "loudness_before": loud_in,
             "loudness_target": C.TARGET_LUFS, "rendering_method": "motion",
-            "motion": {"scenes": len(beats), "templates": counts, "look": look, "icons": {k: icon_rep[k] for k in ("family", "icons", "most_used", "question_style", "beats_with_icon")}, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1)}}
+            "motion": {"scenes": len(beats), "templates": counts, "look": look, "icons": {k: icon_rep[k] for k in ("family", "icons", "most_used", "question_style", "beats_with_icon")}, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1),
+                       "variety": vrep}}
 
 
 def _loudness(path: Path, job_dir: Path, what: str):
