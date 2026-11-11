@@ -1,16 +1,22 @@
 # script.md format
 
 A script is plain text: a short header, then narration with shot tags.
-Paste it into Video Studio (http://localhost:8765), press **Check**, then **Make draft**.
+Paste it into Video Studio (http://localhost:8765) and press **Check**. When Check has no errors (warnings are
+fine) two buttons appear: **Make final** goes straight to the final (video, thumbnails, metadata.txt,
+captions_final.srt, upload pack), **Draft first** makes a quick low-resolution draft to review, then you press
+Make final on the video's page. The same two buttons are on a video's page and for Shorts; the browser remembers
+which one you used last and draws it as the main button.
 
 Two ways to make the pictures (the **Pictures** menu on the new-video screen writes the header line for you):
 
 | `rendering_method:` | Pictures | Samples (**Load sample** follows the Pictures menu) |
 |---|---|---|
-| `ai_image` (default, no line needed) | AI images with camera moves + cards, numbers, quotes, charts | `docs/sample_script.md` |
-| `motion` | bright-pop motion graphics: kinetic words, stick figures, transitions, caption chip, sound on every beat | `docs/sample_motion_gfx_script.md` |
+| `motion` (default, no line needed) | bright-pop motion graphics: kinetic words, stick figures, icons, transitions, sound on every beat, no burned-in captions | `docs/sample_motion_gfx_script.md` |
+| `ai_image` | AI images with camera moves + cards, numbers, quotes, charts | `docs/sample_script.md` |
 
-The same shot tags work for both, so one script can be rendered either way.
+The same shot tags work for both, so one script can be rendered either way. The default comes from
+`DEFAULT_RENDERING_METHOD` in `.env` (`motion`). A script without the line that only works with AI images
+(`character:`, `[talk:]` / `[act:]`, `clip_from:`, `style: motion`) gets `ai_image` by itself.
 
 ## 1. Header (between two `---` lines)
 
@@ -23,7 +29,7 @@ description: |                                (optional, indent the lines below 
   #AI #Stocks
 tags: ai bubble, stock market, nvidia         (comma separated)
 type: full                                    (full = 16:9 long video (default), short = 9:16 Short, 15 s-2:00)
-rendering_method: motion                      (optional: ai_image (default) or motion, see the table above)
+rendering_method: motion                      (optional: motion (default) or ai_image, see the table above)
 music: mystery, tense, epic                   (a mood folder of assets/library/music (calm, dark, emotional,
                                                epic, mystery, tech, tense, uplifting) or track names; full
                                                videos: one per chapter in this order, crossfaded)
@@ -50,7 +56,7 @@ name). Leave a key out and the default preset is used, which is exactly how vide
 |---|---|---|---|
 | `language:` | languages of the voice presets | `en` | |
 | `voice:` | `presets/voices/` | `en_us_michael` | a Kokoro voice id (`bm_george`); `character:` still sets its own voice |
-| `captions:` | `presets/captions/` | `amber_word` | |
+| `captions:` | `presets/captions/` | `amber_word` (motion graphics: `none`) | |
 | `art_style:` | `presets/art_styles/` | `doc_photo` | |
 | `music:` | `presets/music/` | `any` | track names from `assets/audio/bgm` (`misdirection, soaring`) |
 
@@ -71,7 +77,7 @@ header replaces a character's own voice.
 
 | id | Look |
 |---|---|
-| `amber_word` (default) | short phrases, the spoken word turns amber |
+| `amber_word` (default for `ai_image`) | short phrases, the spoken word turns amber |
 | `big_word` | one heavy word at a time, popping in |
 | `red_pop` | two tall words, the spoken one red |
 | `soft_glow` | clean capitals with a soft glow |
@@ -81,8 +87,11 @@ header replaces a character's own voice.
 | `serif` | small-caps serif |
 | `pixel` | retro game lettering |
 | `clean_lower` | friendly lowercase |
-| `none` | nothing burned in (the .srt for YouTube is still made) |
-| `chip` | white pill at the top left, spoken word on a yellow marker (default for `rendering_method: motion`) |
+| `none` | nothing burned in (the .srt for YouTube is still made). Default for `rendering_method: motion`: its scenes already show the key words |
+| `chip` | white pill at the top left, spoken word on a yellow marker (motion graphics; pick it in the Captions tab or write `captions: chip`) |
+
+Every video gets `captions_final.srt` whatever the style (also `none`); it is in the upload pack for YouTube's
+subtitles.
 
 Each style is a file in `presets/captions/` (font, colours, words per phrase, sizes for full videos / vertical /
 Shorts); the fonts are in `assets/fonts` (all SIL Open Font License).
@@ -106,7 +115,7 @@ included; your own file in a folder replaces the starter one).
 
 ### Pictures (`rendering_method:`)
 
-`rendering_method: ai_image` (default) = AI images + graphics, as always. `rendering_method: motion` = bright-pop
+`rendering_method: ai_image` = AI images + graphics. `rendering_method: motion` (the default) = bright-pop
 motion graphics: kinetic words, stick figures, numbers, charts, memos and transitions, a new picture every 1.2-3 s,
 no AI images (docs/MOTION_GFX_PLAN.md). The same shot tags work; the narration words pick the figures' poses and props.
 Not with `character:` or `clip_from:`. Video Studio: the "Pictures" menu on the new-video screen writes this line.

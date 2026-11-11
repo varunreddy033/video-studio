@@ -6,6 +6,7 @@ description: |
   #AI #Test
 tags: ai bubble, stock market, test
 format: landscape
+rendering_method: ai_image
 music: misdirection
 thumbnail: AI BUBBLE?
 thumbnail_prompt: a giant glowing soap bubble floating over a city skyline at dusk, dramatic light

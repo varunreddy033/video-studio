@@ -60,7 +60,8 @@ def recent(title: str) -> dict:
 
 
 def options() -> dict:
-    return {"icons": L.usable_families() or ["fluent_flat"], "palette": list(D.PALETTE_SETS),
+    return {"icons": L.usable_families(rotation=True) or ["fluent_flat"],
+            "icons_all": L.usable_families() or ["fluent_flat"], "palette": list(D.PALETTE_SETS),
             "fonts": list(D.FONT_PAIRS), "icon_style": ["sticker", "plain"]}
 
 
@@ -78,7 +79,7 @@ def choose_look(meta: dict, title: str) -> dict:
         looks = recent(title)["looks"]
         h = int(hashlib.sha1(title.encode("utf-8")).hexdigest()[:8], 16)
         for part in ("icons", "palette", "fonts"):
-            if base.get(part) in opts[part]:
+            if base.get(part) in (opts["icons_all"] if part == "icons" else opts[part]):
                 continue
             used = [lk.get(part) for lk in looks]
             n = len(opts[part])
@@ -89,7 +90,7 @@ def choose_look(meta: dict, title: str) -> dict:
         if v:
             base[part] = v
     for part in ("icons", "palette", "fonts", "icon_style"):
-        if base.get(part) not in opts[part]:
+        if base.get(part) not in (opts["icons_all"] if part == "icons" else opts[part]):
             base[part] = CLASSIC[part] if CLASSIC[part] in opts[part] else opts[part][0]
     return base
 

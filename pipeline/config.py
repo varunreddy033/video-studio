@@ -58,8 +58,13 @@ SFX_MAX_SEC = float(env("SFX_MAX_SEC", "2.5"))
 BGM_FILE = env("BGM_FILE")
 TARGET_LUFS = float(env("TARGET_LUFS", "-14"))
 FPS = int(env("FPS", "30"))
-# how the pictures are made (script header rendering_method:). ai_image = the original renderer (default).
+# how the pictures are made (script header rendering_method:). motion = motion graphics (the default since
+# 2026-11-11, .env DEFAULT_RENDERING_METHOD); ai_image = the original AI-image renderer. Scripts without the line
+# that need AI images (character:, [talk:]/[act:], clip Shorts, style: motion) still get ai_image (script_parser).
 RENDERING_METHODS = {"ai_image": "AI images", "motion": "Motion graphics"}
+DEFAULT_RENDERING_METHOD = env("DEFAULT_RENDERING_METHOD", "motion").lower()
+if DEFAULT_RENDERING_METHOD not in RENDERING_METHODS:
+    DEFAULT_RENDERING_METHOD = "motion"
 GAP_IN_PARAGRAPH = 0.12       # silence between voice segments of one paragraph (at a shot cut)
 GAP_AFTER_PARAGRAPH = float(env("SCENE_PAD", "0.35"))
 WORDS_PER_MIN = 155           # measured: Kokoro am_michael at speed 1.0

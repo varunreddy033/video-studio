@@ -2,12 +2,16 @@ How to use: copy ONE prompt below (from its line of dashes to the next) into a C
 LENGTH / ANGLE lines, and paste Claude's script into Video Studio -> + New video -> Check. If Check shows errors or
 warnings, paste them back to Claude and ask it to fix the script.
 
-  A. STERLING PRESENTS   (recommended: our cat presenter on camera + acting out the story)
+  D. MOTION GRAPHICS     (DEFAULT, recommended: bright-pop animated explainer: kinetic words, stick figures,
+                          icons, transitions, sound on every beat; no presenter, no AI images, fast to render.
+                          Example: docs/sample_motion_gfx_script.md)
+  A. STERLING PRESENTS   (character video: the cat presenter on camera + acting out the story; AI images)
   B. NO PRESENTER        (documentary style: AI images + cards only)
   C. STERLING SHORT      (a 30-90 s vertical Short from scratch; for a Short cut from a finished video, use
                           Make Short -> From a video I already made instead: no script needed)
-  D. MOTION GRAPHICS     (bright-pop animated explainer: kinetic words, stick figures, transitions, caption chip;
-                          no AI images, fast to render. Example: docs/sample_motion_gfx_script.md)
+
+Motion graphics is what Video Studio makes when the header has no rendering_method: line. Prompts A and C are
+for the character channel only: never reuse their sign-offs or persona in a motion-graphics script.
 
 ================================================================================================================
 A. STERLING PRESENTS
@@ -192,11 +196,12 @@ RULES (Video Studio's Check enforces the numbers)
 - Facts only from your research list; numbers written as words in the narration; no stage directions.
 
 ================================================================================================================
-D. MOTION GRAPHICS (bright-pop animated explainer, no presenter, no AI images)
+D. MOTION GRAPHICS (the default: bright-pop animated explainer, no presenter, no AI images)
 ================================================================================================================
 
-You are my scriptwriter for a faceless YouTube explainer channel. The video is rendered as bright-pop motion
-graphics: kinetic words that land on the spoken word, anonymous stick figures with props, big numbers, quotes,
+You are my scriptwriter for a faceless YouTube explainer channel. There is no presenter, host, mascot or
+character: the narrator is an unnamed voice. The video is rendered as bright-pop motion
+graphics: kinetic words that land on the spoken word, anonymous stick figures with icons, big numbers, quotes,
 charts and memos with REPORTED / DENIED stamps. The picture changes every 1.2-3 seconds on the narration's commas
 and full stops, and the words of each line decide what is drawn. Write a complete script for:
 
@@ -222,6 +227,8 @@ music: <one mood: calm, dark, emotional, epic, mystery, tech, tense, uplifting (
 sfx: auto
 thumbnail: <2-4 word thumbnail text, ALL CAPS, ends with ? or !>
 ---
+(rendering_method: motion is the default, the line just makes it explicit. No character: line, no captions: line:
+the scenes show the key words, so motion videos have no burned-in captions; the .srt subtitles are made anyway.)
 
 ## <Chapter 1 heading>
 [card: <BIG TEXT> | <small line>]
@@ -255,3 +262,6 @@ Rules:
    dollars"), no abbreviations, no stage directions, no emojis.
 7. Hook in the first 8 seconds. End with a question for the comments. Include my angle and one honest opinion
    moment so it feels like a real person's take.
+8. No presenter: the narrator never says its own name, never introduces itself ("I'm ...", "welcome back to
+   ..."), never describes itself (no animal, no outfit), and the description has no character sign-off. Don't
+   use [talk:] or [act:] tags (they need a character video).

@@ -1,6 +1,11 @@
 """The icon library of the motion-graphics renderer (rendering_method: motion): assets/library/icons/.
 
-  packs        PACKS: where each pack comes from (a pinned @iconify-json npm package, or Natural Earth), its role
+  packs        PACKS: where each pack comes from (a pinned @iconify-json npm package, or Natural Earth), its role.
+               The hand-picked packs below + every Iconify set in assets/library/icons/packs.json (in git, written by
+               tools/import_icon_packs.py --discover: all Iconify sets, the ones imported and the refused ones + why)
+  kinds        illustration (colour illustration / emoji), flat (one-colour filled), line (one-colour stroke),
+               flag, map. Only illustration sets with role "family" can be a video's main icon family; line and
+               flat icons are for small labels. Brand / logo sets are never imported (trademarks).
   licences     check_licence(): a strict allow-list. Anything else is refused by the importer.
   storage      assets/library/icons/<set>/icons.json (made by tools/import_icon_packs.py, NOT in git: it is rebuilt
                from the pinned npm packages by setup.sh) + LICENCE (in git) + a row in CREDITS.md and NOTICE
@@ -48,6 +53,29 @@ PACKS = {
     "twemoji": {"npm": "twemoji", "label": "Twemoji", "role": "family", "emoji": True, "optional": True,
                 "licence_url": "https://raw.githubusercontent.com/jdecked/twemoji/main/LICENSE-GRAPHICS"},
 }
+KINDS = {"fluent_flat": "illustration", "fluent_color": "illustration", "noto": "illustration", "twemoji": "illustration",
+         "phosphor": "flat", "tabler": "line", "flags": "flag", "natural_earth": "map"}
+for _k, _v in PACKS.items():
+    _v["kind"] = KINDS[_k]
+    _v["rotation"] = _v["role"] == "family"          # the hand-picked families always take part in look: auto
+PACKS["phosphor"]["role"] = "flat"
+REGISTRY = ICONS_DIR / "packs.json"
+# icon names that are a company's logo or brand mark (trademarks): never imported, from any pack
+BRAND_NAME = __import__("re").compile(r"(^|-)(brand|brands|logo|logos|logotype)(-|$)")
+
+
+def registry() -> dict:
+    """assets/library/icons/packs.json: {"iconify_json": version, "sets": {id: entry}} ({} before --discover)."""
+    try:
+        return json.loads(REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+for _k, _v in (registry().get("sets") or {}).items():
+    if _v.get("decision") == "import" and _k not in PACKS:
+        PACKS[_k] = {kk: _v[kk] for kk in ("npm", "label", "role", "kind", "licence_url", "category") if kk in _v}
+        PACKS[_k].update(emoji=bool(_v.get("emoji")), optional=False, archive=bool(_v.get("archive")), rotation=False)
 FAMILIES = [k for k, v in PACKS.items() if v["role"] == "family"]
 SKIN = ("-light", "-medium-light", "-medium", "-medium-dark", "-dark")
 
@@ -73,12 +101,26 @@ def installed() -> list:
     return [k for k in PACKS if (ICONS_DIR / k / "icons.json").exists()]
 
 
-def usable_families() -> list:
-    """Imported illustration families a video may use (CC BY ones only while ALLOW_CC_BY=1)."""
+def usable_families(rotation: bool = False) -> list:
+    """Imported illustration families a video may use (CC BY ones only while ALLOW_CC_BY=1). rotation=True: only the
+    ones `look: auto` rotates through (the hand-picked three + new emoji-style families whose topic coverage in the
+    search index is at least as good as the weakest hand-picked one, icon_index.family_coverage)."""
     out = []
     for k in FAMILIES:
         if k in installed() and (ALLOWED.get(load(k)["licence"]) == "free" or allow_cc_by()):
             out.append(k)
+    if rotation:
+        try:
+            from . import icon_index as IX
+            cov = IX.family_coverage()
+        except Exception:  # noqa: BLE001  (no index yet: the hand-picked ones)
+            cov = {}
+        base = [cov.get(k, 0) for k in out if PACKS[k].get("rotation")]
+        bar = min(base) if base else 1.0
+        # new families join only when they are emoji-style illustration sets (colour UI-icon sets such as
+        # withicons_* or icon_park can still be chosen by hand with icons:)
+        out = [k for k in out if PACKS[k].get("rotation")
+               or (PACKS[k].get("emoji") and cov.get(k, 0) >= bar and cov.get(k, 0) > 0)]
     return out
 
 

@@ -52,6 +52,168 @@ Used by the motion-graphics renderer. The icons are installed by setup.sh from p
 - Tabler Icons: Copyright Paweł Kuna. Licence: MIT (assets/library/icons/tabler/LICENCE). Source: https://github.com/tabler/tabler-icons
 - Flag Icons: Copyright Panayiotis Lipiridis. Licence: MIT (assets/library/icons/flags/LICENCE). Source: https://github.com/lipis/flag-icons
 - Natural Earth country shapes (1:110m): Public domain, made by Natural Earth. Licence: public-domain (assets/library/icons/natural_earth/LICENCE). Source: https://www.naturalearthdata.com
+- Akar Icons: Copyright Arturo Wibawa. Licence: MIT (assets/library/icons/akar_icons/LICENCE). Source: https://github.com/artcoholic/akar-icons
+- andrsrxn/icons: Copyright Andrés Raxón. Licence: MIT (assets/library/icons/andrsrxn/LICENCE). Source: https://github.com/andrsrxn/icons
+- Ant Design Icons: Copyright HeskeyBaozi. Licence: MIT (assets/library/icons/ant_design/LICENCE). Source: https://github.com/ant-design/ant-design-icons
+- @icons: Copyright Valentin Fossati. Licence: MIT (assets/library/icons/at_icons/LICENCE). Source: https://github.com/Voxybuns/at-icons
+- Bootstrap Icons: Copyright The Bootstrap Authors. Licence: MIT (assets/library/icons/bi/LICENCE). Source: https://github.com/twbs/icons
+- Bitcoin Icons: Copyright Bitcoin Design Community. Licence: MIT (assets/library/icons/bitcoin_icons/LICENCE). Source: https://github.com/BitcoinDesign/Bitcoin-Icons
+- Boxicons: Copyright Boxicons. Licence: MIT (assets/library/icons/boxicons/LICENCE). Source: https://github.com/box-icons/boxicons-core
+- BoxIcons v2: Copyright Boxicons. Licence: MIT (assets/library/icons/bx/LICENCE). Source: https://github.com/box-icons/boxicons
+- BoxIcons v2 Solid: Copyright Boxicons. Licence: MIT (assets/library/icons/bxs/LICENCE). Source: https://github.com/box-icons/boxicons
+- Bytesize Icons: Copyright Dan Klammer. Licence: MIT (assets/library/icons/bytesize/LICENCE). Source: https://github.com/danklammer/bytesize-icons
+- Carbon: Copyright IBM. Licence: Apache-2.0 (assets/library/icons/carbon/LICENCE). Source: https://github.com/carbon-design-system/carbon/tree/main/packages/icons
+- Charm Icons: Copyright Jay Newey. Licence: MIT (assets/library/icons/charm/LICENCE). Source: https://github.com/jaynewey/charm-icons
+- CoreUI Flags: Copyright creativeLabs Łukasz Holeczek. Licence: CC0-1.0 (assets/library/icons/cif/LICENCE). Source: https://github.com/coreui/coreui-icons
+- Circle Flags: Copyright HatScripts. Licence: MIT (assets/library/icons/circle_flags/LICENCE). Source: https://github.com/HatScripts/circle-flags
+- Clarity: Copyright VMware. Licence: MIT (assets/library/icons/clarity/LICENCE). Source: https://github.com/vmware/clarity
+- CodeX Icons: Copyright CodeX. Licence: MIT (assets/library/icons/codex/LICENCE). Source: https://github.com/davidabou/icons
+- coolicons: Copyright Kryston Schwarze. Licence: MIT (assets/library/icons/coolicons/LICENCE). Source: https://github.com/krystonschwarze/coolicons
+- Cuida Icons: Copyright Sysvale. Licence: Apache-2.0 (assets/library/icons/cuida/LICENCE). Source: https://github.com/Sysvale/cuida-icons
+- Dinkie Icons: Copyright atelierAnchor. Licence: MIT (assets/library/icons/dinkie_icons/LICENCE). Source: https://github.com/atelier-anchor/dinkie-icons
+- Oreo Doodle Icons: Copyright Nicole Tang. Licence: MIT (assets/library/icons/doodle_icons/LICENCE). Source: https://github.com/oreo-design/doodle-icons
+- Duoicons: Copyright fernandcf. Licence: MIT (assets/library/icons/duo_icons/LICENCE). Source: https://github.com/fazdiu/duo-icons
+- Evil Icons: Copyright Alexander Madyankin and Roman Shamin. Licence: MIT (assets/library/icons/ei/LICENCE). Source: https://github.com/evil-icons/evil-icons
+- Energy Icons: Copyright Sam Passmore. Licence: MIT (assets/library/icons/energy_icons/LICENCE). Source: https://github.com/Sam-r-passmore/energy-icons
+- EOS Icons: Copyright SUSE UX/UI team. Licence: MIT (assets/library/icons/eos_icons/LICENCE). Source: https://gitlab.com/SUSE-UIUX/eos-icons
+- Element Plus: Copyright Element Plus. Licence: MIT (assets/library/icons/ep/LICENCE). Source: https://github.com/element-plus/element-plus-icons
+- Eva Icons: Copyright Akveo. Licence: MIT (assets/library/icons/eva/LICENCE). Source: https://github.com/akveo/eva-icons/
+- Framework7 Icons: Copyright Vladimir Kharlampidi. Licence: MIT (assets/library/icons/f7/LICENCE). Source: https://github.com/framework7io/framework7-icons
+- Famicons: Copyright Family. Licence: MIT (assets/library/icons/famicons/LICENCE). Source: https://github.com/familyjs/famicons
+- Feather Icon: Copyright Megumi Hano. Licence: MIT (assets/library/icons/fe/LICENCE). Source: https://github.com/feathericon/feathericon
+- Feather Icons: Copyright Cole Bemis. Licence: MIT (assets/library/icons/feather/LICENCE). Source: https://github.com/feathericons/feather
+- Flagpack: Copyright Yummygum. Licence: MIT (assets/library/icons/flagpack/LICENCE). Source: https://github.com/Yummygum/flagpack-core
+- Flat Color Icons: Copyright Icons8. Licence: MIT (assets/library/icons/flat_color_icons/LICENCE). Source: https://github.com/icons8/flat-Color-icons
+- Flat UI Icons: Copyright Designmodo, Inc.. Licence: MIT (assets/library/icons/flat_ui/LICENCE). Source: https://github.com/designmodo/Flat-UI
+- Flowbite Icons: Copyright Themesberg. Licence: MIT (assets/library/icons/flowbite/LICENCE). Source: https://github.com/themesberg/flowbite-icons
+- Fluent UI System Icons: Copyright Microsoft Corporation. Licence: MIT (assets/library/icons/fluent/LICENCE). Source: https://github.com/microsoft/fluentui-system-icons
+- Fluent UI System Color Icons: Copyright Microsoft Corporation. Licence: MIT (assets/library/icons/fluent_ui_color/LICENCE). Source: https://github.com/microsoft/fluentui-system-icons
+- Fluent Emoji High Contrast: Copyright Microsoft Corporation. Licence: MIT (assets/library/icons/fluent_emoji_high_contrast/LICENCE). Source: https://github.com/microsoft/fluentui-emoji
+- Fluent UI MDL2: Copyright Microsoft Corporation. Licence: MIT (assets/library/icons/fluent_mdl2/LICENCE). Source: https://github.com/microsoft/fluentui/tree/master/packages/react-icons-mdl2
+- Fontisto: Copyright Kenan Gündoğan. Licence: MIT (assets/library/icons/fontisto/LICENCE). Source: https://github.com/kenangundogan/fontisto
+- FormKit Icons: Copyright FormKit, Inc. Licence: MIT (assets/library/icons/formkit/LICENCE). Source: https://github.com/formkit/formkit/tree/master/packages/icons
+- Foundation: Copyright Zurb. Licence: MIT (assets/library/icons/foundation/LICENCE). Source: https://github.com/zurb/foundation-icon-fonts
+- Firefox OS Emoji: Copyright Mozilla. Licence: Apache-2.0 (assets/library/icons/fxemoji/LICENCE). Source: https://github.com/mozilla/fxemoji
+- Garden SVG Icons: Copyright Zendesk. Licence: Apache-2.0 (assets/library/icons/garden/LICENCE). Source: https://github.com/zendeskgarden/svg-icons
+- GeoGlyphs: Copyright Sam Matthews. Licence: MIT (assets/library/icons/geo/LICENCE). Source: https://github.com/cugos/geoglyphs
+- css.gg: Copyright Astrit. Licence: MIT (assets/library/icons/gg/LICENCE). Source: https://github.com/astrit/css.gg
+- Ginetex Care Symbols: Copyright YESSIR Organization. Licence: MIT (assets/library/icons/ginetex/LICENCE). Source: https://github.com/yessir-web-tech/ginetex-icons
+- Glyphs: Copyright Goran Spasojevic. Licence: MIT (assets/library/icons/glyphs/LICENCE). Source: https://github.com/gorango/glyphs
+- Glyphs Poly: Copyright Goran Spasojevic. Licence: MIT (assets/library/icons/glyphs_poly/LICENCE). Source: https://github.com/gorango/glyphs
+- Gravity UI Icons: Copyright YANDEX LLC. Licence: MIT (assets/library/icons/gravity_ui/LICENCE). Source: https://github.com/gravity-ui/icons/
+- Griddy Icons: Copyright Zuzana Benova. Licence: MIT (assets/library/icons/griddy_icons/LICENCE). Source: https://github.com/griddy-icons/griddy-icons
+- Grommet Icons: Copyright Grommet. Licence: Apache-2.0 (assets/library/icons/grommet_icons/LICENCE). Source: https://github.com/grommet/grommet-icons
+- Health Icons: Copyright Resolve to Save Lives. Licence: MIT (assets/library/icons/healthicons/LICENCE). Source: https://github.com/resolvetosavelives/healthicons
+- HeroIcons: Copyright Refactoring UI Inc. Licence: MIT (assets/library/icons/heroicons/LICENCE). Source: https://github.com/tailwindlabs/heroicons
+- HeroIcons v1 Outline: Copyright Refactoring UI Inc. Licence: MIT (assets/library/icons/heroicons_outline/LICENCE). Source: https://github.com/tailwindlabs/heroicons
+- HeroIcons v1 Solid: Copyright Refactoring UI Inc. Licence: MIT (assets/library/icons/heroicons_solid/LICENCE). Source: https://github.com/tailwindlabs/heroicons
+- Huge Icons: Copyright Hugeicons. Licence: MIT (assets/library/icons/hugeicons/LICENCE). Source: https://icon-sets.iconify.design/icon-sets/hugeicons/
+- Humbleicons: Copyright Jiří Zralý. Licence: MIT (assets/library/icons/humbleicons/LICENCE). Source: https://github.com/zraly/humbleicons
+- Google Material Icons: Copyright Material Design Authors. Licence: Apache-2.0 (assets/library/icons/ic/LICENCE). Source: https://github.com/material-icons/material-icons
+- IconPark: Copyright ByteDance. Licence: Apache-2.0 (assets/library/icons/icon_park/LICENCE). Source: https://github.com/bytedance/IconPark
+- IconPark Outline: Copyright ByteDance. Licence: Apache-2.0 (assets/library/icons/icon_park_outline/LICENCE). Source: https://github.com/bytedance/IconPark
+- IconPark Solid: Copyright ByteDance. Licence: Apache-2.0 (assets/library/icons/icon_park_solid/LICENCE). Source: https://github.com/bytedance/IconPark
+- IconPark TwoTone: Copyright ByteDance. Licence: Apache-2.0 (assets/library/icons/icon_park_twotone/LICENCE). Source: https://github.com/bytedance/IconPark
+- Iconito Food: Copyright Iconito. Licence: MIT (assets/library/icons/iconito/LICENCE). Source: https://github.com/iconi-to/free-food
+- IconMind: Copyright IconMind. Licence: MIT (assets/library/icons/iconmind/LICENCE). Source: https://github.com/Iconmind/iconmind
+- Iconoir: Copyright Luca Burgio. Licence: MIT (assets/library/icons/iconoir/LICENCE). Source: https://github.com/iconoir-icons/iconoir
+- IconOven: Copyright Appic Marketing. Licence: MIT (assets/library/icons/iconoven/LICENCE). Source: https://iconoven.com/icons
+- Icons8 Windows 10 Icons: Copyright Icons8. Licence: MIT (assets/library/icons/icons8/LICENCE). Source: https://github.com/icons8/windows-10-icons
+- Icalicons: Copyright Icalia Labs. Licence: MIT (assets/library/icons/il/LICENCE). Source: 
+- IonIcons: Copyright Ben Sperry. Licence: MIT (assets/library/icons/ion/LICENCE). Source: https://github.com/ionic-team/ionicons
+- Innowatio Font: Copyright Innowatio. Licence: Apache-2.0 (assets/library/icons/iwwa/LICENCE). Source: https://github.com/innowatio/iwwa-icons
+- Siemens Industrial Experience Icons: Copyright Siemens AG. Licence: MIT (assets/library/icons/ix/LICENCE). Source: https://github.com/siemens/ix-icons
+- Jam Icons: Copyright Michael Amprimo. Licence: MIT (assets/library/icons/jam/LICENCE). Source: https://github.com/michaelampr
+- Keyline Icons: Copyright Keyline Icons. Licence: MIT (assets/library/icons/keyline_icons/LICENCE). Source: https://github.com/keyline-icons/keyline-icons
+- Line Awesome: Copyright Icons8. Licence: Apache-2.0 (assets/library/icons/la/LICENCE). Source: https://github.com/icons8/line-awesome
+- Material Line Icons: Copyright Vjacheslav Trushkin. Licence: MIT (assets/library/icons/line_md/LICENCE). Source: https://github.com/cyberalien/line-md
+- Lineicons: Copyright Lineicons. Licence: MIT (assets/library/icons/lineicons/LICENCE). Source: https://github.com/LineiconsHQ/Lineicons
+- Lsicon: Copyright Wis Design. Licence: MIT (assets/library/icons/lsicon/LICENCE). Source: https://www.lsicon.com/
+- Lucide: Copyright Lucide Contributors. Licence: ISC (assets/library/icons/lucide/LICENCE). Source: https://github.com/lucide-icons/lucide
+- Lucide Extended: Copyright Applifted. Licence: ISC (assets/library/icons/lucide_extended/LICENCE). Source: https://github.com/applifted/lucide-extended
+- Lucide Lab: Copyright Lucide Contributors. Licence: ISC (assets/library/icons/lucide_lab/LICENCE). Source: https://github.com/lucide-icons/lucide-lab
+- Mage Icons: Copyright MageIcons. Licence: Apache-2.0 (assets/library/icons/mage/LICENCE). Source: https://github.com/Mage-Icons/mage-icons
+- Majesticons: Copyright Gerrit Halfmann. Licence: MIT (assets/library/icons/majesticons/LICENCE). Source: https://github.com/halfmage/majesticons
+- Maki: Copyright Mapbox. Licence: CC0-1.0 (assets/library/icons/maki/LICENCE). Source: https://github.com/mapbox/maki
+- Marketeq: Copyright Marketeq. Licence: MIT (assets/library/icons/marketeq/LICENCE). Source: 
+- Material Symbols: Copyright Google. Licence: Apache-2.0 (assets/library/icons/material_symbols/LICENCE). Source: https://github.com/google/material-design-icons
+- Material Symbols Light: Copyright Google. Licence: Apache-2.0 (assets/library/icons/material_symbols_light/LICENCE). Source: https://github.com/google/material-design-icons
+- Matita: Copyright matita.dev. Licence: MIT (assets/library/icons/matita/LICENCE). Source: https://github.com/matita-dev/icons
+- Material Design Icons: Copyright Pictogrammers. Licence: Apache-2.0 (assets/library/icons/mdi/LICENCE). Source: https://github.com/Templarian/MaterialDesign
+- Medical Icons: Copyright Samuel Frémondière. Licence: MIT (assets/library/icons/medical_icon/LICENCE). Source: https://github.com/samcome/webfont-medical-icons
+- Memory Icons: Copyright Pictogrammers. Licence: Apache-2.0 (assets/library/icons/memory/LICENCE). Source: https://github.com/Pictogrammers/Memory
+- Meteocons: Copyright Bas Milius. Licence: MIT (assets/library/icons/meteocons/LICENCE). Source: https://github.com/basmilius/weather-icons
+- Meteor Icons: Copyright zkreations. Licence: MIT (assets/library/icons/meteor_icons/LICENCE). Source: https://github.com/zkreations/icons
+- Mono Icons: Copyright Mono. Licence: MIT (assets/library/icons/mi/LICENCE). Source: https://github.com/mono-company/mono-icons
+- MingCute Icon: Copyright MingCute Design. Licence: Apache-2.0 (assets/library/icons/mingcute/LICENCE). Source: https://github.com/Richard9394/MingCute
+- Mono Icons: Copyright Mono. Licence: MIT (assets/library/icons/mono_icons/LICENCE). Source: https://github.com/mono-company/mono-icons
+- Myna UI Icons: Copyright Praveen Juge. Licence: MIT (assets/library/icons/mynaui/LICENCE). Source: https://github.com/praveenjuge/mynaui-icons
+- Nimbus: Copyright Linkedstore S.A.. Licence: MIT (assets/library/icons/nimbus/LICENCE). Source: https://github.com/cyberalien/nimbus-icons
+- Noto Emoji (v1): Copyright Google Inc. Licence: Apache-2.0 (assets/library/icons/noto_v1/LICENCE). Source: https://github.com/googlefonts/noto-emoji
+- Octicons: Copyright GitHub. Licence: MIT (assets/library/icons/octicon/LICENCE). Source: https://github.com/primer/octicons/
+- Open Iconic: Copyright Iconic. Licence: MIT (assets/library/icons/oi/LICENCE). Source: https://github.com/iconic/open-iconic
+- OOUI: Copyright OOUI Team. Licence: MIT (assets/library/icons/ooui/LICENCE). Source: https://github.com/wikimedia/oojs-ui
+- OSM Icons: Copyright GMGeo. Licence: CC0-1.0 (assets/library/icons/osmic/LICENCE). Source: https://github.com/gmgeo/osmic
+- OpenSearch UI: Copyright OpenSearch Contributors. Licence: Apache-2.0 (assets/library/icons/oui/LICENCE). Source: https://github.com/opensearch-project/oui
+- Gitlab SVGs: Copyright GitLab B.V.. Licence: MIT (assets/library/icons/pajamas/LICENCE). Source: https://gitlab.com/gitlab-org/gitlab-svgs/-/tree/main
+- Pinhead Map Icons: Copyright Quincy Morgan. Licence: CC0-1.0 (assets/library/icons/pinhead/LICENCE). Source: https://github.com/waysidemapping/pinhead
+- Pixelarticons: Copyright Gerrit Halfmann. Licence: MIT (assets/library/icons/pixelarticons/LICENCE). Source: https://github.com/halfmage/pixelarticons
+- Prime Icons: Copyright PrimeTek. Licence: MIT (assets/library/icons/prime/LICENCE). Source: https://github.com/primefaces/primeicons
+- ProIcons: Copyright ProCode. Licence: MIT (assets/library/icons/proicons/LICENCE). Source: https://github.com/ProCode-Software/proicons
+- Qlementine Icons: Copyright Olivier Cléro. Licence: MIT (assets/library/icons/qlementine_icons/LICENCE). Source: https://github.com/oclero/qlementine-icons
+- Quill Icons: Copyright Casper Lourens. Licence: MIT (assets/library/icons/quill/LICENCE). Source: https://www.figma.com/community/file/1034432054377533052/Quill-Iconset
+- Radix Icons: Copyright WorkOS. Licence: MIT (assets/library/icons/radix_icons/LICENCE). Source: https://github.com/radix-ui/icons
+- Raphael: Copyright Dmitry Baranovskiy. Licence: MIT (assets/library/icons/raphael/LICENCE). Source: https://github.com/dmitrybaranovskiy/raphael
+- Reicon: Copyright REICON. Licence: MIT (assets/library/icons/reicon/LICENCE). Source: https://github.com/dqev/reicon
+- Remix Icon: Copyright Remix Design. Licence: Apache-2.0 (assets/library/icons/ri/LICENCE). Source: https://github.com/cyberalien/RemixIcon
+- Sargam Icons: Copyright Abhimanyu Rana. Licence: MIT (assets/library/icons/si/LICENCE). Source: https://github.com/planetabhi/sargam-icons
+- SidekickIcons: Copyright Andri Soone. Licence: MIT (assets/library/icons/sidekickicons/LICENCE). Source: https://github.com/ndri/sidekickicons
+- Simple line icons: Copyright Sabbir Ahmed. Licence: MIT (assets/library/icons/simple_line_icons/LICENCE). Source: https://github.com/thesabbir/simple-line-icons
+- Stash Icons: Copyright Pingback LLC. Licence: MIT (assets/library/icons/stash/LICENCE). Source: https://github.com/stash-ui/icons
+- Struq Icons: Copyright Struq. Licence: MIT (assets/library/icons/struq/LICENCE). Source: https://struq.nl/iconen
+- SVG Spinners: Copyright Utkarsh Verma. Licence: MIT (assets/library/icons/svg_spinners/LICENCE). Source: https://github.com/n3r4zzurr0/svg-spinners
+- Tabler Flags: Copyright Paweł Kuna. Licence: MIT (assets/library/icons/tabler_flags/LICENCE). Source: https://github.com/tabler/tabler-flags
+- TDesign Icons: Copyright TDesign. Licence: MIT (assets/library/icons/tdesign/LICENCE). Source: https://github.com/Tencent/tdesign-icons
+- Teenyicons: Copyright smhmd. Licence: MIT (assets/library/icons/teenyicons/LICENCE). Source: https://github.com/teenyicons/teenyicons
+- Temaki: Copyright Bryan Housel. Licence: CC0-1.0 (assets/library/icons/temaki/LICENCE). Source: https://github.com/rapideditor/temaki
+- TopCoat Icons: Copyright TopCoat. Licence: Apache-2.0 (assets/library/icons/topcoat/LICENCE). Source: https://github.com/topcoat/icons
+- Unicons: Copyright Iconscout. Licence: Apache-2.0 (assets/library/icons/uil/LICENCE). Source: https://github.com/Iconscout/unicons
+- Unicons Monochrome: Copyright Iconscout. Licence: Apache-2.0 (assets/library/icons/uim/LICENCE). Source: https://github.com/Iconscout/unicons
+- Unicons Solid: Copyright Iconscout. Licence: Apache-2.0 (assets/library/icons/uis/LICENCE). Source: https://github.com/Iconscout/unicons
+- Unicons Thin Line: Copyright Iconscout. Licence: Apache-2.0 (assets/library/icons/uit/LICENCE). Source: https://github.com/Iconscout/unicons
+- uiw icons: Copyright liwen0526. Licence: MIT (assets/library/icons/uiw/LICENCE). Source: https://github.com/uiwjs/icons
+- Vaadin Icons: Copyright Vaadin. Licence: Apache-2.0 (assets/library/icons/vaadin/LICENCE). Source: https://github.com/vaadin/web-components
+- Vadivam: Copyright Praveen Juge. Licence: MIT (assets/library/icons/vadivam/LICENCE). Source: https://github.com/praveenjuge/vadivam
+- WeUI Icon: Copyright WeUI. Licence: MIT (assets/library/icons/weui/LICENCE). Source: https://github.com/weui/weui-icon
+- with icons: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Anime: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_anime/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Bauhaus: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_bauhaus/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Bento: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_bento/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Brutal: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_brutal/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Christmas: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_christmas/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Chrome: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_chrome/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Clay: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_clay/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Coquette: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_coquette/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Dock: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_dock/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Glass: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_glass/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Gothic: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_gothic/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Halloween: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_halloween/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Kawaii: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_kawaii/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Liquid: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_liquid/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Cunar: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_lunar/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Luxe: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_luxe/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Pastel: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_pastel/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Plush: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_plush/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Rangoli: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_rangoli/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Retro: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_retro/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Skeuo: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_skeuo/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Soft 3D: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_soft3d/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Sticker: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_sticker/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Suite: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_suite/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Utsav: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_utsav/LICENCE). Source: https://github.com/withevergrow/withicons
+- with icons Valentine: Copyright Evergrow. Licence: MIT (assets/library/icons/withicons_valentine/LICENCE). Source: https://github.com/withevergrow/withicons
+- Icons8 Windows 8 Icons: Copyright Icons8. Licence: MIT (assets/library/icons/wpf/LICENCE). Source: https://github.com/icons8/WPF-UI-Framework
+- Zondicons: Copyright Steve Schoger. Licence: MIT (assets/library/icons/zondicons/LICENCE). Source: https://github.com/dukestreetstudio/zondicons
 - Noto Emoji is licensed under the Apache License, Version 2.0; those files may only be used in
   compliance with that License (copy: assets/library/icons/noto/LICENCE).
 - Emoji keyword data for the icon search: emojilib (MIT), unicode-emoji-json (MIT). Search model:

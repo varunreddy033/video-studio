@@ -462,18 +462,26 @@ function headerValue(text, key) {
 }
 function setArtStyle(text, id) { return setHeaderKey(text, "art_style", id); }
 const METHOD_LABEL = { ai_image: "AI images", motion: "Motion graphics" };
-const DRAFT_HINT = { ai_image: "Draft: AI images are shown as labelled placeholders, so it takes about a minute.",
-  motion: "Draft: the real animation at 960x540 (about 2.5 minutes per minute of video on the Mac)." };
+const DRAFT_HINT = { ai_image: "Check first; errors block both buttons, warnings don't. Draft first: AI images are labelled placeholders, so it takes about a minute.",
+  motion: "Check first; errors block both buttons, warnings don't. Draft first: the real animation at 960x540 (about 1 minute per minute of video)." };
+// Make final / Draft first: the last choice is remembered in this browser and drawn as the main button
+const CHOICE_KEY = "vs.renderChoice";
+function lastChoice() { try { return localStorage.getItem(CHOICE_KEY) === "draft" ? "draft" : "final"; } catch { return "final"; } }
+function rememberChoice(mode) { try { localStorage.setItem(CHOICE_KEY, mode === "draft" ? "draft" : "final"); } catch {} }
+function markChoice(finalBtn, draftBtn) {
+  const d = lastChoice() === "draft";
+  finalBtn.classList.toggle("primary", !d); draftBtn.classList.toggle("primary", d);
+}
 function methodPicker(getText, setText, recheck) {
-  // how the pictures are made: AI images (default, no header line) or motion graphics (kinetic type + stick figures)
-  const cur = (headerValue(getText(), "rendering_method") || "ai_image").toLowerCase();
+  // how the pictures are made: motion graphics (default, no header line needed) or AI images
+  const cur = (headerValue(getText(), "rendering_method") || health.default_rendering_method || "motion").toLowerCase();
   const note = h("span", { class: "hint" });
   const show = () => { note.textContent = sel.value === "motion"
     ? "Bright-pop motion graphics: kinetic words, stick figures, transitions and sound on every beat (HyperFrames, on this Mac)."
-    : "AI pictures from the image model, with camera moves (the default).";
+    : "AI pictures from the image model, with camera moves. Character (presenter) videos always use this.";
     const dh = $("#draftHint"); if (dh) dh.textContent = DRAFT_HINT[sel.value] || DRAFT_HINT.ai_image; };
   const sel = h("select", { id: "methodSel", class: "btn small", "aria-label": "Rendering method", onchange: () => {
-      setText(setHeaderKey(getText(), "rendering_method", sel.value === "ai_image" ? null : sel.value));
+      setText(setHeaderKey(getText(), "rendering_method", sel.value));
       show(); if (getText().trim()) recheck(); } },
     Object.entries(METHOD_LABEL).map(([v, l]) => h("option", { value: v, selected: v === cur }, l)));
   sel._show = show; setTimeout(show, 0);   // after the page is built (the draft hint is added later)
@@ -659,11 +667,13 @@ function captionsPane(r, getText, setText, recheck) {
   const box = h("div", {}, h("p", { class: "hint" }, "Loading caption styles…"));
   (async () => {
     let list; try { list = await lookList("captions", "/api/captions"); } catch (e) { box.firstChild.textContent = e.message; return; }
-    const cur = (r.captions || {}).id || list[0].id;
-    const pick = (c) => { if (c.id === cur) return; setText(setHeaderKey(getText(), "captions", c.id === list[0].id ? null : c.id)); recheck(); };
+    const cur = (r.captions || {}).id || list[0].id, def = (r.captions || {}).default || list[0].id;
+    const pick = (c) => { if (c.id === cur) return; setText(setHeaderKey(getText(), "captions", c.id === def ? null : c.id)); recheck(); };
     box.replaceChildren(
       h("p", { class: "hint", style: "margin-top:0" }, "How the words on screen look. Each clip is drawn by the same code as the real video. "
-        + "Click a style to put captions: in the script header."),
+        + "Click a style to put captions: in the script header."
+        + ((r.stats || {}).rendering_method === "motion" ? " Motion graphics: No captions is the default, because the scenes already show the key words."
+          : "") + " The .srt file for YouTube's subtitles is made either way and goes in the upload pack."),
       h("div", { class: "styles" }, list.map(c => {
         const v = h("video", { src: c.preview_url, loop: true, playsinline: true, preload: "auto", "aria-label": c.label + " preview" });
         v.muted = true; v.autoplay = true;
@@ -782,26 +792,34 @@ function showNew(kind = "full") {
     oninput: (e) => { newText = e.target.value; createBtn.disabled = true; } });
   ta.value = newText;
   const out = h("div");
-  const createBtn = h("button", { class: "btn primary", disabled: true, onclick: async () => {
-    createBtn.disabled = true;
-    try { const r = await api("/api/jobs", { method: "POST", body: JSON.stringify({ text: withType(newText, kind), render: "draft" }) });
-      newText = ""; select(r.id); } catch (e) { toast(e.message); createBtn.disabled = false; } } }, "Save & make draft");
+  const create = async (mode) => {
+    finalBtn.disabled = draftBtn.disabled = true; rememberChoice(mode);
+    try { const r = await api("/api/jobs", { method: "POST", body: JSON.stringify({ text: withType(newText, kind), render: mode }) });
+      newText = ""; select(r.id); } catch (e) { toast(e.message); finalBtn.disabled = draftBtn.disabled = false; } };
+  const finalBtn = h("button", { class: "btn", disabled: true, title: "Save and go straight to the final render (no draft)",
+    onclick: () => create("final") }, "Make final");
+  const draftBtn = h("button", { class: "btn", disabled: true, title: "Save and make a quick low-resolution draft to review first",
+    onclick: () => create("draft") }, "Draft first");
+  const createBtn = { set disabled(v) { finalBtn.disabled = draftBtn.disabled = v; } };   // both follow Check
+  markChoice(finalBtn, draftBtn);
   const doCheck = async () => {
     if (!newText.trim()) { toast("Paste a script first"); return; }
-    { const sel = $("#methodSel"), v = (headerValue(newText, "rendering_method") || "ai_image").toLowerCase();
+    { const sel = $("#methodSel"), v = (headerValue(newText, "rendering_method") || health.default_rendering_method || "motion").toLowerCase();
       if (sel && METHOD_LABEL[v] && sel.value !== v) { sel.value = v; if (sel._show) sel._show(); } }
     try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: withType(newText, kind) }) });
       out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => withType(newText, kind))),
         lookCard(r, () => newText, (t) => { newText = t; ta.value = t; }, doCheck),
         iconCard(r, () => withType(newText, kind), (t) => { newText = t; ta.value = t; }, doCheck) || "");
-      createBtn.disabled = !r.ok; if (r.ok) createBtn.focus();
+      { const sel = $("#methodSel"), v = (r.stats || {}).rendering_method;   // what the script really gets
+        if (sel && METHOD_LABEL[v] && sel.value !== v) { sel.value = v; if (sel._show) sel._show(); } }
+      createBtn.disabled = !r.ok; if (r.ok) (lastChoice() === "draft" ? draftBtn : finalBtn).focus();
     } catch (e) { toast(e.message); } };
   const fileIn = h("input", { type: "file", accept: ".md,.txt,text/markdown,text/plain", style: "display:none", onchange: async (e) => {
     const f = e.target.files[0]; if (!f) return; newText = await f.text(); ta.value = newText; createBtn.disabled = true; doCheck(); } });
   m.append(h("h2", {}, kind === "short" ? "New Short (from scratch)" : "New full video"),
     h("p", { class: "sub" }, kind === "short"
       ? "Paste a short script (type: short is added if the header doesn't have it). 15 s to 2:00, hook in the first 2 seconds, end on a line that loops back to the start."
-      : "Paste the script.md you wrote with Claude. Check it, make a quick draft to review pacing, then make the final."),
+      : "Paste the script.md you wrote with Claude and press Check. Then Make final (straight to the upload files) or Draft first (a quick low-resolution review, then the final)."),
     h("div", { class: "card" },
       h("div", { class: "row", style: "margin-bottom:10px" },
         h("a", { class: "link", href: "/docs/SCRIPT_FORMAT.md", target: "_blank" }, "Script format"),
@@ -815,8 +833,8 @@ function showNew(kind = "full") {
       methodPicker(() => newText, (t) => { newText = t; ta.value = t; createBtn.disabled = true; }, doCheck),
       ta,
       h("div", { class: "row", style: "margin-top:12px" },
-        h("button", { class: "btn", onclick: doCheck }, "Check"), createBtn,
-        h("span", { class: "hint", id: "draftHint" }, DRAFT_HINT.ai_image))),
+        h("button", { class: "btn", onclick: doCheck }, "Check"), finalBtn, draftBtn,
+        h("span", { class: "hint", id: "draftHint" }, DRAFT_HINT.motion))),
     out);
   if (newText.trim()) doCheck();
 }
@@ -828,7 +846,8 @@ function stepsBar(d) {
   const cls = (done, now) => "step" + (done ? " done" : now ? " now" : "");
   return h("div", { class: "steps" },
     h("div", { class: cls((d.check || {}).ok, !(d.check || {}).ok) }, h("span", { class: "dot" }, (d.check || {}).ok ? "✓" : "1"), "Script checked"),
-    h("div", { class: cls(hasDraft, ["queued", "rendering"].includes(st) && mode === "draft") }, h("span", { class: "dot" }, hasDraft ? "✓" : "2"), "Draft"),
+    h("div", { class: cls(hasDraft, ["queued", "rendering"].includes(st) && mode === "draft") }, h("span", { class: "dot" }, hasDraft ? "✓" : hasFinal ? "–" : "2"),
+      hasFinal && !hasDraft ? "Draft (skipped)" : "Draft (optional)"),
     h("div", { class: cls(hasFinal, ["queued", "rendering"].includes(st) && mode === "final") }, h("span", { class: "dot" }, hasFinal ? "✓" : "3"), "Final + thumbnails"));
 }
 
@@ -886,6 +905,17 @@ function videoCard(d) {
   return card;
 }
 
+function jobButtons(d, off) {
+  // before any render: Make final (straight to the final) + Draft first; afterwards re-make either one
+  const fresh = !d.draft && !d.final;
+  const draftB = h("button", { class: "btn", disabled: off, onclick: () => { rememberChoice("draft"); go("draft"); } },
+    d.draft ? "Re-make draft" : fresh ? "Draft first" : "Make draft");
+  const finalB = h("button", { class: "btn", disabled: off, onclick: () => { rememberChoice("final"); go("final"); } },
+    d.final ? "Re-make final" : "Make final");
+  if (fresh) markChoice(finalB, draftB); else finalB.classList.add("primary");
+  return fresh ? [finalB, draftB] : [draftB, finalB];
+}
+
 function showJob() {
   const d = data; const m = $("#main"); m.replaceChildren();
   const running = ["queued", "rendering"].includes(d.status);
@@ -895,8 +925,7 @@ function showJob() {
     h("div", { style: "flex:1;min-width:0" }, h("h2", {}, d.title || "Untitled"),
       h("div", { class: "row hint" }, h("span", { class: "chip " + cls }, label), d.type === "short" ? h("span", { class: "chip type" }, d.clip ? "Short · clip" : "Short") : null,
         when(d.created), d.format ? `· ${d.format}` : "")),
-    h("button", { class: "btn", disabled: running || !ok || !d.script, onclick: () => go("draft") }, d.draft ? "Re-make draft" : "Make draft"),
-    h("button", { class: "btn primary", disabled: running || !ok || !d.script, onclick: () => go("final") }, d.final ? "Re-make final" : "Make final")));
+    ...jobButtons(d, running || !ok || !d.script)));
   if (!d.script) { m.append(h("div", { class: "banner warn", style: "margin-top:16px" }, "This is an older test job from before the script.md format. It can be watched but not re-rendered.")); }
   else m.append(stepsBar(d));
   if (d.status === "failed") m.append(h("div", { class: "banner bad" }, h("b", {}, d.stage || "Failed"), "\n", d.error || "",
@@ -938,7 +967,7 @@ function editorCard(d, open) {
     ta,
     h("div", { class: "row", style: "margin-top:12px" },
       h("button", { class: "btn", disabled: running, onclick: save }, "Check & save"),
-      h("span", { class: "hint" }, running ? "Editing is locked while rendering." : "Saving doesn't re-render; press Make draft or Make final after.")),
+      h("span", { class: "hint" }, running ? "Editing is locked while rendering." : "Saving doesn't re-render; press Make final (or Draft first) after.")),
     out);
 }
 

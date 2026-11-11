@@ -20,6 +20,10 @@ marked DECIDED unless I ask.
   One clear commit per finished step. Never commit .env, old/n8n_data_backup_*, output/, models/, assets/audio/
   (all in .gitignore). Run tools/check_secrets.sh before every commit. Don't push broken or untested code.
 
+- Asset library rule (STANDING, 2026-11-11): "The asset library only grows. Any new icon, sound, music track or
+  generated prop fetched or made for a video is stored in assets/library with its licence, source and tags,
+  indexed, and offered to later videos. Nothing is deleted without asking me."
+
 ## Goal
 - 1 hour of new content per day (2x30 or 3x20 min preferred over 6x10: fewer uploads, less template-y).
 - I pick a trending topic each day and write the script with Claude (chat). Videos must be good enough that
@@ -426,7 +430,25 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         (white + red question mark): all three checks PASS. 157 SFX from 58 different files. Contact sheet old vs new:
         output/contact_sheets/earpods_old_vs_new.jpg (scratchpad contact_sheet.py). This final is the first entry in
         data/asset_history.json. Old job 20261111-085018-292260 kept (ask before deleting).
-  - [ ] Phase 8 vertical motion + motion Shorts (not started).
+  - [x] Defaults + library (2026-11-11): motion graphics is the DEFAULT (.env DEFAULT_RENDERING_METHOD=motion; no
+      rendering_method: line = motion, except character: / [talk:] / [act:] / clip_from / style: motion scripts,
+      which get ai_image by themselves; docs/sample_script.md now says rendering_method: ai_image). Motion default
+      captions: none (the scenes show the words; chip and the rest stay in the Captions tab; captions_final.srt is
+      always made and in the upload pack); ai_image keeps amber_word. Check -> "Make final" (straight to the final)
+      or "Draft first", on the new-video screen, a video's page and Shorts; last choice remembered per browser
+      (localStorage vs.renderChoice). Prompt D in docs/CLAUDE_SCRIPT_PROMPT.md is the default, no presenter/name.
+      Icons: tools/import_icon_packs.py --discover 2.2.555 sorted all 276 Iconify sets into
+      assets/library/icons/packs.json (in git): 162 new sets imported (317,445 icons; total 169 packs, 331,496),
+      108 refused (47 CC BY 4.0 = only with ALLOW_CC_BY=1, 30 brand/logo sets, 31 other licences). Kinds:
+      illustration / flat / line / flag / map; only illustration "family" sets can be a video's main family;
+      look: auto rotates fluent_flat, fluent_color, noto, noto_v1 only (emoji families with coverage >= the
+      hand-picked ones); withicons_* / icon_park etc. only with icons:. Icon names with brand/logo are dropped.
+      Picker: a topic word the family can't draw (Fluent/Noto have no chip) takes one icon from ONE companion
+      colour set per video (picker._companion); ambiguous words with a hint are searched as the hint (chip ->
+      computer chip). Index 54 s; index.json 63 MB + embeddings.npy 255 MB (mmap) + icons 329 MB +
+      node_modules/@iconify-json 476 MB, none in git. Licence downloads use curl + jsDelivr's GitHub mirror
+      (urllib waited 30 s a file here; raw.githubusercontent throttled to 75 s).
+- [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
       preview, clip Shorts, pack export/import, cross-platform encoder + bundled fonts + UTF-8. Tested:

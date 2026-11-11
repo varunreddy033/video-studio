@@ -17,6 +17,7 @@ plan(beats, names, meta) is used by the renderer (real voice timings) and by the
 """
 
 import base64
+from functools import lru_cache
 import re
 
 from .. import icon_index as IX
@@ -201,9 +202,10 @@ def topic_nouns(meta: dict, beats: list) -> list:
         add(b["text"], 1)
     for w in names:
         score.pop(w, None)
-    keep = [w for w in score if score[w] >= 2 and len(w) >= 4 and w not in AMBIGUOUS]
+    keep = [w for w in score if score[w] >= 2 and len(w) >= 4 and (w not in AMBIGUOUS or w in HINTS)]
     keep.sort(key=lambda w: (-score[w], first[w], w))
-    return keep[:NOUNS]
+    # an ambiguous word with a hint is searched as the hint ("chip" -> "computer chip", not a chipmunk)
+    return [HINTS[w] if w in AMBIGUOUS else w for w in keep[:NOUNS]]
 
 
 def _candidates(family: str, banned: set):
@@ -221,6 +223,57 @@ def _candidates(family: str, banned: set):
     return rows, out
 
 
+COMPANION_MIN = 0.60       # a companion-set icon must fit a topic word at least this well
+COMPANION_GAP = 0.45       # ... and the family's own best for that word must be under this
+
+
+@lru_cache(maxsize=1)
+def _sets_index():
+    rows, _, _ = IX.load()
+    out = {}
+    for i, r in enumerate(rows):
+        out.setdefault(r["set"], []).append(i)
+    return out
+
+
+def _companion(family: str, nouns: list, rows, emb, cand: list, banned: set):
+    """Topic words the family can't draw (Fluent / Noto have no computer chip): one other colour illustration set
+    per video lends its best icon for each such word. Returns (extra row indices, companion set id or None)."""
+    import numpy as np
+    if not nouns:
+        return [], None
+    vec = IX.embed(nouns)
+
+    def bonus(n, ii):
+        ws = {stem(n.split()[-1])}                 # the head word: "computer chip" -> chip (exact name word)
+        return np.array([0.16 if ws & {stem(w) for w in rows[i]["name"].split("-")} else 0.0 for i in ii])
+    fam_sc = vec @ np.asarray(emb[cand], dtype="float32").T
+    fam = [float((fam_sc[j] + bonus(n, cand)).max()) for j, n in enumerate(nouns)]
+    missing = [(n, v) for n, v, b in zip(nouns, vec, fam) if b < COMPANION_GAP and len(n) >= 4]
+    if not missing:
+        return [], None
+    sets = [k for k, v in L.PACKS.items() if v.get("kind") == "illustration" and k != family and k in L.installed()
+            and not v.get("archive") and v.get("category") != "Holiday / Seasonal"
+            and L.ALLOWED.get(L.load(k)["licence"]) == "free"]
+    idx = _sets_index()
+    best_set, best_total, best_pick = None, 0.0, []
+    for sid in sorted(sets):
+        ii = [i for i in idx.get(sid, []) if rows[i]["id"] not in banned and not BORING.search(rows[i]["name"])]
+        if not ii:
+            continue
+        sc = np.stack([v for _n, v in missing]) @ np.asarray(emb[ii], dtype="float32").T
+        pick, total = [], 0.0
+        for j, (n, _v) in enumerate(missing):
+            row = (sc[j] + bonus(n, ii)).round(4)
+            k = int(max(range(len(ii)), key=lambda q: (float(row[q]), -q)))
+            if row[k] >= COMPANION_MIN:
+                pick.append(ii[k])
+                total += float(row[k])
+        if total > best_total + 1e-6:
+            best_set, best_total, best_pick = sid, total, pick
+    return sorted(set(best_pick)), best_set
+
+
 def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list = None) -> dict:
     """Icons for a whole video.
 
@@ -235,11 +288,13 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
     reuse = max(1, int(meta.get("icon_reuse") or 1))
     rows, cand = _candidates(family, banned)
     _, emb, pos = IX.load()
+    extra, companion = _companion(family, topic_nouns(meta, beats), rows, emb, cand, banned)
+    cand = cand + extra
     missing = [p for p in pins if p not in pos]
     if missing:
         raise PipelineError(f"icons_pin: no such icon: {', '.join(missing)}. Search with: "
                             f"bin/python tools/icon_search.py \"words\" --set {family}")
-    cand_emb = emb[cand]
+    cand_emb = np.asarray(emb[cand], dtype="float32")
     cand_ids = [rows[i]["id"] for i in cand]
     name_words = [{stem(w) for w in rows[i]["name"].split("-")} for i in cand]
     name_last = [stem(rows[i]["name"].split("-")[-1]) for i in cand]
@@ -373,9 +428,11 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
         take(ni, k, float(sc[k]), "pool")
         done.add(ni)
 
-    return {"family": family, "picks": picks, "nouns": nouns,
+    rep = report(beats, names, all_needs, picks, family, [cand_ids[k] for k in pool])
+    rep["companion"] = companion
+    return {"family": family, "picks": picks, "nouns": nouns, "companion": companion,
             "pool": [{"id": cand_ids[k], "noun": pool_noun[k]} for k in pool],
-            "report": report(beats, names, all_needs, picks, family, [cand_ids[k] for k in pool])}
+            "report": rep}
 
 
 def plan_video(beats: list, meta: dict, seen: dict, seed: int):

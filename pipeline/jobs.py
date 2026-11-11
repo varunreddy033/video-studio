@@ -92,7 +92,10 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
         out["art_style"] = None
     try:
         cp = presets.load("captions", parsed["meta"]["presets"]["captions"])
-        out["captions"] = {"id": cp["id"], "label": cp["label"], "enabled": cp.get("enabled", True)}
+        out["captions"] = {"id": cp["id"], "label": cp["label"], "enabled": cp.get("enabled", True),
+                           # what no captions: line means for this video (motion graphics: none, else amber_word)
+                           "default": "none" if parsed["meta"].get("rendering_method") == "motion"
+                           and not parsed["meta"].get("clip") else presets.DEFAULTS["captions"]}
     except presets.PresetError:
         out["captions"] = None
     vid = parsed["meta"].get("voice")

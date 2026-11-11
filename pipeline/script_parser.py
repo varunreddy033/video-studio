@@ -387,8 +387,6 @@ def parse(text: str) -> dict:
             err(1, "motion Shorts aren't built yet (motion plan phase 8); use style: classic for Shorts")
         if meta["format"] != "landscape":
             err(1, "style: motion is landscape (16:9) for now")
-    elif meta.get("palette") and (meta.get("rendering_method") or "").strip().lower() != "motion":
-        warn(1, "palette: only applies to style: motion and rendering_method: motion")
     clip = None
     if meta.get("clip_from") or meta.get("clip_start") or meta.get("clip_end"):
         if vtype != "short":
@@ -416,7 +414,12 @@ def parse(text: str) -> dict:
         segments, shots, chapters = [], [], []
     meta["clip"] = clip
     # ---------------------------------------------------------------- rendering method
-    rm = (meta.get("rendering_method") or "ai_image").strip().lower()
+    rm = (meta.get("rendering_method") or "").strip().lower()
+    meta["rendering_method_given"] = bool(rm)
+    if not rm:
+        # no line: the default (motion graphics), except scripts that only work with AI images
+        needs_ai = (char or clip or vstyle == "motion" or any(sh["type"] in CHARACTER_SHOTS for sh in shots))
+        rm = "ai_image" if needs_ai else C.DEFAULT_RENDERING_METHOD
     if rm not in C.RENDERING_METHODS:
         err(1, f"rendering_method must be one of {', '.join(C.RENDERING_METHODS)}, got '{rm}'")
         rm = "ai_image"
@@ -433,7 +436,8 @@ def parse(text: str) -> dict:
         if header["art_style"]:
             warn(1, "art_style applies to AI images only; motion graphics use the bright-pop palette")
         if not header["captions"]:
-            meta["presets"]["captions"] = "chip"      # the reference look: a caption chip in the corner
+            # the scenes already show the key words; a caption chip would repeat them. The .srt is still made.
+            meta["presets"]["captions"] = "none"
         if not (meta.get("sfx_given")):
             meta["sfx"] = "auto"                      # motion videos get the animation's own sounds by default
         fam = (meta.get("icons") or "").strip().lower()
@@ -451,7 +455,9 @@ def parse(text: str) -> dict:
         reuse = str(meta.get("icon_reuse") or "").strip()
         if reuse and not (reuse.isdigit() and 1 <= int(reuse) <= 5):
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
-    elif any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style")):
+    elif meta.get("palette") and vstyle != "motion":
+        warn(1, "palette: only applies to style: motion and rendering_method: motion")
+    if rm != "motion" and any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style")):
         warn(1, "icons / icon_reuse / icons_pin / icons_ban / look / fonts / icon_style only apply to "
                 "rendering_method: motion")
     if not segments and not clip:

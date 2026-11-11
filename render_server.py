@@ -219,6 +219,7 @@ def health():
         "encoder": encoder.name(),
         "local_image_model": C.IMAGE_MODEL_AVAILABLE,
         "seconds_per_image": C.SECONDS_PER_IMAGE,
+        "default_rendering_method": C.DEFAULT_RENDERING_METHOD,
         "voice": C.KOKORO_VOICE,
         "music_tracks": len(music_files(60)),
         "sfx_files": len(sfx_files()),
