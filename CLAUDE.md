@@ -476,6 +476,18 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         template's own animation. Windows (estimate): top type+layout 25 -> 13 uses. Regression: sample_script draft
         11 s, motion sample draft 193 s, frames checked. Picker: the "ram" (sheep) emoji is never picked (it matched
         "chip"/memory in noto_v1).
+  - [x] Step 4 (2026-11-11): pipeline/motion_gfx/scenes.py = 24 new code-drawn scene types (ranking, process,
+        cause_effect, pros_cons, checklist, before_after, split, scale, funnel, venn, donut, icon_grid, table, phone,
+        browser, chat, newspaper, ticker, calendar, countdown, magnifier, reaction, globe, route), each 2 arrangements x
+        frame = 4 layouts, with a fit test + roles for the planner; + 3 format "host" scenes (dashboard, terminal,
+        sticky) that fit any line. Figure scenes without an icon are re-planned instead of turning into words; words
+        over their cap become a headline scene. Header scene_order: a, b, ... (test reels) forces types in turn.
+        Windows (estimate, Pop Poster): 29-31 types, top type 19.8 %, top layout x6, 10-12 transitions, kinetic 14.7 %,
+        A-B-A-B 0 = 8/8 goals. All 24 types checked in a forced reel (contact sheet). Fixed a thread race: the voice
+        (Kokoro) and the icon search imported transformers at the same time -> "ImportError AlbertModel"; the server
+        now imports it once at start. Fonts added: Patrick Hand + Space Mono (OFL, assets/fonts/licences).
+        Formats scaffolding in the same commit (pipeline/motion_gfx/formats.py, header show:, default Pop Poster).
+        Regression: sample_script draft 12 s; motion sample draft 216 s.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

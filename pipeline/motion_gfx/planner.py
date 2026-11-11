@@ -158,7 +158,8 @@ TYPES = {
              "fits": lambda b, st: 0.85 if X.pile_noun(b["text"]) else 0.0},
 }
 SHOT_BOUND = {"number": "number", "quote": "quote", "chart": "chart", "card": "title"}
-LAYOUTS = {}               # name -> number of layouts (templates.layouts(); 3 until step 3)
+LAYOUTS = {}               # name -> number of layouts (default 6 = 3 own arrangements x frame)
+OWN_LAYOUTS = {}           # name -> own arrangements (default 3); layout >= own = the same arrangement in a frame
 TYPE_SHARE = 0.20
 KINETIC_SHARE = 0.15
 LAYOUT_USES = 6
@@ -167,6 +168,10 @@ LAYOUT_USES = 6
 def layouts_of(name: str) -> int:
     """Layouts of a type: the 13 older types have 6 (their 3 own arrangements, each also drawn in a frame)."""
     return LAYOUTS.get(name, 6)
+
+
+def own_of(name: str) -> int:
+    return OWN_LAYOUTS.get("title" if name == "chapter" else name, 3)
 
 
 def frame_of(name: str, seed: int) -> str:
@@ -202,9 +207,35 @@ def _chapter_lean(chapter_no: int, seed: int) -> dict:
     return {n: 0.15 for n in names if _h(seed, "lean", chapter_no, n) % 3 == 0}
 
 
-def plan(beats: list, seed: int = 0, exclude: dict = None, weights: dict = None) -> tuple:
+def forced(beats: list, order: list) -> tuple:
+    """scene_order: test reels: the given types in turn on every beat that isn't a chapter card or a shot tag's own
+    graphic. A type that can't draw a beat's words still gets it (it falls back to the beat's phrase)."""
+    names, info, k, used = [], [], 0, set()
+    for b in beats:
+        if b.get("chapter_card"):
+            names.append("chapter")
+        elif b["index"] == 0 and b["kind"] in SHOT_BOUND:
+            names.append(SHOT_BOUND[b["kind"]])
+        else:
+            names.append(order[k % len(order)])
+            k += 1
+        extra = {}
+        if names[-1] == "map_flag":
+            c = next((c for c in X.countries(b["text"]) if c[0] not in used), None)
+            if c:
+                extra["country"] = c
+                used.add(c[0])
+            else:
+                names[-1] = "globe"
+        info.append(extra)
+    return names, info
+
+
+def plan(beats: list, seed: int = 0, exclude: dict = None, weights: dict = None, order: list = None) -> tuple:
     """(names, info) for every beat. exclude = {beat index: {types not allowed there}} (e.g. a figure whose icon
     wasn't found). weights = {type: extra weight} from the video's format (step 5)."""
+    if order:
+        return forced(beats, order)
     n = len(beats)
     cap = max(2, math.floor(TYPE_SHARE * n))
     kcap = max(1, math.floor(KINETIC_SHARE * n))
@@ -235,7 +266,9 @@ def plan(beats: list, seed: int = 0, exclude: dict = None, weights: dict = None)
                     + (_h(seed, i, t) % 1000) / 1000 * 0.08
                 cands.append((score, t))
             cands.sort(key=lambda x: (-x[0], x[1]))
-            name = _choose(cands, names, used, cap, kcap) or "figure"
+            banned = (exclude or {}).get(i, set())
+            name = _choose(cands, names, used, cap, kcap, banned) or next(
+                t for t in ("figure", "kinetic", "magnifier") if t not in banned)
         if name == "map_flag":
             c = next((c for c in X.countries(b["text"]) if c[0] not in state["countries"]), None)
             if c is None:
@@ -249,27 +282,34 @@ def plan(beats: list, seed: int = 0, exclude: dict = None, weights: dict = None)
     return names, info
 
 
-def _choose(cands, names, used, cap, kcap):
+def _choose(cands, names, used, cap, kcap, banned=()):
     """The best candidate that keeps the budget; the rules are relaxed one by one when none does."""
     prev = names[-1] if names else None
 
     def abab(t):
         return len(names) >= 3 and names[-2] == t and names[-1] == names[-3]
 
+    kin_ok = lambda t: t != "kinetic" or used.get(t, 0) < kcap                          # noqa: E731
     rules = [
         lambda t: t != prev and not abab(t) and used.get(t, 0) < (kcap if t == "kinetic" else cap)
         and used.get(t, 0) < LAYOUT_USES * layouts_of(t),
-        lambda t: t != prev and used.get(t, 0) < (kcap if t == "kinetic" else cap),
-        lambda t: t != prev and (t != "kinetic" or used.get(t, 0) < kcap),
+        lambda t: t != prev and not abab(t) and used.get(t, 0) < (kcap if t == "kinetic" else cap),
+        lambda t: t != prev and not abab(t) and kin_ok(t),
+        lambda t: t != prev and kin_ok(t),
+        lambda t: t != prev and t != "kinetic",
         lambda t: t != prev,
     ]
     for ok in rules:
         for _s, t in cands:
             if ok(t):
+                if t == "kinetic" and not kin_ok(t):      # words over their cap: a headline scene instead
+                    for alt in ("reaction", "magnifier", "newspaper", "title_card"):
+                        if alt != prev and alt in TYPES and alt not in banned and not abab(alt):
+                            return alt
                 return t
     # nothing but the previous type fits: take the least used other drawable type
-    for t in ("figure", "kinetic", "memo"):
-        if t != prev:
+    for t in ("figure", "kinetic", "magnifier", "memo"):
+        if t != prev and t not in banned:
             return t
     return None
 
@@ -337,3 +377,7 @@ def transitions(beats: list, names: list, seed: int = 0, groups: dict = None, si
         out.append(pick)
         used[pick] = used.get(pick, 0) + 1
     return out
+
+
+from . import scenes as _scenes  # noqa: E402  (the 24 newer scene types register themselves)
+_scenes.register()

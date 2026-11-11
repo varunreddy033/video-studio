@@ -103,10 +103,26 @@ def recent(title: str) -> dict:
     return out
 
 
-def options() -> dict:
+def options(fmt: str = None) -> dict:
+    """What a look part may be. Palette sets, font pairs and icon styles come from the video's format."""
+    from . import formats as Fm
+    f = Fm.get(fmt)
     return {"icons": L.usable_families(rotation=True) or ["fluent_flat"],
-            "icons_all": L.usable_families() or ["fluent_flat"], "palette": list(D.PALETTE_SETS),
-            "fonts": list(D.FONT_PAIRS), "icon_style": ["sticker", "plain"]}
+            "icons_all": L.usable_families() or ["fluent_flat"], "palette": list(f["palettes"]),
+            "fonts": list(f["fonts"]), "icon_style": list(f["icon_style"]), "format": Fm.names()}
+
+
+def choose_format(meta: dict, title: str) -> str:
+    """show: <format> in the header, else the format this video already has, else auto (step 7) / the default.
+    (The header key is show: because format: already means landscape / vertical.)"""
+    from . import formats as Fm
+    pin = (meta.get("show") or "").strip().lower()
+    if pin and pin != "auto" and pin in Fm.FORMATS:
+        return pin
+    old = (entry(title) or {}).get("look") or {}
+    if old.get("format") in Fm.FORMATS:
+        return old["format"]
+    return Fm.choose_auto(meta, title, recent(title)) if hasattr(Fm, "choose_auto") else Fm.DEFAULT
 
 
 def choose_look(meta: dict, title: str) -> dict:
@@ -114,28 +130,31 @@ def choose_look(meta: dict, title: str) -> dict:
             "fonts": (meta.get("fonts") or "").strip().lower(),
             "icon_style": (meta.get("icon_style") or "").strip().lower()}
     mode = (meta.get("look") or "auto").strip().lower()
-    opts = options()
+    fmt = choose_format(meta, title)
+    opts = options(fmt)
     if mode == "classic":
         base = dict(CLASSIC)
     else:
         old = entry(title)
         base = dict((old or {}).get("look") or {})
+        if base.get("format") != fmt:                        # another format: its own palette / fonts / style
+            base = {"icons": base.get("icons")}
         looks = recent(title)["looks"]
         h = int(hashlib.sha1(title.encode("utf-8")).hexdigest()[:8], 16)
-        for part in ("icons", "palette", "fonts"):
+        for part in ("icons", "palette", "fonts", "icon_style"):
             if base.get(part) in (opts["icons_all"] if part == "icons" else opts[part]):
                 continue
             used = [lk.get(part) for lk in looks]
             n = len(opts[part])
             order = [opts[part][(h + k) % n] for k in range(n)]
             base[part] = min(order, key=lambda o: (used.count(o), order.index(o)))
-        base.setdefault("icon_style", "sticker")
     for part, v in pins.items():
         if v:
             base[part] = v
     for part in ("icons", "palette", "fonts", "icon_style"):
         if base.get(part) not in (opts["icons_all"] if part == "icons" else opts[part]):
             base[part] = CLASSIC[part] if CLASSIC[part] in opts[part] else opts[part][0]
+    base["format"] = fmt
     return base
 
 

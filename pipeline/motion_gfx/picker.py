@@ -443,26 +443,28 @@ def plan_video(beats: list, meta: dict, seen: dict, seed: int):
     without an icon becomes kinetic words. Returns (names, variants, info, plan)."""
     from . import extras as X
     from . import planner as PL
-    exclude = {}
-    names, info = PL.plan(beats, seed, exclude, meta.get("format_weights"))
+    exclude = {i: set(meta.get("format_banned") or []) for i in range(len(beats))}
+    order = [x.strip().lower() for x in str(meta.get("scene_order") or "").split(",") if x.strip()] or None
+    names, info = PL.plan(beats, seed, exclude, meta.get("format_weights"), order)
     p = None
     for _round in range(5):
         extra = [n for i, (b, nm) in enumerate(zip(beats, names)) if nm in X.NEW for n in X.needs(i, b, nm)]
         p = plan(beats, names, meta, seen, extra)
         changed = False
         for i, nm in enumerate(names):          # a scene whose icons weren't found: plan that beat again without it
-            missing = nm in X.NEW and any((i, n["slot"]) not in p["picks"] for n in extra
-                                          if n["beat"] == i and n["required"])
+            missing = (nm in X.NEW and any((i, n["slot"]) not in p["picks"] for n in extra
+                                           if n["beat"] == i and n["required"])) or \
+                      (nm == "figure" and (i, 0) not in p["picks"])
             if missing:
                 exclude.setdefault(i, set()).add(nm)
                 changed = True
-        if not changed:
+        if not changed or order:
             break
         names, info = PL.plan(beats, seed, exclude, meta.get("format_weights"))
-    for i, n in enumerate(names):                               # no icon for a figure scene -> kinetic words
-        if n == "figure" and (i, 0) not in p["picks"]:          # (unless that would put two word scenes in a row)
+    for i, n in enumerate(names):            # still no icon for a figure scene -> kinetic words, if that keeps the
+        if n == "figure" and (i, 0) not in p["picks"]:          # words cap and no two word scenes touch
             near = [names[j] for j in (i - 1, i + 1) if 0 <= j < len(names)]
-            if "kinetic" not in near:
+            if "kinetic" not in near and names.count("kinetic") < max(1, int(PL.KINETIC_SHARE * len(names))):
                 names[i] = "kinetic"
     for r in p["report"]["rows"]:
         r["template"] = names[r["beat"]]
@@ -526,10 +528,14 @@ def check_report(parsed: dict, history: dict = None) -> dict:
     look = Hs.choose_look(meta, title)
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
     seen = Hs.recent(title) if history is None else history
-    names, variants, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"]), seen, seed)
+    from . import formats as Fm
+    show = Fm.get(look.get("format"))
+    names, variants, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"], format_weights=show["weights"],
+                                                      format_banned=show["banned"]), seen, seed)
     rep = p["report"]
     from . import planner as PL, variety
-    trans = PL.transitions(beats, names, seed)
+    trans = PL.transitions(beats, names, seed, show["transitions"], show["signature"])
+    rep["format"] = {"id": look.get("format"), "label": show["label"]}
     rep["variety"] = variety.report(names, variants, trans, beats, seen.get("videos"), look)
     rep["look"] = look
     rep["pool"] = p["pool"]

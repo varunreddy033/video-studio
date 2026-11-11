@@ -47,7 +47,7 @@ META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed"
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
              "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method",
              "icons", "icon_reuse", "icons_pin", "icons_ban",
-             "look", "fonts", "icon_style"}     # + voice / music: preset ids (presets/), see presets.py
+             "look", "fonts", "icon_style", "scene_order", "show"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -447,17 +447,28 @@ def parse(text: str) -> dict:
             if fam not in fams:
                 err(1, f"icons must be one of {', '.join(fams)}, got '{fam}'")
         from .motion_gfx import design as MD
+        from .motion_gfx import formats as MF                 # (adds the formats' palettes and fonts to design)
+        fm = (meta.get("show") or "").strip().lower()       # the video's format (show package); format: = 16:9 / 9:16
+        if fm and fm != "auto" and fm not in MF.FORMATS:
+            err(1, f"show must be auto or one of {', '.join(MF.FORMATS)}, got '{fm}'")
         for key, valid in (("palette", list(MD.PALETTE_SETS)), ("fonts", list(MD.FONT_PAIRS)),
                            ("icon_style", ["sticker", "plain"]), ("look", ["auto", "classic"])):
             v = (meta.get(key) or "").strip().lower()
             if v and v not in valid:
                 err(1, f"{key} must be one of {', '.join(valid)} for motion graphics, got '{v}'")
+        order = [x.strip().lower() for x in str(meta.get("scene_order") or "").split(",") if x.strip()]
+        if order:                                       # test / preview reels: these scene types in this order
+            from .motion_gfx import planner as PLN
+            bad = [x for x in order if x not in PLN.TYPES]
+            if bad:
+                err(1, f"scene_order: unknown scene type(s) {', '.join(bad)}; valid: {', '.join(sorted(PLN.TYPES))}")
+            warn(1, "scene_order: forces scene types for a test reel (the planner's choices are switched off)")
         reuse = str(meta.get("icon_reuse") or "").strip()
         if reuse and not (reuse.isdigit() and 1 <= int(reuse) <= 5):
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
     elif meta.get("palette") and vstyle != "motion":
         warn(1, "palette: only applies to style: motion and rendering_method: motion")
-    if rm != "motion" and any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style")):
+    if rm != "motion" and any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style", "show")):
         warn(1, "icons / icon_reuse / icons_pin / icons_ban / look / fonts / icon_style only apply to "
                 "rendering_method: motion")
     if not segments and not clip:

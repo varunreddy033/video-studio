@@ -30,6 +30,7 @@ from . import beats as B
 from . import compose, hf, history, picker
 from . import variety as V
 from . import planner as PL
+from . import formats as Fm
 from . import design as D
 from . import templates as T
 
@@ -111,14 +112,18 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
     beats = PL.rhythm(B.split(parsed, tl, spans), seed)          # bursts + breathers (docs/VARIETY_PLAN.md 5.4)
     T.set_look(look["fonts"])
+    show = Fm.get(look.get("format"))                            # the video's format (docs/VARIETY_PLAN.md 3)
+    Fm.apply_motion(show)
     order = D.palette_order(len(beats), seed, D.PALETTE_SETS[look["palette"]])
     seen = history.recent(title)
-    log(f"  look: icons {look['icons']}, palette {look['palette']}, fonts {look['fonts']}, {look['icon_style']} icons "
+    log(f"  format: {show['label']}; look: icons {look['icons']}, palette {look['palette']}, fonts {look['fonts']}, {look['icon_style']} icons "
         f"(last videos: {len(seen['looks'])})")
     shutil.rmtree(project / "compositions", ignore_errors=True)
     compose.prepare(project, voice_wav)
     cues = []
-    used_tpl, variants, info, plan = picker.plan_video(beats, dict(meta, look_icons=look["icons"]), seen, seed)
+    used_tpl, variants, info, plan = picker.plan_video(beats, dict(meta, look_icons=look["icons"],
+                                                                   format_weights=show["weights"],
+                                                                   format_banned=show["banned"]), seen, seed)
     from . import extras as X
     video_years = sorted({y for b in beats for y in X.years(b["text"])})
     icons = {}
@@ -130,27 +135,28 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     log(f"  icons ({plan['family']}): {icon_rep['icons']} different in {icon_rep['beats_with_icon']} of {len(beats)} scenes, "
         f"most used {icon_rep['most_used']['count']}x, question-style {icon_rep['question_style']}, "
         f"{icon_rep['from_pool']} from the topic pool of {icon_rep['pool_size']}, {len(icon_rep['without'])} scenes found none")
-    trans = PL.transitions(beats, used_tpl, seed)
-    ents = PL.entrances(used_tpl, seed)
+    trans = PL.transitions(beats, used_tpl, seed, show["transitions"], show["signature"])
+    ents = PL.entrances(used_tpl, seed, show["entrances"])
     for i, b in enumerate(beats):
         b["transition"] = trans[i]
         b["entrance"] = ents[i]
-        b["frame"] = PL.frame_of(used_tpl[i], seed) if variants[i] >= 3 else None
+        b["frame"] = PL.frame_of(used_tpl[i], seed) if variants[i] >= PL.own_of(used_tpl[i]) else None
         b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]
         ctx = {"W": W, "H": H, "fmt": fmt, "pal": pal, "dur": b["dur"], "shot": parsed["shots"][b["shot"]],
                "rnd": random.Random(seed + i), "icons": icons.get(i, {}),
-               "look": look, "variant": variants[i] % 3, "years": video_years, **info[i]}
+               "look": look, "variant": variants[i] % PL.own_of(name), "years": video_years,
+               "kicker": show["kicker"], **info[i]}
         P_ = compose.host(i) + "-"
-        parts = T.build(name, P_, b, ctx)
+        parts = Fm.restyle(T.build(name, P_, b, ctx), show)
         (project / "compositions" / f"scene_{i + 1:03d}.html").write_text(
-            compose.scene_file(i, b, parts, pal, b["ov"], W, H), encoding="utf-8")
+            compose.scene_file(i, b, parts, pal, b["ov"], W, H, show), encoding="utf-8")
         for t, kind in parts["cues"]:
-            cues.append((b["start"] + t, kind))
+            cues.append((b["start"] + t, show["sfx"].get(kind, kind)))
         if b["transition"] != "cut":
             cues.append((b["start"] - b["ov"] * 0.6, {"push": "swipe", "slide": "swipe", "push_up": "swoosh-up", "glitch": "glitch",
-                                                  "flash": "impact", "fade": "swipe"}.get(b["transition"], "whoosh")))
+                                                  "flash": "impact", "fade": "swipe", "page": "paper"}.get(b["transition"], "whoosh")))
         b["template"] = name
         b["variant"] = variants[i]
         progress("visuals", i + 1, len(beats))

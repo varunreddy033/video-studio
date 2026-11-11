@@ -712,12 +712,13 @@ def scene_names(beats):
 
 
 def build(name, P, beat, ctx):
-    if name == "chapter":
-        return title(P, beat, ctx, text=beat["chapter"], sub="", kicker="Chapter")
-    if beat.get("chapter_card"):
-        return title(P, beat, ctx, text=beat["chapter"], sub="", kicker="Chapter")
+    if name == "chapter" or beat.get("chapter_card"):
+        return title(P, beat, ctx, text=beat["chapter"], sub="", kicker=ctx.get("kicker", "Chapter"))
     from . import extras as X
+    from . import scenes as S
     if name in X.NEW:
         return X.build(name, P, beat, ctx)
+    if name in S.BUILDERS:
+        return S.build(name, P, beat, ctx)
     return {"kinetic": kinetic, "figure": figure, "number": number, "title": title, "quote": quote, "chart": chart,
             "memo": memo}[name](P, beat, ctx)

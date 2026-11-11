@@ -583,6 +583,14 @@ def get_file(job_id, name):
 
 
 if __name__ == "__main__":
+    # transformers is imported lazily by the voice (Kokoro: AlbertModel) and by the icon search (Check page) in
+    # different threads; two threads importing it at once leave one with a half-built module (ImportError
+    # AlbertModel). Import it once here, before any thread runs.
+    try:
+        import transformers
+        transformers.AlbertModel, transformers.AutoModel, transformers.AutoTokenizer  # noqa: B018 (load lazily-defined names)
+    except Exception as e:  # noqa: BLE001
+        print(f"transformers pre-import failed: {e}", flush=True)
     jobs.start_worker()
     print(f"Video Studio: open http://localhost:{C.PORT}", flush=True)
     code = auth.setup_code()

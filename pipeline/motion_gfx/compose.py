@@ -53,6 +53,7 @@ def _transition_js(kind, ov, W, H):
         "whip": (f'{{x: {-int(W * 0.35)}, filter: "blur(24px)"}}', f'{{x: 0, filter: "blur(0px)", {d}}}'),
         "wipe": ('{clipPath: "circle(0% at 50% 55%)"}', f'{{clipPath: "circle(150% at 50% 55%)", {d}}}'),
         "blinds": ('{clipPath: "inset(0% 0% 100% 0%)"}', f'{{clipPath: "inset(0% 0% 0% 0%)", {d}}}'),
+        "page": ('{rotationY: -85, transformPerspective: 1800, transformOrigin: "0% 50%"}', f"{{rotationY: 0, {d}}}"),
         "split": ('{clipPath: "polygon(50% 0%, 50% 0%, 50% 100%, 50% 100%)"}',
                   f'{{clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", {d}}}'),
     }[kind]
@@ -107,8 +108,12 @@ def _entrance_js(kind, hid, ov, W, H):
             }.get(kind, "")
 
 
-def scene_file(i, beat, parts, pal, ov, W, H):
+def scene_file(i, beat, parts, pal, ov, W, H, show=None):
+    from . import formats as Fm
     hid = host(i)
+    show = show or Fm.get(None)
+    back = Fm.backdrop_html(show, pal, W, H)
+    rough = Fm.ROUGH_FILTER if show.get("rough") else ""
     length = beat["dur"] + ov
     tr = _transition_js(beat["transition"], ov, W, H).replace("__H__", hid)
     frame = frame_html(beat.get("frame"), hid, pal, W, H)
@@ -119,11 +124,11 @@ def scene_file(i, beat, parts, pal, ov, W, H):
 #root {{ position: absolute; inset: 0; overflow: hidden; }}
 #{hid}-stage {{ position: absolute; inset: 0; background: {pal['bg']}; overflow: hidden; }}
 #{hid}-cam {{ position: absolute; inset: 0; }}
-#{hid}-ent {{ position: absolute; inset: 0; {tilt} }}
+#{hid}-ent {{ position: absolute; inset: 0; {tilt}{"filter: url(#rough);" if rough else ""} }}
 {parts['css']}
 </style>
 <div id="root" data-composition-id="{hid}" data-width="{W}" data-height="{H}">
-  <div id="{hid}-stage"><div id="{hid}-cam">{frame}<div id="{hid}-ent">
+  {rough}<div id="{hid}-stage">{back}<div id="{hid}-cam">{frame}<div id="{hid}-ent">
 {parts['html']}
   </div></div></div>
 </div>

@@ -120,6 +120,22 @@ motion graphics: kinetic words, stick figures, numbers, charts, memos and transi
 no AI images (docs/MOTION_GFX_PLAN.md). The same shot tags work; the narration words pick the figures' poses and props.
 Not with `character:` or `clip_from:`. Video Studio: the "Pictures" menu on the new-video screen writes this line.
 
+Formats (motion graphics only, docs/VARIETY_PLAN.md). Every video gets a whole show package: palettes, fonts, a
+background treatment, which scene types it leans on, entrances, transitions (with a signature chapter
+transition), sounds and music moods. `show: pop_poster | tech_desk | data_lab | paper_notebook` pins one (the key
+is `show:` because `format:` already means landscape / vertical). Pop Poster = bright colours + stick figures;
+Tech Desk = dark UI, glass panels, app windows, phones, terminals, no people; Data Lab = navy + neon, charts,
+counters, rankings, dashboards, no people; Paper Notebook = ruled paper, sticky notes, checklists, hand-drawn
+wobble. Default (until `show: auto` lands): Pop Poster.
+
+Scene planner. The renderer picks a scene type per beat from ~37 (stick figure, kinetic words, number, chart, quote,
+memo, map, timeline, meter, versus, pile, list, plus ranking, process, cause -> effect, pros/cons, checklist,
+before/after, split screen, scale, funnel, venn, donut, icon grid, spec table, phone, browser window, chat, newspaper,
+ticker, calendar, countdown, magnifier, reaction burst, globe, route map, and the format hosts dashboard / terminal /
+sticky notes) by what each line does (statistic, comparison, list, process, cause, timeline...), with caps: no type
+above 20 % of scenes, no type + layout above 6, words at most 15 %, never the same type twice in a row. Check shows
+the result in the Variety card. `scene_order: ranking, donut, ...` (test reels only) forces types in turn.
+
 Icons (motion graphics only). Each stick-figure scene shows one icon from the icon library
 (assets/library/icons, docs/ASSET_PACKS_PLAN.md), chosen for the whole video at once: the script's topic words
 make a pool of ~40-60 icons, every scene gets the best match for its own words, one icon is used once per video,
