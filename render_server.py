@@ -368,6 +368,25 @@ def caption_preview(cid):
     return send_file(f, mimetype="video/mp4", conditional=True)
 
 
+@app.get("/api/formats")
+def formats_list():
+    """Motion-graphics formats (styles) for the Style tab: id, label, description, preview picture."""
+    from pipeline.motion_gfx import formats as Fm
+    return jsonify([{"id": k, "label": v["label"], "description": v["description"],
+                     "preview_url": f"/api/formats/{k}/preview.jpg"} for k, v in Fm.FORMATS.items()])
+
+
+@app.get("/api/formats/<fid>/preview.jpg")
+def format_preview(fid):
+    from pipeline.motion_gfx import formats as Fm
+    p = C.ASSETS / "format_previews" / f"{fid}.jpg"
+    if fid not in Fm.FORMATS or not p.exists():
+        abort(404)
+    resp = send_file(p, mimetype="image/jpeg")
+    resp.headers["Cache-Control"] = "private, max-age=86400"
+    return resp
+
+
 @app.get("/api/art_styles")
 def art_styles():
     return jsonify(presets.list("art_styles"))

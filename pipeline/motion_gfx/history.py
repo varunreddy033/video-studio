@@ -43,7 +43,9 @@ def _load_all() -> list:
 
 
 def _alive(v) -> bool:
-    return v.get("status") != "rendering" or time.time() - float(v.get("started") or 0) < STALE
+    """A "rendering" reservation older than STALE is ignored, unless the video was finished before (then it counts
+    as done again)."""
+    return v.get("status") != "rendering" or v.get("was") == "done" or time.time() - float(v.get("started") or 0) < STALE
 
 
 def load() -> list:
@@ -178,8 +180,10 @@ def reserve(meta: dict, title: str, job: str, beats: list = None) -> dict:
         videos, key = _load_all(), key_of(title)
         for v in videos:
             if v.get("key") == key and _alive(v):
-                if v.get("status") in ("rendering", "draft"):        # no status = a final from before reservations
-                    v.update(look=look, job=job, status="rendering", started=time.time())
+                # a re-render keeps its look (choose_look returned it); a look from before formats gets its format now.
+                # The entry is marked "rendering" so videos queued at the same time see it (record() sets "done").
+                v.update(look=look, job=job, status="rendering", started=time.time(),
+                         was=v.get("was") or ("done" if v.get("status") in (None, "done") else v.get("status")))
                 break
         else:
             videos = [v for v in videos if v.get("key") != key]      # a stale reservation of this title
@@ -195,5 +199,5 @@ def finish_draft(title: str, extra: dict = None) -> None:
         videos, key = _load_all(), key_of(title)
         for v in videos:
             if v.get("key") == key and v.get("status") == "rendering":
-                v.update(extra or {}, status="draft")
+                v.update(extra or {}, status="done" if v.get("was") == "done" else "draft")
         _write(videos)

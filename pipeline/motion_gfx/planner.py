@@ -166,18 +166,24 @@ LAYOUT_USES = 6
 
 
 def layouts_of(name: str) -> int:
-    """Layouts of a type: the 13 older types have 6 (their 3 own arrangements, each also drawn in a frame)."""
-    return LAYOUTS.get(name, 6)
+    """Layouts of a type = its own arrangements x (plain + the 4 frames of compose.FRAMES): 15 for the 13 older
+    types (3 arrangements), 10 for the newer ones (2)."""
+    return own_of(name) * 5
 
 
 def own_of(name: str) -> int:
     return OWN_LAYOUTS.get("title" if name == "chapter" else name, 3)
 
 
-def frame_of(name: str, seed: int) -> str:
-    """The frame a type's layouts 3-5 use in this video (one per type, seeded)."""
+def frame_of(name: str, seed: int, variant: int = None) -> str:
+    """The frame of a layout: none for layouts 0..own-1, then each block of `own` layouts in the next frame (the
+    order of the 4 frames is seeded per type)."""
     from . import compose
-    return compose.FRAMES[_h(seed, "frame", name) % len(compose.FRAMES)]
+    own = own_of(name)
+    if variant is not None and variant < own:
+        return None
+    k = 0 if variant is None else variant // own - 1
+    return compose.FRAMES[(_h(seed, "frame", name) + k) % len(compose.FRAMES)]
 
 
 def entrances(names: list, seed: int = 0, pool: list = None) -> list:
@@ -290,10 +296,12 @@ def _choose(cands, names, used, cap, kcap, banned=()):
         return len(names) >= 3 and names[-2] == t and names[-1] == names[-3]
 
     kin_ok = lambda t: t != "kinetic" or used.get(t, 0) < kcap                          # noqa: E731
+    lay_ok = lambda t: used.get(t, 0) < LAYOUT_USES * layouts_of(t)                      # noqa: E731
     rules = [
         lambda t: t != prev and not abab(t) and used.get(t, 0) < (kcap if t == "kinetic" else cap)
         and used.get(t, 0) < LAYOUT_USES * layouts_of(t),
-        lambda t: t != prev and not abab(t) and used.get(t, 0) < (kcap if t == "kinetic" else cap),
+        lambda t: t != prev and not abab(t) and used.get(t, 0) < (kcap if t == "kinetic" else cap) and lay_ok(t),
+        lambda t: t != prev and not abab(t) and kin_ok(t) and lay_ok(t),
         lambda t: t != prev and not abab(t) and kin_ok(t),
         lambda t: t != prev and kin_ok(t),
         lambda t: t != prev and t != "kinetic",

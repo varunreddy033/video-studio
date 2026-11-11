@@ -1224,7 +1224,7 @@ BUILDERS = {n: globals()[n] for n in SPECS}
 def register():
     from . import planner as PL
     for name, (roles, data, fits) in SPECS.items():
-        PL.register(name, {"roles": roles, "data": data, "fits": fits}, layouts=OWN * 2)
+        PL.register(name, {"roles": roles, "data": data, "fits": fits})
         PL.OWN_LAYOUTS[name] = OWN
 
 

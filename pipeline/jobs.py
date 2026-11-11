@@ -98,6 +98,10 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
                            and not parsed["meta"].get("clip") else presets.DEFAULTS["captions"]}
     except presets.PresetError:
         out["captions"] = None
+    if parsed["meta"].get("rendering_method") == "motion":     # the Style tab (motion-graphics formats)
+        from .motion_gfx import formats as Fm
+        sid = (parsed["meta"].get("show") or "auto").strip().lower()
+        out["show"] = {"id": sid, "label": "Auto" if sid == "auto" else Fm.get(sid)["label"]}
     vid = parsed["meta"].get("voice")
     vp = next((v for v in presets.list("voices") if v.get("voice") == vid), None)
     out["voice"] = {"voice": vid, "preset": vp and vp["id"], "label": vp["label"] if vp else vid,
@@ -144,6 +148,15 @@ def enqueue(job_id: str, mode: str) -> str:
         raise ValueError(f"already {st['status']}")
     if not (st.get("check") or {}).get("ok"):
         raise ValueError("the script has errors; fix them and press Check again")
+    if st.get("rendering_method") == "motion":
+        # reserve the format + look when the job is QUEUED: videos queued together never share a format
+        # (docs/VARIETY_PLAN.md section 6); the render keeps this reservation when it starts
+        try:
+            from .motion_gfx import history as Hs, picker as Pk
+            parsed = script_parser.parse((jdir(job_id) / "script.md").read_text(encoding="utf-8"))
+            Hs.reserve(parsed["meta"], parsed["meta"].get("title", ""), job_id, Pk.estimate_beats(parsed))
+        except Exception as e:  # noqa: BLE001  (the render reserves again when it starts)
+            log(jdir(job_id), f"format reservation at queue time failed: {e}")
     ahead = _queue.qsize() + sum(1 for j in list_jobs() if j.get("status") == "rendering")
     set_state(job_id, status="queued", mode=mode, stage=f"waiting ({ahead} ahead)" if ahead else "starting",
               done=0, total=0, error=None)

@@ -141,7 +141,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     for i, b in enumerate(beats):
         b["transition"] = trans[i]
         b["entrance"] = ents[i]
-        b["frame"] = PL.frame_of(used_tpl[i], fseed) if variants[i] >= PL.own_of(used_tpl[i]) else None
+        b["frame"] = PL.frame_of(used_tpl[i], fseed, variants[i])
         b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]

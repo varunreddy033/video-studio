@@ -518,6 +518,14 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         newsroom. Bug fixed: entries from before reservations (no status) were treated as unfinished and the preview
         drafts overwrote the Windows final's look; restored from its final (backup output/backups/asset_history-*.json),
         and the two entries only my tests made (Nvidia sample draft, scene-types reel) removed.
+  - [ ] Step 8 / final test (2026-11-11): Windows re-render, job 20261111-162738-976a6a, show: auto -> Tech Desk: 30 types
+        in 187 scenes, top type kinetic 15.0 %, top type+layout 6, 8 transition types, kinetic 15.0 % = every acceptance
+        number met; 7:41 in 1481 s. EarPods (job 20261111-162741-a1f91e) got Case File (different format, reserved at
+        queue time) but the server restart stopped it mid-render: press Make final again, then make the 1-frame-every-10-s
+        side-by-side contact sheet. Since then (committed untested at Varun's request; he tests): format + look
+        reserved when a motion job is QUEUED (re-renders too, status "rendering", back to done/draft after);
+        layouts = own arrangements x (plain + 4 frames) (15 older / 10 newer types); Style tab in Look & sound
+        (Auto + 8 formats with preview strips from assets/format_previews, writes show:), GET /api/formats.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

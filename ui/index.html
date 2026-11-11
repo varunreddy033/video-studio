@@ -183,6 +183,8 @@ video { width: 100%; border-radius: var(--radius); background: #000; display: bl
 .barrow b { font-weight: 500; color: var(--muted, inherit); }
 ul.goals { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 12px; font-size: 13px; }
 ul.goals li.ok { color: var(--ok); } ul.goals li.bad { color: var(--bad); }
+.style .pv.wide { aspect-ratio: 32/9; }
+.pv.autopv { display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--accent); font-size: 28px; letter-spacing: .1em; }
 .chip.type { background: var(--info-soft); color: var(--info); }
 .icongrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 8px; }
 .icontile { margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
@@ -605,10 +607,11 @@ const PANES = {
   sfx: { label: "Sound effects", show: (r) => !isClip(r), summary: sfxSummary, build: sfxPane },
   voice: { label: "Voice", show: (r) => !isClip(r), summary: (r) => (r.voice || {}).label, build: voicePane },
   captions: { label: "Captions", summary: (r) => (r.captions || {}).label, build: captionsPane },
+  show: { label: "Style", show: (r) => !!r.show && !isClip(r), summary: (r) => (r.show || {}).label, build: stylePane },
   style: { label: "Art style", show: (r) => r.art_style && !isClip(r) && (r.stats || {}).rendering_method !== "motion", summary: (r) => (r.art_style || {}).label,
            build: (r, g, s, c) => styleCard(r, g, s, c, true) },
 };
-const PANE_ORDER = ["voice", "music", "captions", "sfx", "style"];
+const PANE_ORDER = ["show", "voice", "music", "captions", "sfx", "style"];
 function iconCard(r, getText, setText, recheck) {
   // rendering_method: motion: the icons the render will pick (topic pool + one per scene), with pin / ban buttons
   const s = r.stats || {};
@@ -697,6 +700,25 @@ function lookCard(r, getText, setText, recheck) {
 function tile(sel, onPick, title, ...kids) {
   return h("div", { class: "style" + (sel ? " sel" : ""), role: "button", tabindex: "0", title, onclick: onPick,
     onkeydown: (e) => { if (e.key === "Enter") onPick(); } }, ...kids);
+}
+function stylePane(r, getText, setText, recheck) {
+  // motion graphics: the video's format (show package). Auto = picked from the topic + what recent videos used.
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading styles…"));
+  (async () => {
+    let list; try { list = await lookList("formats", "/api/formats"); } catch (e) { box.firstChild.textContent = e.message; return; }
+    const cur = (r.show || {}).id || "auto";
+    const pick = (id) => { if (id === cur) return; setText(setHeaderKey(getText(), "show", id === "auto" ? null : id)); recheck(); };
+    const auto = tile(cur === "auto", () => pick("auto"), "Let Video Studio choose",
+      h("div", { class: "pv wide autopv" }, h("b", {}, "AUTO")), h("b", {}, "Auto (recommended)" + (cur === "auto" ? " ✓" : "")),
+      h("span", {}, "Picks the style that fits the topic best and that your last 10 videos used least. Two videos queued together always get different styles."));
+    box.replaceChildren(
+      h("p", { class: "hint", style: "margin-top:0" }, "The whole look of the video: colours, fonts, background, which scenes it uses, transitions and sounds. "
+        + "Click a style to put show: in the script header. The Variety card below shows the result."),
+      h("div", { class: "styles" }, auto, list.map(f => tile(f.id === cur, () => pick(f.id), "Use this style",
+        h("div", { class: "pv wide" }, h("img", { src: f.preview_url, alt: f.label + " preview", loading: "lazy" })),
+        h("b", {}, f.label + (f.id === cur ? " ✓" : "")), h("span", {}, f.description)))));
+  })();
+  return box;
 }
 function captionsPane(r, getText, setText, recheck) {
   const box = h("div", {}, h("p", { class: "hint" }, "Loading caption styles…"));
