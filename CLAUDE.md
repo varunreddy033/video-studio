@@ -488,6 +488,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         now imports it once at start. Fonts added: Patrick Hand + Space Mono (OFL, assets/fonts/licences).
         Formats scaffolding in the same commit (pipeline/motion_gfx/formats.py, header show:, default Pop Poster).
         Regression: sample_script draft 12 s; motion sample draft 216 s.
+  - [x] Step 5 (2026-11-11), WAITING FOR VARUN'S APPROVAL of the 4 formats: pipeline/motion_gfx/formats.py, header
+        show: (format: already means landscape/vertical) = pop_poster (default) | tech_desk | data_lab |
+        paper_notebook. Per format: palette sets + font pairs (new: tech, lab, hand), icon style, card/line colours,
+        line weight, shadow (offset / soft / glow), backdrop (none / UI grid + brackets / dot grid + glow / ruled paper
+        + margin + tape) + hand-drawn wobble filter (paper), scene weights + banned types (no stick figures in Tech Desk /
+        Data Lab), entrance pool, easing, transition groups + signature (wipe / glitch / zoom / page turn), SFX map,
+        music moods, chapter kicker. Planner seed = title + format (Pop Poster keeps the title-only seed). Picker: words
+        the video capitalises mid-sentence are names everywhere (no apple for "Apple changed..."), "running" is filler.
+        Preview: output/previews/formats_1-4.mp4 (2 x 2, the Windows opening, 18 s) + formats_1-4_sheet.jpg.
+        Regression: sample_script draft 9 s, presets clean.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

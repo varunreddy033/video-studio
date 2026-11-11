@@ -58,7 +58,7 @@ FACES = ("Smileys & Emotion", "People & Body")          # ranked a little lower:
 NUMBER_WORDS = set("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
                    "sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred "
                    "thousand million billion trillion first second third half percent".split())
-FILLER = set("thing things people person year years time times day days way ways lot kind sort part number "
+FILLER = set("running runs thing things people person year years time times day days way ways lot kind sort part number "
              "something anything everything nothing someone anyone everyone right left back well let lets "
              "pull need know think thought want mean means point reason reasons story fact truth idea frankly "
              "meanwhile already never ever always actually simply exactly almost around between during without "
@@ -100,10 +100,32 @@ def stem(w: str) -> str:
 NAME = re.compile(r"\b[A-Z][a-z]+-[A-Z][a-z]+\b|(?<![.!?:]\s)(?<!^)\b[A-Z][a-z]+(?:[-'’][A-Za-z]+)*\b|\b[A-Z]{2,}[a-z]*\b")
 
 
+import contextvars  # noqa: E402
+
+# names the whole video capitalises mid-sentence ("Apple", "Windows"): names at the start of a clause too (plan() sets
+# it per render / Check; a ContextVar so two threads never share it)
+VIDEO_NAMES = contextvars.ContextVar("video_names", default=frozenset())
+
+
+def video_names(texts) -> frozenset:
+    out = set()
+    for t in texts:
+        for m in NAME.finditer(t.strip()):
+            w = m.group(0)
+            if w.lower() not in T.STOP and len(w) >= 3:
+                out.add(w)
+    return frozenset(out)
+
+
 def without_names(text: str) -> str:
     """The clause without names: "Apple", "Lily-Rose Depp", "Bose" mean a company or a person, not an apple or a rose.
-    A capitalised word counts as a name unless it starts the clause or a sentence."""
-    return re.sub(r"\s+", " ", NAME.sub(" ", text.strip())).strip()
+    A capitalised word counts as a name unless it starts the clause or a sentence; a word the video capitalises
+    mid-sentence elsewhere (VIDEO_NAMES) is a name everywhere."""
+    t = NAME.sub(" ", text.strip())
+    known = VIDEO_NAMES.get()
+    if known:
+        t = re.sub(r"\b(" + "|".join(re.escape(w) for w in sorted(known)) + r")\b", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def content_words(text: str, names: bool = False) -> list:
@@ -282,6 +304,7 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
     Returns {"family", "picks": {(beat, slot): {"id", "score", "how"}}, "pool": [...], "nouns": [...], "report": {...}}.
     """
     import numpy as np
+    VIDEO_NAMES.set(video_names([" ".join(b["text"] for b in beats)]))     # joined: clause starts aren't starts
     family = family_of(meta)
     banned = set(id_list(meta.get("icons_ban"), family))
     pins = [p for p in id_list(meta.get("icons_pin"), family) if p not in banned]
@@ -530,6 +553,7 @@ def check_report(parsed: dict, history: dict = None) -> dict:
     seen = Hs.recent(title) if history is None else history
     from . import formats as Fm
     show = Fm.get(look.get("format"))
+    seed = Fm.seed_of(title, look.get("format"))
     names, variants, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"], format_weights=show["weights"],
                                                       format_banned=show["banned"]), seen, seed)
     rep = p["report"]

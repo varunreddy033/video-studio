@@ -23,8 +23,8 @@ FORMATS = {
         "palettes": ["pop", "warm", "cool", "bold"], "fonts": ["poster", "condensed", "comic"],
         "icon_style": ["sticker"], "card": "#FFFFFF", "line": "#111111", "line_scale": 1.0, "shadow": "offset",
         "backdrop": None, "rough": False,
-        "weights": {"figure": 0.15, "versus": 0.2, "number": 0.1, "split": 0.15, "reaction": 0.15, "pros_cons": 0.1,
-                    "scale": 0.15, "icon_list": 0.1},
+        "weights": {"figure": 0.35, "versus": 0.3, "number": 0.15, "split": 0.25, "reaction": 0.25, "pros_cons": 0.15,
+                    "scale": 0.25, "icon_list": 0.2, "pile": 0.2, "map_flag": 0.2},
         "banned": ["dashboard", "terminal", "sticky"],
         "entrances": ["pop", "drop", "skew", "rise"],
         "ease": {"EASE_IN": "expo.out", "EASE_POP": "back.out(2.2)"},
@@ -40,10 +40,10 @@ FORMATS = {
         "palettes": ["tech_cyan", "tech_violet"], "fonts": ["tech"],
         "icon_style": ["plain"], "card": "#EAF2FF", "line": "#0B1222", "line_scale": 0.55, "shadow": "soft",
         "backdrop": "grid", "rough": False,
-        "weights": {"browser": 0.35, "phone": 0.35, "table": 0.35, "ticker": 0.25, "magnifier": 0.2, "chat": 0.15,
-                    "countdown": 0.2, "process": 0.15, "before_after": 0.15, "split": 0.15, "number": 0.1,
-                    "terminal": 0.35, "dashboard": 0.2},
-        "banned": ["figure", "sticky"],
+        "weights": {"browser": 0.5, "phone": 0.5, "table": 0.45, "ticker": 0.3, "magnifier": 0.25, "chat": 0.3,
+                    "countdown": 0.25, "process": 0.2, "before_after": 0.2, "split": 0.2, "number": 0.1,
+                    "terminal": 0.5, "dashboard": 0.3, "calendar": -0.2, "newspaper": -0.3},
+        "banned": ["figure", "sticky", "reaction", "pile"],
         "entrances": ["rise", "mask", "none", "pop"],
         "ease": {"EASE_IN": "power3.out", "EASE_POP": "back.out(1.4)"},
         "transitions": {"same": ["cut", "fade"], "next": ["slide", "push", "blinds"],
@@ -60,7 +60,7 @@ FORMATS = {
         "backdrop": "dots", "rough": False,
         "weights": {"chart": 0.3, "number": 0.3, "donut": 0.4, "icon_grid": 0.4, "ranking": 0.4, "table": 0.3,
                     "meter": 0.3, "funnel": 0.35, "ticker": 0.3, "timeline": 0.2, "scale": 0.2, "venn": 0.15,
-                    "dashboard": 0.4},
+                    "dashboard": 0.55, "magnifier": -0.2, "calendar": -0.1},
         "banned": ["figure", "reaction", "browser", "phone", "chat", "newspaper", "terminal", "sticky"],
         "entrances": ["mask", "rise", "none"],
         "ease": {"EASE_IN": "power3.out", "EASE_POP": "back.out(1.2)"},
@@ -77,9 +77,9 @@ FORMATS = {
         "palettes": ["paper_yellow", "paper_mint"], "fonts": ["hand"],
         "icon_style": ["sticker"], "card": "#FFFDF5", "line": "#1F2A44", "line_scale": 0.8, "shadow": "offset",
         "backdrop": "ruled", "rough": True,
-        "weights": {"figure": 0.2, "checklist": 0.4, "process": 0.35, "cause_effect": 0.35, "pros_cons": 0.3,
-                    "venn": 0.3, "before_after": 0.2, "calendar": 0.15, "icon_list": 0.2, "route": 0.15,
-                    "sticky": 0.4},
+        "weights": {"figure": 0.3, "checklist": 0.45, "process": 0.4, "cause_effect": 0.4, "pros_cons": 0.35,
+                    "venn": 0.35, "before_after": 0.25, "calendar": 0.15, "icon_list": 0.25, "route": 0.2,
+                    "sticky": 0.55, "newspaper": -0.3, "magnifier": -0.1},
         "banned": ["ticker", "dashboard", "terminal"],
         "entrances": ["drop", "rise", "flip"],
         "ease": {"EASE_IN": "power2.out", "EASE_POP": "back.out(1.7)"},
@@ -120,6 +120,14 @@ D.FONT_PAIRS.update({
 })
 POP_SETS = ["pop", "warm", "cool", "bold"]
 POP_FONTS = ["poster", "condensed", "comic"]
+
+
+def seed_of(title: str, fmt: str) -> int:
+    """The planner's seed: the title AND the format, so one script in two formats makes different choices. Pop Poster
+    keeps the title-only seed (videos made before formats re-render the same)."""
+    import hashlib
+    key = title if (fmt or DEFAULT) == DEFAULT else f"{title}|{fmt}"
+    return int(hashlib.sha1(key.encode()).hexdigest()[:6], 16)
 
 
 def get(name: str) -> dict:

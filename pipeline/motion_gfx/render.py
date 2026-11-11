@@ -114,7 +114,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     T.set_look(look["fonts"])
     show = Fm.get(look.get("format"))                            # the video's format (docs/VARIETY_PLAN.md 3)
     Fm.apply_motion(show)
-    order = D.palette_order(len(beats), seed, D.PALETTE_SETS[look["palette"]])
+    fseed = Fm.seed_of(title, look.get("format"))                # same script in another format = other choices
+    order = D.palette_order(len(beats), fseed, D.PALETTE_SETS[look["palette"]])
     seen = history.recent(title)
     log(f"  format: {show['label']}; look: icons {look['icons']}, palette {look['palette']}, fonts {look['fonts']}, {look['icon_style']} icons "
         f"(last videos: {len(seen['looks'])})")
@@ -123,7 +124,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     cues = []
     used_tpl, variants, info, plan = picker.plan_video(beats, dict(meta, look_icons=look["icons"],
                                                                    format_weights=show["weights"],
-                                                                   format_banned=show["banned"]), seen, seed)
+                                                                   format_banned=show["banned"]), seen, fseed)
     from . import extras as X
     video_years = sorted({y for b in beats for y in X.years(b["text"])})
     icons = {}
@@ -135,12 +136,12 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     log(f"  icons ({plan['family']}): {icon_rep['icons']} different in {icon_rep['beats_with_icon']} of {len(beats)} scenes, "
         f"most used {icon_rep['most_used']['count']}x, question-style {icon_rep['question_style']}, "
         f"{icon_rep['from_pool']} from the topic pool of {icon_rep['pool_size']}, {len(icon_rep['without'])} scenes found none")
-    trans = PL.transitions(beats, used_tpl, seed, show["transitions"], show["signature"])
-    ents = PL.entrances(used_tpl, seed, show["entrances"])
+    trans = PL.transitions(beats, used_tpl, fseed, show["transitions"], show["signature"])
+    ents = PL.entrances(used_tpl, fseed, show["entrances"])
     for i, b in enumerate(beats):
         b["transition"] = trans[i]
         b["entrance"] = ents[i]
-        b["frame"] = PL.frame_of(used_tpl[i], seed) if variants[i] >= PL.own_of(used_tpl[i]) else None
+        b["frame"] = PL.frame_of(used_tpl[i], fseed) if variants[i] >= PL.own_of(used_tpl[i]) else None
         b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]
