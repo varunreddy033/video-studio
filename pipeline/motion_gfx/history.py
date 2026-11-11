@@ -112,7 +112,7 @@ def options(fmt: str = None) -> dict:
             "fonts": list(f["fonts"]), "icon_style": list(f["icon_style"]), "format": Fm.names()}
 
 
-def choose_format(meta: dict, title: str) -> str:
+def choose_format(meta: dict, title: str, beats: list = None) -> str:
     """show: <format> in the header, else the format this video already has, else auto (step 7) / the default.
     (The header key is show: because format: already means landscape / vertical.)"""
     from . import formats as Fm
@@ -122,15 +122,15 @@ def choose_format(meta: dict, title: str) -> str:
     old = (entry(title) or {}).get("look") or {}
     if old.get("format") in Fm.FORMATS:
         return old["format"]
-    return Fm.choose_auto(meta, title, recent(title)) if hasattr(Fm, "choose_auto") else Fm.DEFAULT
+    return Fm.choose_auto(meta, title, recent(title), beats)
 
 
-def choose_look(meta: dict, title: str) -> dict:
+def choose_look(meta: dict, title: str, beats: list = None) -> dict:
     pins = {"icons": (meta.get("icons") or "").strip().lower(), "palette": (meta.get("palette") or "").strip().lower(),
             "fonts": (meta.get("fonts") or "").strip().lower(),
             "icon_style": (meta.get("icon_style") or "").strip().lower()}
     mode = (meta.get("look") or "auto").strip().lower()
-    fmt = choose_format(meta, title)
+    fmt = choose_format(meta, title, beats)
     opts = options(fmt)
     if mode == "classic":
         base = dict(CLASSIC)
@@ -171,14 +171,14 @@ def record(title: str, job: str, data: dict) -> None:
         _write(videos)
 
 
-def reserve(meta: dict, title: str, job: str) -> dict:
+def reserve(meta: dict, title: str, job: str, beats: list = None) -> dict:
     """Chooses this video's look and reserves it in the history before anything renders (see the module doc)."""
     with _locked():
-        look = choose_look(meta, title)
+        look = choose_look(meta, title, beats)
         videos, key = _load_all(), key_of(title)
         for v in videos:
             if v.get("key") == key and _alive(v):
-                if v.get("status") != "done":
+                if v.get("status") in ("rendering", "draft"):        # no status = a final from before reservations
                     v.update(look=look, job=job, status="rendering", started=time.time())
                 break
         else:

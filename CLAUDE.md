@@ -508,6 +508,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         banned automatically (formats.ALL_HOSTS). Font added: Courier Prime (OFL). Windows (estimate) per format:
         6-8 of 8 goals (Data Lab 4: a script with few numbers). Preview: output/previews/formats_5-8.mp4 + _sheet.jpg.
         Regression: sample_script draft 11 s, presets clean.
+  - [x] Step 7 (2026-11-11): show: auto (default) = topic fit (MiniLM: title/tags/description vs each format's
+        description) + 0.03 per variety goal the script meets in that format (planner-only plan of all 8, ~1 s) - 0.06
+        per use in the last 10 videos; never the format of a video rendering right now; a re-render keeps its format.
+        FORMATS_ALLOWED in .env (tested: pop_poster, blueprint -> blueprint). Similarity check: variety.similarity vs
+        the last 10 fingerprints (look incl. format, scene mix, transition mix), warning above 0.72 on the Check page
+        naming the closest video (tested: a copy of itself = 1.00 + warning). Check page: format, why, top fits.
+        Picks: Windows -> tech_desk (8/8), EarPods -> case_file (6/8), Nvidia spy sample -> case_file, AI bubble ->
+        newsroom. Bug fixed: entries from before reservations (no status) were treated as unfinished and the preview
+        drafts overwrote the Windows final's look; restored from its final (backup output/backups/asset_history-*.json),
+        and the two entries only my tests made (Nvidia sample draft, scene-types reel) removed.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

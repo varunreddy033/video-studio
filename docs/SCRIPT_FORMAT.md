@@ -122,11 +122,17 @@ Not with `character:` or `clip_from:`. Video Studio: the "Pictures" menu on the 
 
 Formats (motion graphics only, docs/VARIETY_PLAN.md). Every video gets a whole show package: palettes, fonts, a
 background treatment, which scene types it leans on, entrances, transitions (with a signature chapter
-transition), sounds and music moods. `show: pop_poster | tech_desk | data_lab | paper_notebook` pins one (the key
-is `show:` because `format:` already means landscape / vertical). Pop Poster = bright colours + stick figures;
-Tech Desk = dark UI, glass panels, app windows, phones, terminals, no people; Data Lab = navy + neon, charts,
-counters, rankings, dashboards, no people; Paper Notebook = ruled paper, sticky notes, checklists, hand-drawn
-wobble. Default (until `show: auto` lands): Pop Poster.
+transition), sounds and music moods. `show: auto` (the default, no line needed) picks the format whose description fits the
+title / tags / description best, plus a bonus for each variety goal the script meets in it, minus a penalty for each
+use in the last 10 videos; it never takes the format of a video rendering at the same time, and a re-render keeps the
+format it had. `show: <id>` pins one (the key is `show:` because `format:` already means landscape / vertical):
+`pop_poster` (bright colours, stick figures), `tech_desk` (dark UI, app windows, phones, terminals, no people),
+`data_lab` (navy + neon, charts, counters, dashboards, no people), `paper_notebook` (ruled paper, sticky notes,
+checklists, hand-drawn wobble), `newsroom` (headline bars, lower thirds, ticker, anchor silhouette), `case_file` (noir
+desk lamp, memos, evidence board), `arcade_retro` (pixel CRT, level cards, health bars), `blueprint` (blue grid,
+line diagrams). `FORMATS_ALLOWED=tech_desk, data_lab` in .env limits auto to a channel's family of formats.
+The Variety card on the Check page names the chosen format and why, and warns when the video is too similar to one
+of the last 10 (similarity above 0.72).
 
 Scene planner. The renderer picks a scene type per beat from ~37 (stick figure, kinetic words, number, chart, quote,
 memo, map, timeline, meter, versus, pile, list, plus ranking, process, cause -> effect, pros/cons, checklist,

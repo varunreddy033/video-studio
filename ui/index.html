@@ -646,20 +646,24 @@ function iconCard(r, getText, setText, recheck) {
       h("details", {}, h("summary", {}, `Icon per scene (${x.rows.length})`),
         h("div", { class: "icongrid" }, x.rows.filter(y => y.icon).map(y => tile(y.icon, `${ts(y.t)} · ${y.text}`, pins.has(y.icon))))),
       banned.length ? h("p", { class: "hint" }, "Banned (click to allow again): ", ...banned) : null);
-    const old = document.getElementById("variety"), vc = varietyCard(x.variety, true);
+    const old = document.getElementById("variety"), vc = varietyCard(x.variety, true, x.format);
     if (vc) { if (old) old.replaceWith(vc); else card.after(vc); }
   }).catch((e) => card.replaceChildren(h("h3", {}, "Icons"), h("p", { class: "hint" }, e.message)));
   return card;
 }
 
-function varietyCard(v, estimated) {
+function varietyCard(v, estimated, fmt) {
   // docs/VARIETY_PLAN.md section 7: scene-type mix, most-used type + layout, transitions, goals
   if (!v) return null;
   const G = { max_type_share: "no scene type above 20%", max_type_layout: "no type + layout above 6 uses",
     min_types: "15+ scene types", min_transitions: "6+ transition types", max_kinetic_share: "kinetic words at most 15%",
     max_transition_share: "no transition above 35%", no_type_twice: "never the same type twice in a row", no_abab: "no A-B-A-B runs" };
   const max = Math.max(...Object.values(v.scene_mix), 1);
+  const fits = fmt && fmt.fit ? Object.entries(fmt.fit).slice(0, 3).map(([k, x]) => `${k.replace("_", " ")} ${x.toFixed(2)}`).join(", ") : "";
   return h("div", { class: "card", id: "variety" }, h("h3", {}, `Variety (${v.goals_met} of ${v.goals_total} goals)`),
+    fmt ? h("p", { class: "hint", style: "margin-top:-4px" }, `Format: ${fmt.label} (${fmt.why}). Best topic fits: ${fits}. `
+      + "Pin another with show: pop_poster / tech_desk / data_lab / paper_notebook / newsroom / case_file / arcade_retro / blueprint.") : null,
+    v.warning ? h("div", { class: "banner warn", style: "margin:8px 0" }, v.warning) : null,
     h("div", { class: "stats" },
       h("div", { class: "stat" }, h("b", {}, v.types), h("span", {}, `scene types in ${v.scenes} scenes`)),
       h("div", { class: "stat" }, h("b", {}, `${v.top_type.share}%`), h("span", {}, `most used: ${v.top_type.type} (${v.top_type.count}×)`)),

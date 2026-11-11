@@ -548,7 +548,7 @@ def check_report(parsed: dict, history: dict = None) -> dict:
     beats = estimate_beats(parsed)
     meta = parsed["meta"]
     title = meta.get("title", "")
-    look = Hs.choose_look(meta, title)
+    look = Hs.choose_look(meta, title, beats)
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
     seen = Hs.recent(title) if history is None else history
     from . import formats as Fm
@@ -559,8 +559,22 @@ def check_report(parsed: dict, history: dict = None) -> dict:
     rep = p["report"]
     from . import planner as PL, variety
     trans = PL.transitions(beats, names, seed, show["transitions"], show["signature"])
-    rep["format"] = {"id": look.get("format"), "label": show["label"]}
+    pin = (meta.get("show") or "").strip().lower()
+    why = "pinned with show:" if pin and pin != "auto" else (
+        "kept from this video's earlier render" if ((Hs.entry(title) or {}).get("look") or {}).get("format") else
+        "best topic fit, used least in the last 10 videos")
+    try:
+        fit = Fm.topic_scores(meta, title)
+        goals = Fm.goals_by_format(beats, title)
+    except Exception:  # noqa: BLE001
+        fit, goals = {}, {}
+    rep["format"] = {"id": look.get("format"), "label": show["label"], "why": why, "allowed": Fm.allowed(),
+                     "fit": dict(sorted(fit.items(), key=lambda kv: -kv[1])), "goals": goals}
     rep["variety"] = variety.report(names, variants, trans, beats, seen.get("videos"), look)
+    cl = rep["variety"].get("closest")
+    if cl and cl[0] > Fm.SIMILAR_WARN:
+        rep["variety"]["warning"] = (f"This video is {cl[0]:.2f} similar to \u201c{cl[1]}\u201d (warning above "
+                                     f"{Fm.SIMILAR_WARN}): pick another show: or look.")
     rep["look"] = look
     rep["pool"] = p["pool"]
     rep["nouns"] = p["nouns"]

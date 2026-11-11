@@ -97,7 +97,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
 
     # 0 reserve this video's look in data/asset_history.json before anything else (videos queued or rendered at the
     #   same time then never share a look; docs/VARIETY_PLAN.md section 6)
-    look = history.reserve(meta, title, job_dir.name)
+    look = history.reserve(meta, title, job_dir.name, picker.estimate_beats(parsed))
     # 1 voice + cut points (identical to the AI-image renderer)
     tl, total = assemble._timeline(parsed, job_dir, progress)
     if P["max_sec"] and total > P["max_sec"]:

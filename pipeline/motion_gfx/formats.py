@@ -329,3 +329,68 @@ def backdrop_html(fmt: dict, pal: dict, W: int, H: int) -> str:
 ROUGH_FILTER = ('<svg width="0" height="0" style="position:absolute"><filter id="rough"><feTurbulence type="fractalNoise" '
                 'baseFrequency="0.035" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="4"/>'
                 '</filter></svg>')
+
+
+# ------------------------------------------------------------------------------------- show: auto (step 7)
+FRESH_PENALTY = 0.06       # per use of a format in the last 10 videos
+SIMILAR_WARN = 0.72        # variety.similarity above this = Check warns (names the closest video)
+
+
+def allowed() -> list:
+    """FORMATS_ALLOWED=tech_desk, data_lab in .env limits show: auto to a channel's family of formats."""
+    from .. import config as C
+    want = [x.strip().lower() for x in C.env("FORMATS_ALLOWED").split(",") if x.strip()]
+    return [f for f in FORMATS if f in want] or list(FORMATS)
+
+
+def _topic_text(meta: dict, title: str) -> str:
+    tags = meta.get("tags") or []
+    tags = ", ".join(tags) if isinstance(tags, list) else str(tags)
+    desc = re.sub(r"https?://\S+", " ", str(meta.get("description") or ""))
+    desc = " ".join(line for line in desc.splitlines() if not re.match(r"\s*(sources?:|#)", line, re.I))
+    return f"{title}. {tags}. {desc}"[:1200]
+
+
+def topic_scores(meta: dict, title: str) -> dict:
+    """{format: cosine similarity of the script's title/tags/description to the format's description}."""
+    from .. import icon_index as IX
+    names_ = list(FORMATS)
+    vec = IX.embed([_topic_text(meta, title)] + [FORMATS[n]["description"] for n in names_])
+    return {n: round(float(vec[0] @ vec[k + 1]), 4) for k, n in enumerate(names_)}
+
+
+GOAL_BONUS = 0.03           # per variety goal the script meets in a format (planner-only estimate)
+
+
+def goals_by_format(beats: list, title: str) -> dict:
+    """{format: variety goals met} from a quick plan of the script in every format (no icon search)."""
+    from . import planner as PL, variety as V
+    out = {}
+    for n in FORMATS:
+        f = get(n)
+        seed = seed_of(title, n)
+        ex = {i: set(f["banned"]) for i in range(len(beats))}
+        names_, _ = PL.plan(beats, seed, ex, f["weights"])
+        tr = PL.transitions(beats, names_, seed, f["transitions"], f["signature"])
+        out[n] = V.report(names_, PL.variants(names_, seed), tr, beats)["goals_met"]
+    return out
+
+
+def choose_auto(meta: dict, title: str, seen: dict, beats: list = None) -> str:
+    """show: auto: topic fit + a bonus per variety goal the script meets in that format - a penalty for every use in
+    the last 10 videos; never the format of a video that is rendering right now (two videos started together are
+    always different shows)."""
+    pool = allowed()
+    try:
+        goals = goals_by_format(beats, title) if beats else {}
+    except Exception:  # noqa: BLE001
+        goals = {}
+    videos = (seen or {}).get("videos") or []
+    used = [((v.get("look") or {}).get("format")) for v in videos]
+    busy = {(v.get("look") or {}).get("format") for v in videos if v.get("status") == "rendering"}
+    try:
+        fit = topic_scores(meta, title)
+    except Exception:  # noqa: BLE001  (no search model on this machine: freshness only)
+        fit = {n: 0.0 for n in FORMATS}
+    cands = [n for n in pool if n not in busy] or pool
+    return max(sorted(cands), key=lambda n: fit.get(n, 0) + GOAL_BONUS * goals.get(n, 0) - FRESH_PENALTY * used.count(n))
