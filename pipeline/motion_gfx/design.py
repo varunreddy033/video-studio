@@ -16,9 +16,22 @@ PALETTES = [
     {"name": "purple", "bg": "#7C4DFF", "ink": "#FFFFFF", "hi": "#FFD21F", "pop": "#FFD21F", "soft": "#9C78FF"},
 ]
 
+# one palette SET per video (look rotation, history.py); scenes walk through the set's colours
+PALETTE_SETS = {"pop": ["yellow", "red", "cream", "blue", "green", "pink", "white", "purple"],
+                "warm": ["yellow", "red", "cream", "pink", "white"],
+                "cool": ["blue", "green", "purple", "white", "cream"],
+                "bold": ["red", "blue", "yellow", "green", "purple"]}
+
 # fonts bundled in assets/fonts (SIL OFL), copied into every job
 FONTS = {"display": ("Anton", "Anton-Regular.ttf", 400), "heavy": ("Barlow Black", "Barlow-Black.ttf", 900),
-         "body": ("Poppins SemiBold", "Poppins-SemiBold.ttf", 600), "comic": ("Bangers", "Bangers-Regular.ttf", 400)}
+         "body": ("Poppins SemiBold", "Poppins-SemiBold.ttf", 600), "comic": ("Bangers", "Bangers-Regular.ttf", 400),
+         "condensed": ("Barlow Condensed ExtraBold", "BarlowCondensed-ExtraBold.ttf", 800),
+         "bold": ("Barlow Bold", "Barlow-Bold.ttf", 700)}
+
+# one font pairing per video: headline font (+ its caps width per character, for fit()) and body font
+FONT_PAIRS = {"poster": {"head": "Anton", "char_w": 0.5, "body": "Poppins SemiBold"},
+              "condensed": {"head": "Barlow Condensed ExtraBold", "char_w": 0.5, "body": "Barlow Bold"},
+              "comic": {"head": "Bangers", "char_w": 0.55, "body": "Poppins SemiBold"}}
 
 EASE_IN = "expo.out"            # signature entrance (kinetic-typography: cubic-bezier(0.16,1,0.3,1))
 EASE_POP = "back.out(2.2)"      # pops with ~20 % overshoot (Energetic)
@@ -35,10 +48,14 @@ SAFE = {"landscape": {"x0": 0.07, "x1": 0.93, "y0": 0.22, "y1": 0.93, "chip": (0
         "vertical": {"x0": 0.08, "x1": 0.84, "y0": 0.20, "y1": 0.69, "chip": (0.07, 0.10)}}
 
 
-def palette_order(n, seed=0):
-    """n palette indexes where neighbours always differ (and so do scenes two apart, when possible)."""
-    out, k = [], seed % len(PALETTES)
+def palette_order(n, seed=0, names=None):
+    """n palette indexes where neighbours always differ (and so do scenes two apart, when possible).
+    names = the video's palette set (PALETTE_SETS); default all eight."""
+    allowed = [k for k, p in enumerate(PALETTES) if not names or p["name"] in names]
+    m = len(allowed)
+    step = 3 if m % 3 else 1                 # 3 is co-prime with 8, 5, 7: walks all colours, never repeats in a row
+    out, k = [], seed % m
     for _ in range(n):
-        out.append(k)
-        k = (k + 3) % len(PALETTES)          # 3 is co-prime with 8: walks all colours, never repeats in a row
+        out.append(allowed[k])
+        k = (k + step) % m
     return out

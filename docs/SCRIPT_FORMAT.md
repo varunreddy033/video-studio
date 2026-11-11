@@ -124,6 +124,14 @@ pick per scene and the repetition numbers; Pin / Ban write the lines below.
 | `icon_reuse: 1` | how often one icon may appear in the video (1-5, default 1) |
 | `icons_pin: low-battery, rocket` | icons to prefer (added to the pool, ranked higher); `set:name` for another set |
 | `icons_ban: skull, pill` | icons never used in this video |
+| `look: auto` | one look per video, rotating across videos (default): icon family, colour set, fonts. `classic` = the original look |
+| `palette: pop` | colour set: `pop` (all 8 colours), `warm`, `cool`, `bold` |
+| `fonts: poster` | font pairing: `poster` (Anton + Poppins), `condensed` (Barlow Condensed + Barlow), `comic` (Bangers + Poppins) |
+| `icon_style: sticker` | `sticker` (white rounded badge, dark outline, shadow; default) or `plain` |
+
+With `look: auto` each part not pinned is the one the last 5 finished videos used least (data/asset_history.json,
+written after every final; icons used there rank a little lower too). A video already in that file keeps its look,
+so re-rendering a script gives the same video.
 
 ### Art style (`art_style:`)
 

@@ -394,6 +394,14 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         (POST /api/motion/icons, GET /api/icons/<set>/<name>.svg) with pool, pick per scene, Pin/Ban. Old EarPods
         beats: 63 different icons in 95 figure scenes, 0 repeats, 0 question-style (was exclaim 73x). Sample draft
         79 s; classic sample draft 13 s; Remotion sample draft 29 s; presets clean.
+  - [x] Step 4 looks (2026-11-11): pipeline/motion_gfx/history.py + data/asset_history.json (private): one entry per
+        motion FINAL (look, icons, templates, palettes, fonts, music, sfx). Look per video = icon family (fluent_flat /
+        fluent_color / noto) + palette set (design.PALETTE_SETS pop/warm/cool/bold) + font pair (design.FONT_PAIRS
+        poster/condensed/comic) + icon_style (sticker = white badge, dark outline, shadow; plain); `look: auto` takes
+        what the last 5 videos used least, a video already in the history keeps its look, `look: classic` = original.
+        Header keys look, palette (motion gfx meaning), fonts, icon_style. Icons of the last 5 videos rank 0.05 lower.
+        Templates read the fonts via templates.set_look (HEAD/BODY/CHAR_W). Sample draft 79 s (noto/bold/comic);
+        classic draft 12 s; Remotion draft 26 s; presets clean. Draft renders never write the history.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

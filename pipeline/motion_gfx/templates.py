@@ -113,8 +113,19 @@ def key_phrase(text, n=3):
     return " ".join(best[2]).upper()
 
 
-def fit(text, max_w, max_size, min_size=40, char_w=0.5):
-    """Font size (px) so the text fits max_w (Anton caps are ~0.5 em wide per character)."""
+# the video's font pairing (design.FONT_PAIRS), set once per render by set_look(); renders run one at a time
+HEAD, BODY, CHAR_W = "Anton", "Poppins SemiBold", 0.5
+
+
+def set_look(fonts: str) -> None:
+    global HEAD, BODY, CHAR_W
+    pair = D.FONT_PAIRS.get(fonts) or D.FONT_PAIRS["poster"]
+    HEAD, BODY, CHAR_W = pair["head"], pair["body"], pair["char_w"]
+
+
+def fit(text, max_w, max_size, min_size=40, char_w=None):
+    """Font size (px) so the text fits max_w (the headline font's caps are ~CHAR_W em wide per character)."""
+    char_w = char_w or CHAR_W
     n = max(1, len(text))
     return int(max(min_size, min(max_size, max_w / (n * char_w))))
 
@@ -154,7 +165,7 @@ def ambient(P, ctx, n=4):
         dx, dy, rot = rnd.randint(-60, 60), rnd.randint(-50, 50), rnd.randint(-40, 40)
         js.append(f'tl.fromTo("#{P}amb{k}", {{x: 0, y: 0, rotation: 0, opacity: 0}}, {{x: {dx}, y: {dy}, rotation: {rot}, '
                   f'opacity: 1, duration: {max(1.0, dur):.2f}, ease: "none"}}, 0);')
-    css = (f".amb {{ position:absolute; }} .plus {{ font-family:'Anton'; line-height:1; text-align:center; }}")
+    css = (f".amb {{ position:absolute; }} .plus {{ font-family:'{HEAD}'; line-height:1; text-align:center; }}")
     html = [h.replace('class="amb', 'data-layout-ignore class="amb') for h in html]
     return "\n".join(html), css, "\n".join(js)
 
@@ -188,7 +199,7 @@ def kinetic(P, beat, ctx):
     rot = ctx["rnd"].choice([-3, -2, 2, 3])
     html = (f'<div id="{P}kin" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{y0}px;height:{y1 - y0}px;'
             f'display:flex;flex-direction:column;justify-content:center;align-items:center">{"".join(html_lines)}</div>')
-    css = (f"#{P}kin .ln {{ font-family:'Anton'; font-size:{size}px; line-height:1.04; color:{pal['ink']}; "
+    css = (f"#{P}kin .ln {{ font-family:'{HEAD}'; font-size:{size}px; line-height:1.04; color:{pal['ink']}; "
            f"text-align:center; letter-spacing:-0.01em; white-space:nowrap; }}"
            f"#{P}kin .kw {{ display:inline-block; position:relative; margin:0 0.06em; }}"
            f"#{P}kin .tx {{ position:relative; }}"
@@ -217,9 +228,17 @@ def kinetic(P, beat, ctx):
 
 # -------------------------------------------------------------------------------------------------- figures
 def icon_html(el_id, icon, x, y, size, ctx, cls="prop"):
-    """One library icon as a positioned picture. icon = {"id", "uri", ...} from the renderer's icon plan."""
+    """One library icon as a positioned picture. icon = {"id", "uri", ...} from the renderer's icon plan.
+    Sticker style (the default look): white rounded badge, dark outline, soft drop shadow, so every icon reads on
+    every backdrop colour. Plain: the icon alone with a soft shadow."""
+    if (ctx.get("look") or {}).get("icon_style", "sticker") == "sticker":
+        b = max(4, int(size * 0.035))
+        deco = (f"background:#FFFFFF;border:{b}px solid #111111;border-radius:{int(size * 0.26)}px;"
+                f"padding:{int(size * 0.13)}px;box-sizing:border-box;box-shadow:0 {int(size * 0.06)}px 0 rgba(0,0,0,0.22);")
+    else:
+        deco = f"filter:drop-shadow(0 {int(size * 0.04)}px {int(size * 0.03)}px rgba(0,0,0,0.25));"
     return (f'<img id="{el_id}" class="{cls}" alt="" src="{icon["uri"]}" style="left:{x}px;top:{y}px;width:{size}px;'
-            f'height:{size}px">')
+            f'height:{size}px;{deco}">')
 
 
 def choose_figure(text):
@@ -298,7 +317,7 @@ def figure(P, beat, ctx, extra=""):
         hwords = head.split()
         spans = "".join(f'<span id="{P}h{j}" class="hw">{esc(w)}</span> ' for j, w in enumerate(hwords))
         parts.append(f'<div id="{P}head" style="position:absolute;left:{hx}px;width:{hw}px;top:{hy}px;text-align:center;'
-                     f'font-family:\'Anton\';font-size:{hs}px;line-height:1;color:{pal["ink"]}">{spans}</div>')
+                     f'font-family:\'{HEAD}\';font-size:{hs}px;line-height:1;color:{pal["ink"]}">{spans}</div>')
         for j in range(len(hwords)):
             js.append(f'tl.fromTo("#{P}h{j}", {{opacity: 0, y: {int(hs * 0.5)}}}, {{opacity: 1, y: 0, duration: 0.3, '
                       f'ease: "{D.EASE_IN}"}}, {0.12 + j * D.STAGGER:.3f});')
@@ -320,13 +339,13 @@ def number(P, beat, ctx):
     rays = "".join(f'<div class="ray" style="transform:rotate({a}deg)"></div>' for a in range(0, 360, 30))
     html = (f'<div id="{P}rays" data-layout-ignore style="position:absolute;left:{W // 2}px;top:{cy}px;width:0;height:0">{rays}</div>'
             f'<div id="{P}num" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy - int(size * 0.6)}px;'
-            f'text-align:center;font-family:\'Anton\';font-size:{size}px;line-height:1.1;color:{pal["ink"]};'
+            f'text-align:center;font-family:\'{HEAD}\';font-size:{size}px;line-height:1.1;color:{pal["ink"]};'
             f'text-shadow:0 {size // 28}px 0 rgba(0,0,0,0.18)"><span id="{P}numtx">{esc(pre)}0{esc(suf)}</span></div>')
     if label:
         ls = fit(label, (x1 - x0) * 0.7, int(H * 0.065), int(H * 0.035), 0.55)
         html += (f'<div style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy + int(size * 0.62)}px;'
                  f'text-align:center"><span id="{P}lab" style="display:inline-block;background:{pal["ink"]};color:{pal["bg"]};'
-                 f'font-family:\'Poppins SemiBold\';font-size:{ls}px;padding:0.18em 0.7em;border-radius:999px">'
+                 f'font-family:\'{BODY}\';font-size:{ls}px;padding:0.18em 0.7em;border-radius:999px">'
                  f'{esc(label)}</span></div>')
     css = (f"#{P}rays .ray {{ position:absolute; left:0; top:-10px; width:{int(max(W, H) * 0.7)}px; height:20px; "
            f"transform-origin:0 50%; background:linear-gradient(90deg, {pal['soft']}, rgba(255,255,255,0)); }}")
@@ -364,15 +383,15 @@ def title(P, beat, ctx, text=None, sub=None, kicker=""):
     html = (f'<div id="{P}stripe" data-layout-allow-overflow style="position:absolute;left:-5%;width:110%;top:{cy - stripe_h // 2}px;height:{stripe_h}px;'
             f'background:{pal["soft"]}"></div>'
             + (f'<div id="{P}kick" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy - stripe_h // 2 - int(H * 0.08)}px;'
-               f'text-align:center;font-family:\'Poppins SemiBold\';font-size:{int(H * 0.035)}px;letter-spacing:0.3em;'
+               f'text-align:center;font-family:\'{BODY}\';font-size:{int(H * 0.035)}px;letter-spacing:0.3em;'
                f'color:{pal["ink"]}">{esc(kicker.upper())}</div>' if kicker else "")
             + f'<div id="{P}title" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy - stripe_h // 2 + int(size * 0.05)}px;'
-              f'text-align:center;font-family:\'Anton\';font-size:{size}px;line-height:1.08;color:{pal["ink"]}">{lines_html}</div>')
+              f'text-align:center;font-family:\'{HEAD}\';font-size:{size}px;line-height:1.08;color:{pal["ink"]}">{lines_html}</div>')
     if sub:
         ss = fit(sub, (x1 - x0) * 0.8, int(H * 0.06), int(H * 0.032), 0.52)
         html += (f'<div style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy + stripe_h // 2 + int(H * 0.03)}px;'
                  f'text-align:center"><span id="{P}sub" style="display:inline-block;background:{pal["ink"]};color:{pal["bg"]};'
-                 f'font-family:\'Poppins SemiBold\';font-size:{ss}px;padding:0.2em 0.8em;border-radius:999px">{esc(sub)}</span></div>')
+                 f'font-family:\'{BODY}\';font-size:{ss}px;padding:0.2em 0.8em;border-radius:999px">{esc(sub)}</span></div>')
     css = f".tw {{ display:inline-block; margin:0 0.05em; }}"
     js = [f'tl.fromTo("#{P}stripe", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.35, ease: "{D.EASE_IN}"}}, 0);']
     if kicker:
@@ -399,11 +418,11 @@ def quote(P, beat, ctx):
     html = (f'<div id="{P}card" style="position:absolute;box-sizing:border-box;left:{x0 + int((x1 - x0) * 0.04)}px;width:{int((x1 - x0) * 0.92)}px;'
             f'top:{y0 + int((y1 - y0) * 0.08)}px;padding:{int(size * 0.8)}px {int(size)}px;background:#FFFFFF;border:8px solid #111111;'
             f'border-radius:28px;box-shadow:14px 14px 0 #111111">'
-            f'<div id="{P}qm" style="position:absolute;left:{int(size * 0.3)}px;top:{-int(size * 1.4)}px;font-family:\'Anton\';'
+            f'<div id="{P}qm" style="position:absolute;left:{int(size * 0.3)}px;top:{-int(size * 1.4)}px;font-family:\'{HEAD}\';'
             f'font-size:{int(size * 3)}px;color:{pal["pop"]};line-height:1">“</div>'
-            f'<div style="font-family:\'Poppins SemiBold\';font-size:{size}px;line-height:1.25;color:#111111">{spans}</div>'
+            f'<div style="font-family:\'{BODY}\';font-size:{size}px;line-height:1.25;color:#111111">{spans}</div>'
             + (f'<div style="margin-top:{int(size * 0.5)}px"><span id="{P}by" style="display:inline-block;background:#111111;'
-               f'color:#FFFFFF;font-family:\'Poppins SemiBold\';font-size:{int(size * 0.6)}px;padding:0.2em 0.8em;'
+               f'color:#FFFFFF;font-family:\'{BODY}\';font-size:{int(size * 0.6)}px;padding:0.2em 0.8em;'
                f'border-radius:999px">{esc(sh.get("by", ""))}</span></div>' if sh.get("by") else "")
             + "</div>")
     css = f".qw {{ display:inline-block; }}"
@@ -432,7 +451,7 @@ def chart(P, beat, ctx):
     cols = ["#111111", "#FFFFFF", pal["pop"], "#2F6BFF", "#1FC16B"]
     cols = [c for c in cols if c.upper() != pal["bg"].upper()]
     html = [f'<div id="{P}ct" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{y0}px;text-align:center;'
-            f'font-family:\'Anton\';font-size:{ts}px;color:{pal["ink"]}">{esc(sh["title"].upper())}</div>',
+            f'font-family:\'{HEAD}\';font-size:{ts}px;color:{pal["ink"]}">{esc(sh["title"].upper())}</div>',
             f'<div style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{area_bot}px;height:8px;background:{pal["ink"]}"></div>']
     js = [f'tl.fromTo("#{P}ct", {{opacity: 0, y: -30}}, {{opacity: 1, y: 0, duration: 0.35, ease: "{D.EASE_IN}"}}, 0);']
     unit = sh.get("unit", "")
@@ -444,9 +463,9 @@ def chart(P, beat, ctx):
         html.append(f'<div id="{P}b{k}" style="position:absolute;left:{bx}px;width:{bw}px;top:{area_bot - h}px;height:{h}px;'
                     f'background:{c};border:6px solid #111111;border-bottom:0;border-radius:14px 14px 0 0"></div>')
         html.append(f'<div id="{P}v{k}" style="position:absolute;left:{bx - 40}px;width:{bw + 80}px;top:{area_bot - h - vs * 1.4}px;'
-                    f'text-align:center;font-family:\'Anton\';font-size:{vs}px;color:{pal["ink"]}">{v:g}{esc(unit)}</div>')
+                    f'text-align:center;font-family:\'{HEAD}\';font-size:{vs}px;color:{pal["ink"]}">{v:g}{esc(unit)}</div>')
         html.append(f'<div style="position:absolute;left:{bx - 40}px;width:{bw + 80}px;top:{area_bot + 14}px;text-align:center;'
-                    f'font-family:\'Poppins SemiBold\';font-size:{int(vs * 0.7)}px;color:{pal["ink"]}">{esc(lab)}</div>')
+                    f'font-family:\'{BODY}\';font-size:{int(vs * 0.7)}px;color:{pal["ink"]}">{esc(lab)}</div>')
         t = 0.3 + k * 0.12
         js.append(f'tl.fromTo("#{P}b{k}", {{scaleY: 0, transformOrigin: "50% 100%"}}, {{scaleY: 1, duration: 0.55, '
                   f'ease: "{D.EASE_POP}"}}, {t:.2f});')
@@ -473,14 +492,14 @@ def memo(P, beat, ctx):
     html = (f'<div id="{P}doc" style="position:absolute;box-sizing:border-box;left:{dx}px;top:{y0}px;width:{dw}px;height:{dh}px;'
             f'background:#FFFFFF;border:8px solid #111111;border-radius:18px;box-shadow:16px 16px 0 #111111;'
             f'padding:{int(dh * 0.08)}px {int(dw * 0.1)}px">'
-            f'<div style="font-family:\'Anton\';font-size:{int(dh * 0.09)}px;color:#111111;letter-spacing:0.08em">{kind_word}</div>'
+            f'<div style="font-family:\'{HEAD}\';font-size:{int(dh * 0.09)}px;color:#111111;letter-spacing:0.08em">{kind_word}</div>'
             f'<div style="height:6px;background:#111111;margin:{int(dh * 0.02)}px 0 {int(dh * 0.05)}px"></div>{lines}'
             f'<div id="{P}stamp" style="position:absolute;right:{int(dw * 0.08)}px;bottom:{int(dh * 0.12)}px;'
-            f'font-family:\'Anton\';font-size:{int(dh * 0.13)}px;color:#E0222F;border:8px solid #E0222F;border-radius:12px;'
+            f'font-family:\'{HEAD}\';font-size:{int(dh * 0.13)}px;color:#E0222F;border:8px solid #E0222F;border-radius:12px;'
             f'padding:0.02em 0.25em;letter-spacing:0.06em">{stamp}</div></div>'
             f'<div id="{P}mh" style="position:absolute;left:{dx + dw + int(W * 0.05) if land else x0}px;'
             f'width:{hw}px;top:{y0 + int(dh * 0.22) if land else y0 + dh + int(H * 0.03)}px;'
-            f'font-family:\'Anton\';font-size:{hs}px;line-height:1.02;color:{pal["ink"]}">'
+            f'font-family:\'{HEAD}\';font-size:{hs}px;line-height:1.02;color:{pal["ink"]}">'
             + "".join(f'<span id="{P}mw{j}" class="mw">{esc(w)}</span> ' for j, w in enumerate(head.split())) + "</div>")
     css = (f"#{P}doc .ml {{ height:{max(10, int(dh * 0.035))}px; background:#D6D6D0; border-radius:8px; "
            f"margin:{int(dh * 0.035)}px 0; }} .mw {{ display:inline-block; }}")

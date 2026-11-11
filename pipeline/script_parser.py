@@ -46,7 +46,8 @@ BAD_AI_WORDS = re.compile(r"\b(text|words?|logo|sign(age)?|caption|letters?|writ
 META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed", "thumbnail", "thumbnail_prompt",
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
              "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method",
-             "icons", "icon_reuse", "icons_pin", "icons_ban"}     # + voice / music: preset ids (presets/), see presets.py
+             "icons", "icon_reuse", "icons_pin", "icons_ban",
+             "look", "fonts", "icon_style"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -386,8 +387,8 @@ def parse(text: str) -> dict:
             err(1, "motion Shorts aren't built yet (motion plan phase 8); use style: classic for Shorts")
         if meta["format"] != "landscape":
             err(1, "style: motion is landscape (16:9) for now")
-    elif meta.get("palette"):
-        warn(1, "palette: only applies to style: motion")
+    elif meta.get("palette") and (meta.get("rendering_method") or "").strip().lower() != "motion":
+        warn(1, "palette: only applies to style: motion and rendering_method: motion")
     clip = None
     if meta.get("clip_from") or meta.get("clip_start") or meta.get("clip_end"):
         if vtype != "short":
@@ -441,11 +442,18 @@ def parse(text: str) -> dict:
             fams = IL.usable_families() or IL.FAMILIES
             if fam not in fams:
                 err(1, f"icons must be one of {', '.join(fams)}, got '{fam}'")
+        from .motion_gfx import design as MD
+        for key, valid in (("palette", list(MD.PALETTE_SETS)), ("fonts", list(MD.FONT_PAIRS)),
+                           ("icon_style", ["sticker", "plain"]), ("look", ["auto", "classic"])):
+            v = (meta.get(key) or "").strip().lower()
+            if v and v not in valid:
+                err(1, f"{key} must be one of {', '.join(valid)} for motion graphics, got '{v}'")
         reuse = str(meta.get("icon_reuse") or "").strip()
         if reuse and not (reuse.isdigit() and 1 <= int(reuse) <= 5):
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
-    elif any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban")):
-        warn(1, "icons / icon_reuse / icons_pin / icons_ban only apply to rendering_method: motion")
+    elif any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style")):
+        warn(1, "icons / icon_reuse / icons_pin / icons_ban / look / fonts / icon_style only apply to "
+                "rendering_method: motion")
     if not segments and not clip:
         err(start + 1, "no narration found")
 

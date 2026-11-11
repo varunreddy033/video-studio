@@ -394,10 +394,15 @@ def estimate_beats(parsed: dict) -> list:
 
 def check_report(parsed: dict, history: dict = None) -> dict:
     """What the Check page shows for a motion-graphics script: pool, picks, repetition numbers (estimated cuts)."""
+    from . import history as Hs
     beats = estimate_beats(parsed)
     names = T.scene_names(beats)
-    p = plan(beats, names, parsed["meta"], history)
+    meta = parsed["meta"]
+    title = meta.get("title", "")
+    look = Hs.choose_look(meta, title)
+    p = plan(beats, names, dict(meta, look_icons=look["icons"]), Hs.recent(title) if history is None else history)
     rep = p["report"]
+    rep["look"] = look
     rep["pool"] = p["pool"]
     rep["nouns"] = p["nouns"]
     rep["pinned"] = id_list(parsed["meta"].get("icons_pin"), p["family"])

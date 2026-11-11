@@ -27,7 +27,7 @@ from .. import assemble, captions, encoder
 from .. import config as C
 from ..util import PipelineError, best_match, fmt_ts, log as _log, media_duration, run, sfx_files
 from . import beats as B
-from . import compose, hf, picker
+from . import compose, hf, history, picker
 from . import design as D
 from . import templates as T
 
@@ -100,12 +100,17 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     progress("visuals", 0, 1)
     beats = B.split(parsed, tl, spans)
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
-    order = D.palette_order(len(beats), seed)
+    look = history.choose_look(meta, title)                     # one look per video, rotating across videos
+    T.set_look(look["fonts"])
+    order = D.palette_order(len(beats), seed, D.PALETTE_SETS[look["palette"]])
+    seen = history.recent(title)
+    log(f"  look: icons {look['icons']}, palette {look['palette']}, fonts {look['fonts']}, {look['icon_style']} icons "
+        f"(last videos: {len(seen['looks'])})")
     shutil.rmtree(project / "compositions", ignore_errors=True)
     compose.prepare(project, voice_wav)
     cues = []
     used_tpl = T.scene_names(beats)
-    plan = picker.plan(beats, used_tpl, meta)                   # every scene's icon, decided for the whole video
+    plan = picker.plan(beats, used_tpl, dict(meta, look_icons=look["icons"]), seen)                   # every scene's icon, decided for the whole video
     for i, n in enumerate(used_tpl):                            # no icon for a figure scene -> kinetic words
         if n == "figure" and (i, 0) not in plan["picks"]:       # (unless that would put two word scenes in a row)
             near = [used_tpl[j] for j in (i - 1, i + 1) if 0 <= j < len(used_tpl)]
@@ -127,7 +132,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]
         ctx = {"W": W, "H": H, "fmt": fmt, "pal": pal, "dur": b["dur"], "shot": parsed["shots"][b["shot"]],
-               "rnd": random.Random(seed + i), "icons": icons.get(i, {})}
+               "rnd": random.Random(seed + i), "icons": icons.get(i, {}),
+               "look": look}
         P_ = compose.host(i) + "-"
         parts = T.build(name, P_, b, ctx)
         (project / "compositions" / f"scene_{i + 1:03d}.html").write_text(
@@ -228,6 +234,12 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
          "beats": [{"start": b["start"], "dur": b["dur"], "template": b["template"]} for b in beats]}, indent=1),
         encoding="utf-8")
     shutil.rmtree(work, ignore_errors=True)
+    if mode == "final":                                          # freshness for the next videos (data/, private)
+        history.record(title, job_dir.name, {
+            "look": look, "icons": sorted({pk["id"] for (bi, _s), pk in plan["picks"].items() if used_tpl[bi] != "kinetic"}),
+            "templates": sorted(set(used_tpl)), "palettes": sorted({D.PALETTES[k]["name"] for k in order}),
+            "fonts": [look["fonts"]], "music": sorted({m["track"] for m in music or []}),
+            "sfx": sorted({u.split(" -> ")[-1] for u in sfx_used})})
     secs = time.time() - t_start
     n_sfx = len(sfx_used)
     log(f"sound effects: {n_sfx} ({n_sfx / max(1, total) * 60:.0f} a minute), "
@@ -238,7 +250,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "sfx_used": sfx_used, "chapters": chapters, "warnings": warnings, "music": music,
             "type": meta.get("type", "full"), "encoder": encoder.name(), "loudness_before": loud_in,
             "loudness_target": C.TARGET_LUFS, "rendering_method": "motion",
-            "motion": {"scenes": len(beats), "templates": counts, "icons": {k: icon_rep[k] for k in ("family", "icons", "most_used", "question_style", "beats_with_icon")}, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1)}}
+            "motion": {"scenes": len(beats), "templates": counts, "look": look, "icons": {k: icon_rep[k] for k in ("family", "icons", "most_used", "question_style", "beats_with_icon")}, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1)}}
 
 
 def _loudness(path: Path, job_dir: Path, what: str):

@@ -625,6 +625,7 @@ function iconCard(r, getText, setText, recheck) {
         h("div", { class: "stat" }, h("b", {}, x.question_style), h("span", {}, "question-style icons (max 3, one a minute)")),
         h("div", { class: "stat" }, h("b", {}, `${x.pool_used} / ${x.pool_size}`), h("span", {}, "topic pool icons used")),
         h("div", { class: "stat" }, h("b", {}, x.without.length), h("span", {}, "figure scenes with no good icon (shown as kinetic words)"))),
+      x.look ? h("p", { class: "hint" }, `Look of this video: ${x.look.icons.replace("_", " ")} icons, ${x.look.palette} colours, ${x.look.fonts} fonts, ${x.look.icon_style} icons (rotates across videos; pin with icons: / palette: / fonts: / icon_style:, or look: classic).`) : null,
       h("p", { class: "hint" }, "Topic words: " + x.nouns.join(", ") + ". Estimated cuts: the real render times scenes on the voice, so a few picks can change."),
       h("details", { open: true }, h("summary", {}, `Topic pool (${x.pool.length})`),
         h("div", { class: "icongrid" }, x.pool.map(p => tile(p.id, (used.has(p.id) ? "used · " : "") + p.noun, pins.has(p.id))))),
