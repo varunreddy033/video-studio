@@ -68,25 +68,69 @@ def prepare(project: Path, voice_wav: Path):
     shutil.copy(voice_wav, project / "assets/audio/voice.wav")
 
 
+FRAMES = ["card", "tilt", "band", "spot"]          # the framed layouts (layout 3-5 of a type = layout 0-2 + its frame)
+ENTRANCES = ["pop", "rise", "drop", "mask", "flip", "skew", "none"]
+
+
+def frame_html(kind, hid, pal, W, H):
+    """Code-drawn backdrop of a framed layout, behind the scene's own content."""
+    if kind == "card":
+        return (f'<div style="position:absolute;left:{int(W * .05)}px;right:{int(W * .05)}px;top:{int(H * .15)}px;'
+                f'bottom:{int(H * .06)}px;background:{pal["soft"]};border:{max(4, W // 320)}px solid {pal["ink"]};'
+                f'border-radius:{W // 60}px;box-shadow:{W // 150}px {W // 150}px 0 {pal["ink"]}"></div>')
+    if kind == "tilt":
+        return (f'<div style="position:absolute;left:-10%;width:120%;top:{int(H * .30)}px;height:{int(H * .42)}px;'
+                f'background:{pal["soft"]};transform:rotate(-4deg)"></div>')
+    if kind == "band":
+        return (f'<div style="position:absolute;left:0;top:0;bottom:0;width:{int(W * .045)}px;background:{pal["pop"]}"></div>'
+                f'<div style="position:absolute;left:{int(W * .055)}px;top:0;bottom:0;width:{max(3, W // 640)}px;'
+                f'background:{pal["ink"]};opacity:.5"></div>'
+                + "".join(f'<div style="position:absolute;right:{int(W * (.04 + .03 * k))}px;top:{int(H * .07)}px;'
+                          f'width:{int(W * .018)}px;height:{int(W * .018)}px;border-right:{max(4, W // 400)}px solid '
+                          f'{pal["ink"]};border-top:{max(4, W // 400)}px solid {pal["ink"]};transform:rotate(45deg);'
+                          f'opacity:{.8 - .25 * k}"></div>' for k in range(3)))
+    if kind == "spot":
+        r = int(H * .46)
+        return (f'<div style="position:absolute;left:{W // 2 - r}px;top:{int(H * .58) - r}px;width:{2 * r}px;'
+                f'height:{2 * r}px;border-radius:50%;background:{pal["soft"]}"></div>')
+    return ""
+
+
+def _entrance_js(kind, hid, ov, W, H):
+    sel, at = f"#{hid}-ent", f"{ov:.2f}"
+    return {"pop": f'scene.fromTo("{sel}", {{scale: 0.88, opacity: 0.4}}, {{scale: 1, opacity: 1, duration: 0.45, ease: "back.out(2)"}}, {at});',
+            "rise": f'scene.fromTo("{sel}", {{y: {int(H * .06)}}}, {{y: 0, duration: 0.45, ease: "expo.out"}}, {at});',
+            "drop": f'scene.fromTo("{sel}", {{y: {-int(H * .06)}}}, {{y: 0, duration: 0.45, ease: "bounce.out"}}, {at});',
+            "mask": f'scene.fromTo("{sel}", {{clipPath: "inset(0% 100% 0% 0%)"}}, {{clipPath: "inset(0% 0% 0% 0%)", duration: 0.5, ease: "power3.inOut"}}, {at});',
+            "flip": f'scene.fromTo("{sel}", {{rotationX: 55, transformPerspective: 1200, transformOrigin: "50% 100%"}}, {{rotationX: 0, duration: 0.55, ease: "back.out(1.4)"}}, {at});',
+            "skew": f'scene.fromTo("{sel}", {{skewX: 12, x: {-int(W * .03)}}}, {{skewX: 0, x: 0, duration: 0.45, ease: "expo.out"}}, {at});',
+            }.get(kind, "")
+
+
 def scene_file(i, beat, parts, pal, ov, W, H):
     hid = host(i)
     length = beat["dur"] + ov
     tr = _transition_js(beat["transition"], ov, W, H).replace("__H__", hid)
+    frame = frame_html(beat.get("frame"), hid, pal, W, H)
+    ent = _entrance_js(beat.get("entrance"), hid, ov, W, H)
+    tilt = "transform:rotate(-1.5deg) scale(0.96);" if beat.get("frame") == "tilt" else ""
     return f"""<template>
 <style>
 #root {{ position: absolute; inset: 0; overflow: hidden; }}
 #{hid}-stage {{ position: absolute; inset: 0; background: {pal['bg']}; overflow: hidden; }}
 #{hid}-cam {{ position: absolute; inset: 0; }}
+#{hid}-ent {{ position: absolute; inset: 0; {tilt} }}
 {parts['css']}
 </style>
 <div id="root" data-composition-id="{hid}" data-width="{W}" data-height="{H}">
-  <div id="{hid}-stage"><div id="{hid}-cam">
+  <div id="{hid}-stage"><div id="{hid}-cam">{frame}<div id="{hid}-ent">
 {parts['html']}
-  </div></div>
+  </div></div></div>
 </div>
 <script>
 const scene = gsap.timeline({{ paused: true }});
 {tr}
+{ent}
 scene.fromTo("#{hid}-cam", {{scale: 1, x: 0}}, {{scale: {1.09 if beat.get("breather") else 1.035}, x: {-int(W * 0.02) if beat.get("breather") else 0}, transformOrigin: "50% 50%", duration: {length:.2f}, ease: "{"sine.inOut" if beat.get("breather") else "none"}"}}, 0);
 const tl = gsap.timeline();
 (function (tl) {{

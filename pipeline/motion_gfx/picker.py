@@ -41,7 +41,7 @@ QUESTION = re.compile(r"question|exclamation|thinking|monocle|thought-balloon|sh
                       r"magnifying|raising-hand|interrobang|zany|exploding-head|face-with-open-mouth|astonished|"
                       r"hushed|anguished|flushed")
 BORING = re.compile(
-    r"^keycap|button|square|circle|diamond-|-diamond|oclock|-thirty$|triangle|arrow|^input-|^japanese|^flag|"
+    r"^keycap|button|square|circle|diamond-|-diamond|oclock|-thirty$|triangle|arrow|^input-|^japanese|^flag|^ram$|"
     r"^(aries|taurus|gemini|cancer|leo|virgo|libra|scorpio|sagittarius|capricorn|aquarius|pisces|ophiuchus)$|"
     r"^(man|woman|men|women|boy|girl|family|couple|kiss|people|person)-|^(man|woman|boy|girl|person)$|"
     r"-moon$|^moon-|^regional|^skin-tone|-skin-tone|^(red|blue|green|black|white|orange|yellow|purple|brown)-heart$|"

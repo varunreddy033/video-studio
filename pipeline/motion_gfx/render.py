@@ -131,14 +131,17 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         f"most used {icon_rep['most_used']['count']}x, question-style {icon_rep['question_style']}, "
         f"{icon_rep['from_pool']} from the topic pool of {icon_rep['pool_size']}, {len(icon_rep['without'])} scenes found none")
     trans = PL.transitions(beats, used_tpl, seed)
+    ents = PL.entrances(used_tpl, seed)
     for i, b in enumerate(beats):
         b["transition"] = trans[i]
+        b["entrance"] = ents[i]
+        b["frame"] = PL.frame_of(used_tpl[i], seed) if variants[i] >= 3 else None
         b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]
         ctx = {"W": W, "H": H, "fmt": fmt, "pal": pal, "dur": b["dur"], "shot": parsed["shots"][b["shot"]],
                "rnd": random.Random(seed + i), "icons": icons.get(i, {}),
-               "look": look, "variant": variants[i], "years": video_years, **info[i]}
+               "look": look, "variant": variants[i] % 3, "years": video_years, **info[i]}
         P_ = compose.host(i) + "-"
         parts = T.build(name, P_, b, ctx)
         (project / "compositions" / f"scene_{i + 1:03d}.html").write_text(

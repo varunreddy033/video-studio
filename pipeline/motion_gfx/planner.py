@@ -165,7 +165,28 @@ LAYOUT_USES = 6
 
 
 def layouts_of(name: str) -> int:
-    return LAYOUTS.get(name, 3)
+    """Layouts of a type: the 13 older types have 6 (their 3 own arrangements, each also drawn in a frame)."""
+    return LAYOUTS.get(name, 6)
+
+
+def frame_of(name: str, seed: int) -> str:
+    """The frame a type's layouts 3-5 use in this video (one per type, seeded)."""
+    from . import compose
+    return compose.FRAMES[_h(seed, "frame", name) % len(compose.FRAMES)]
+
+
+def entrances(names: list, seed: int = 0, pool: list = None) -> list:
+    """An entrance per scene from the pool (the format's motion language later), never the same twice in a row."""
+    from . import compose
+    pool = pool or compose.ENTRANCES
+    out = []
+    for i, n in enumerate(names):
+        k = _h(seed, "ent", i) % len(pool)
+        e = pool[k]
+        if out and e == out[-1]:
+            e = pool[(k + 1) % len(pool)]
+        out.append(e)
+    return out
 
 
 def register(name: str, spec: dict, layouts: int = None) -> None:

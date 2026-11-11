@@ -470,6 +470,12 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         scene mix stays figure 41 % / kinetic 37 % until step 4 adds types (today almost every beat can only be a
         figure or words). A figure without an icon still turns into words unless a neighbour is words.
         Regression: sample_script draft 11 s; motion sample draft 185 s, all 12 new transitions checked in frames.
+  - [x] Step 3 (2026-11-11): every older scene type has 6 layouts = its 3 own arrangements, each also drawn with a frame
+        (compose.FRAMES card / tilt / band / spot, one per type per video, seeded; layout = variant, frame when >= 3)
+        + an entrance per scene (pop, rise, drop, mask, flip, skew, none; never twice in a row) on top of the
+        template's own animation. Windows (estimate): top type+layout 25 -> 13 uses. Regression: sample_script draft
+        11 s, motion sample draft 193 s, frames checked. Picker: the "ram" (sheep) emoji is never picked (it matched
+        "chip"/memory in noto_v1).
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
