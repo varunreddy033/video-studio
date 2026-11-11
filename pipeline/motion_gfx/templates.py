@@ -216,11 +216,17 @@ def kinetic(P, beat, ctx):
 
 
 # -------------------------------------------------------------------------------------------------- figures
+def icon_html(el_id, icon, x, y, size, ctx, cls="prop"):
+    """One library icon as a positioned picture. icon = {"id", "uri", ...} from the renderer's icon plan."""
+    return (f'<img id="{el_id}" class="{cls}" alt="" src="{icon["uri"]}" style="left:{x}px;top:{y}px;width:{size}px;'
+            f'height:{size}px">')
+
+
 def choose_figure(text):
     for rx, v in RULES:
         if rx.search(text):
             return v
-    return ("talk", "plain", ["question"] if "?" in text else ["exclaim"], False)
+    return ("talk", "plain", [], False)          # no default prop: the icon picker decides (picker.py)
 
 
 def figure(P, beat, ctx, extra=""):
@@ -270,20 +276,19 @@ def figure(P, beat, ctx, extra=""):
             js.append(f'tl.fromTo("#{P}fig0", {{y: {int(H * 0.45)}}}, {{y: 0, duration: 0.5, ease: "{D.EASE_POP}"}}, 0.02);')
         cx = fx + fw + (x1 - fx - fw) // 2 if land else (x0 + x1) // 2
     ps = int(min(W, H) * (0.3 if land else 0.24))
-    for k, name in enumerate(props[:2]):
-        px = cx - ps // 2 + (int(ps * 0.7) * (k * 2 - 1) if len(props) > 1 else 0)
+    icon = (ctx.get("icons") or {}).get(0)                   # the scene's icon, chosen for the whole video by picker.py
+    if icon:
+        px = cx - ps // 2
         py = (y0 + int((y1 - y0) * 0.42)) if two else (y0 + int((y1 - y0) * 0.38))
         if not land:
             py = y0 + int((y1 - y0) * 0.05)
-        parts.append(f'<svg id="{P}prop{k}" class="prop" viewBox="0 0 240 240" style="left:{px}px;top:{py}px;width:{ps}px;'
-                     f'height:{ps}px">{F.prop(P, name, ink, "#FFFFFF", pal["pop"])}</svg>')
-        t = 0.32 + 0.14 * k
-        js.append(f'tl.fromTo("#{P}prop{k}", {{scale: 0, rotation: -25, transformOrigin: "50% 50%"}}, {{scale: 1, rotation: 0, '
+        parts.append(icon_html(f"{P}prop0", icon, px, py, ps, ctx))
+        t = 0.32
+        js.append(f'tl.fromTo("#{P}prop0", {{scale: 0, rotation: -25, transformOrigin: "50% 50%"}}, {{scale: 1, rotation: 0, '
                   f'duration: 0.42, ease: "{D.EASE_POP}"}}, {t:.2f});')
-        js.append(f'tl.fromTo("#{P}prop{k}", {{y: 0}}, {{y: -12, duration: 0.8, ease: "sine.inOut", yoyo: true, '
+        js.append(f'tl.fromTo("#{P}prop0", {{y: 0}}, {{y: -12, duration: 0.8, ease: "sine.inOut", yoyo: true, '
                   f'repeat: {max(0, int(dur / 0.8) - 1)}}}, {t + 0.42:.2f});')
-        if k == 0:
-            cues.append((t + 0.02, PROP_SOUND.get(name, "pop")))
+        cues.append((t + 0.02, icon.get("sound", "pop")))
     head = key_phrase(beat["text"], 3)
     if head:
         hs = fit(head, (x1 - x0) * (0.46 if land else 0.9), int(H * 0.11), int(H * 0.05))
@@ -506,6 +511,19 @@ def pick(beat, k_in_shot):
     if MEMO_WORDS.search(beat["text"]) and k_in_shot % 2 == 0:
         return "memo"
     return "figure" if (i + k_in_shot) % 2 == 0 else "kinetic"
+
+
+def scene_names(beats):
+    """The template of every beat of a video (pick + never the same picture type twice in a row)."""
+    names, k_in_shot, last_shot = [], 0, -1
+    for b in beats:
+        k_in_shot = 0 if b["shot"] != last_shot else k_in_shot + 1
+        last_shot = b["shot"]
+        name = pick(b, k_in_shot)
+        if names and name == names[-1] and name in ("figure", "kinetic", "memo"):
+            name = "kinetic" if name != "kinetic" else "figure"
+        names.append(name)
+    return names
 
 
 def build(name, P, beat, ctx):

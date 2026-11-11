@@ -1,0 +1,405 @@
+"""Which icon every scene of a motion-graphics video shows (docs/ASSET_PACKS_PLAN.md section 3).
+
+  topic pool     the script's key nouns -> the ~60 icons of the video's family that fit them best (shown on the
+                 Check page; `icons_pin:` adds icons, `icons_ban:` removes them)
+  ranking        every scene that wants an icon ("need") asks with its words: the key phrase, each content word, the
+                 whole clause, and what the old RULES table knew (chips -> a computer chip). Score = sentence
+                 similarity (icon_index) + a bonus when a spoken word IS the icon's name + a bonus for pool icons
+  no repeats     one icon is used once in a video (`icon_reuse: 2` allows twice)
+  cooldown       question-style icons (question / exclamation marks, thinking faces, shrugs, magnifiers ...) at most
+                 one a minute and three in a video
+  no default     a scene without a good match takes the best unused pool icon; when nothing is left it gets no icon
+                 and the renderer shows kinetic words instead. There is no question-mark / exclamation fallback.
+  freshness      icons of the last videos (data/asset_history.json, step 4) rank a little lower
+  deterministic  scores are rounded, every tie is broken by scene order and icon id: same script = same icons
+
+plan(beats, names, meta) is used by the renderer (real voice timings) and by the Check page (estimated timings).
+"""
+
+import base64
+import re
+
+from .. import icon_index as IX
+from .. import icon_library as L
+from ..util import PipelineError
+from . import templates as T
+
+DEFAULT_FAMILY = "fluent_flat"
+MATCH_MIN = 0.50          # a scene's own match must score at least this
+NEAR_MIN = 0.44           # second round, for scenes that found nothing: a looser match
+POOL_MIN = 0.36           # a topic noun's icon must score at least this to enter the pool
+POOL_SIZE = 60
+POOL_PER_NOUN = 6         # for the 8 main nouns; the others give 2
+POOL_FILL_MIN = 0.30      # a pool icon must fit the scene at least this much to fill it
+NOUNS = 20
+QUESTION_GAP = 60.0       # seconds between two question-style icons
+QUESTION_MAX = 3
+TOP_K = 40                # candidates kept per need
+
+QUESTION = re.compile(r"question|exclamation|thinking|monocle|thought-balloon|shrug|raised-eyebrow|confused|puzzle|"
+                      r"magnifying|raising-hand|interrobang|zany|exploding-head|face-with-open-mouth|astonished|"
+                      r"hushed|anguished|flushed")
+BORING = re.compile(
+    r"^keycap|button|square|circle|diamond-|-diamond|oclock|-thirty$|triangle|arrow|^input-|^japanese|^flag|"
+    r"^(aries|taurus|gemini|cancer|leo|virgo|libra|scorpio|sagittarius|capricorn|aquarius|pisces|ophiuchus)$|"
+    r"^(man|woman|men|women|boy|girl|family|couple|kiss|people|person)-|^(man|woman|boy|girl|person)$|"
+    r"-moon$|^moon-|^regional|^skin-tone|-skin-tone|^(red|blue|green|black|white|orange|yellow|purple|brown)-heart$|"
+    r"^cl-|^sos-|^up-|^ng-|^ok-|^new-|^free-|^cool-|^id-|^vs-|^atm|^end-|^back-|^on-|^soon-|^top-|"
+    r"^(hundred-points|anger-symbol|dotted-line-face|part-alternation-mark|wavy-dash|curly-loop|double-curly-loop|"
+    r"eight-pointed-star|eight-spoked-asterisk|sparkle|copyright|registered|trade-mark|name-badge|"
+    r"white-flower|diamond-with-a-dot|trident-emblem|fleur-de-lis|menorah|star-of-david|dotted-six-pointed-star|"
+    r"om|wheel-of-dharma|yin-yang|latin-cross|orthodox-cross|star-and-crescent|peace-symbol|place-of-worship|"
+    r"atom-symbol|khanda|medical-symbol|male-sign|female-sign|transgender-symbol|kaaba|mosque|synagogue|"
+    r"hindu-temple|church|shinto-shrine|prayer-beads|pile-of-poo|middle-finger|bikini|briefs|lipstick|kiss-mark|"
+    r"syringe|pill|drop-of-blood|coffin|funeral-urn|headstone|cigarette|water-pistol|bomb|pistol|dagger|"
+    r"crossed-swords|baby-bottle|breast-feeding|pregnant-.*|toilet|roll-of-paper|plunger|condom)$")
+FACES = ("Smileys & Emotion", "People & Body")
+NUMBER_WORDS = set("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+                   "sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred "
+                   "thousand million billion trillion first second third half percent".split())
+FILLER = set("thing things people person year years time times day days way ways lot kind sort part number "
+             "something anything everything nothing someone anyone everyone right left back well let lets "
+             "pull need know think thought want mean means point reason reasons story fact truth idea frankly "
+             "meanwhile already never ever always actually simply exactly almost around between during without "
+             "became become becomes started stopped put putting come comes goes going went gone getting gets "
+             "used using uses made make makes took take takes found find finds little big small more most less "
+             "least many few own sterling here there week pair lost wearing wear wore worn thats youre theyre best better good great real true whole same other another every each still even just only also again last next new old".split())
+# words that are also an icon's name but nearly never mean it (fly = the insect, shorts = the clothes ...)
+AMBIGUOUS = set("fly short rose box jack case light right watch chip trap honey match bug cell mouse".split())
+# what the old RULES table showed for a clause -> words to search with (question / exclaim are not searched)
+HINTS = {"chip": "computer chip", "globe": "globe world", "ship": "cargo ship", "heart": "love heart",
+         "building": "office building", "money": "money bag", "lock": "locked padlock", "camera": "camera photo",
+         "chart_up": "chart increasing", "chart_down": "chart decreasing", "magnifier": "detective investigation",
+         "phone": "mobile phone call", "eye": "spy detective"}
+SOUNDS = [(r"money|dollar|coin|bank|cash|credit|purse|gem", "cash"), (r"camera|video|film|movie", "shutter"),
+          (r"phone|computer|laptop|keyboard|mouse|disk|plug|battery|headphone|radio|television|joystick", "click"),
+          (r"warning|siren|prohibited|entry|skull|fire|collision|bell|alarm", "alert"),
+          (r"chart|rocket|airplane|car|train|ship|bicycle|running|dashing|wind|comet", "whoosh"),
+          (r"page|newspaper|scroll|memo|book|envelope|clipboard|receipt|label|file|card", "paper"),
+          (r"trophy|medal|star|crown|party|confetti|sparkles|check|light-bulb|heart|ribbon", "ding"),
+          (r"hammer|axe|pick|wrench|stamp|scissors|brick|rock|door|package", "impact")]
+
+
+def stem(w: str) -> str:
+    w = w.lower()
+    for suf in ("'s", "’s"):
+        if w.endswith(suf):
+            w = w[:-2]
+    if len(w) > 4 and w.endswith("ies"):
+        return w[:-3] + "y"
+    if len(w) > 3 and w.endswith("es") and w[-3] in "sxz":
+        return w[:-2]
+    if len(w) > 3 and w.endswith("s") and not w.endswith("ss"):
+        return w[:-1]
+    return w
+
+
+def content_words(text: str) -> list:
+    """The words of a clause worth searching an icon for, in spoken order (no repeats)."""
+    out = []
+    for w in re.findall(r"[A-Za-z][A-Za-z'’-]*", text):
+        lw = w.lower().strip("'’-").replace("'", "").replace("’", "")
+        if len(lw) < 3 or lw in T.STOP or lw in T.WEAK or lw in NUMBER_WORDS or lw in FILLER or stem(lw) in FILLER:
+            continue
+        if lw not in out:
+            out.append(lw)
+    return out
+
+
+def is_question(icon_id: str) -> bool:
+    return bool(QUESTION.search(icon_id.split(":", 1)[1]))
+
+
+def sound_for(icon_id: str) -> str:
+    name = icon_id.split(":", 1)[1]
+    for rx, kind in SOUNDS:
+        if re.search(rx, name):
+            return kind
+    return "pop"
+
+
+def data_uri(icon_id: str, colour: str = "#111111") -> str:
+    return "data:image/svg+xml;base64," + base64.b64encode(L.svg(icon_id, colour).encode("utf-8")).decode("ascii")
+
+
+def family_of(meta: dict) -> str:
+    fam = (meta.get("icons") or "").strip().lower() or meta.get("look_icons") or DEFAULT_FAMILY
+    usable = L.usable_families()
+    if not usable:
+        raise PipelineError("motion graphics need the icon packs, and none are imported on this machine. Run once in "
+                            "the project folder: npm ci && bin/python tools/import_icon_packs.py")
+    if fam not in usable:
+        raise PipelineError(f"icons: '{fam}' isn't an imported icon family. Use one of: {', '.join(usable)}")
+    return fam
+
+
+def id_list(value, family: str) -> list:
+    """`icons_pin:` / `icons_ban:` values -> icon ids ("low-battery, noto:rocket" -> ids; bare names = the family)."""
+    out = []
+    for part in re.split(r"[,\s]+", str(value or "").strip()):
+        if part:
+            out.append(part if ":" in part else f"{family}:{part}")
+    return out
+
+
+def figure_need(i: int, beat: dict) -> dict:
+    """What a figure scene asks the picker for: one icon that shows what the clause is about."""
+    text = beat["text"]
+    qs = []
+    phrase = T.key_phrase(text, 3).lower()
+    if phrase and content_words(phrase):
+        qs.append((phrase, 1.0))
+    for w in content_words(text):
+        if stem(w) not in AMBIGUOUS:
+            qs.append((w, 0.94))
+    if len(content_words(text)) >= 2:
+        qs.append((re.sub(r"\s+", " ", text).strip(" .,;:!?").lower(), 0.86))
+    for rx, (_pose, _outfit, props, _two) in T.RULES:
+        if rx.search(text):
+            qs += [(HINTS[p], 0.98) for p in props if p in HINTS]
+            break
+    return {"beat": i, "slot": 0, "t": beat["start"], "queries": qs, "words": {stem(w) for w in content_words(text)},
+            "required": False, "text": text}
+
+
+def topic_nouns(meta: dict, beats: list) -> list:
+    """The ~18 words the video is about: title and tag words first, then the most repeated content words."""
+    score, first = {}, {}
+    order = 0
+
+    def add(text, weight):
+        nonlocal order
+        for w in content_words(text):
+            s = stem(w)
+            score[s] = score.get(s, 0) + weight
+            first.setdefault(s, order)
+            order += 1
+
+    add(meta.get("title", ""), 3)
+    add(str(meta.get("tags", "")).replace(",", " "), 2)
+    for b in beats:
+        add(b["text"], 1)
+    keep = [w for w in score if score[w] >= 2 and len(w) >= 4 and w not in AMBIGUOUS]
+    keep.sort(key=lambda w: (-score[w], first[w], w))
+    return keep[:NOUNS]
+
+
+def _candidates(family: str, banned: set):
+    rows, _emb, _pos = IX.load()
+    out = []
+    for i, r in enumerate(rows):
+        if r["set"] != family or r["id"] in banned or BORING.search(r["name"]):
+            continue
+        if r["category"] in ("Flags",):
+            continue
+        out.append(i)
+    if not out:
+        raise PipelineError(f"the icon family '{family}' has no usable icons in the index. Run: "
+                            f"bin/python tools/build_icon_index.py --force")
+    return rows, out
+
+
+def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list = None) -> dict:
+    """Icons for a whole video.
+
+    beats   the video's beats (text, start, end)            names  the template of every beat
+    needs   optional extra needs from other templates (step 5); figure scenes are added here
+    Returns {"family", "picks": {(beat, slot): {"id", "score", "how"}}, "pool": [...], "nouns": [...], "report": {...}}.
+    """
+    import numpy as np
+    family = family_of(meta)
+    banned = set(id_list(meta.get("icons_ban"), family))
+    pins = [p for p in id_list(meta.get("icons_pin"), family) if p not in banned]
+    reuse = max(1, int(meta.get("icon_reuse") or 1))
+    rows, cand = _candidates(family, banned)
+    _, emb, pos = IX.load()
+    missing = [p for p in pins if p not in pos]
+    if missing:
+        raise PipelineError(f"icons_pin: no such icon: {', '.join(missing)}. Search with: "
+                            f"bin/python tools/icon_search.py \"words\" --set {family}")
+    cand_emb = emb[cand]
+    cand_ids = [rows[i]["id"] for i in cand]
+    name_words = [{stem(w) for w in rows[i]["name"].split("-")} for i in cand]
+    name_last = [stem(rows[i]["name"].split("-")[-1]) for i in cand]
+    key_words = [{stem(w) for w in rows[i]["words"]} for i in cand]
+    face = np.array([0.05 if rows[i]["category"] in FACES else 0.0 for i in cand], dtype="float32")
+    stale = (history or {}).get("icons", {})
+    fresh = np.array([0.05 if cid in stale else 0.0 for cid in cand_ids], dtype="float32")
+
+    all_needs = list(needs or [])
+    for i, (b, n) in enumerate(zip(beats, names)):
+        if n == "figure":
+            all_needs.append(figure_need(i, b))
+    all_needs.sort(key=lambda n: (n["beat"], n["slot"]))
+    nouns = topic_nouns(meta, beats)
+
+    texts = sorted({q for n in all_needs for q, _ in n["queries"]} | set(nouns))
+    vec = IX.embed(texts) if texts else np.zeros((0, cand_emb.shape[1]), dtype="float32")
+    at = {t: k for k, t in enumerate(texts)}
+    sim = (vec @ cand_emb.T).round(4) if texts else np.zeros((0, len(cand)), dtype="float32")
+
+    def lexical(words):
+        out = np.zeros(len(cand), dtype="float32")
+        for k in range(len(cand)):
+            if any(w != nw and nw.startswith(w) and len(w) >= 3 for w in words for nw in name_words[k]) and \
+                    not (words & name_words[k]):
+                out[k] = -0.15                     # "chip" is not a chipmunk, "ear" is not an ear of corn
+                continue
+            hit = (words - AMBIGUOUS) & name_words[k]
+            if hit and (len(name_words[k]) == 1 or name_last[k] in hit):
+                out[k] = 0.16                      # "battery" said, the icon IS a battery
+            elif hit:
+                out[k] = 0.05
+            elif (words - AMBIGUOUS) & key_words[k]:
+                out[k] = 0.04
+        return out
+
+    # topic pool: round-robin over the nouns so every topic gets its best icons before any gets a fifth
+    pool, pool_noun = [], {}
+    per_noun = []
+    for noun in nouns:
+        sc = sim[at[noun]] + lexical({noun}) - face
+        order = sorted(range(len(cand)), key=lambda k: (-float(sc[k]), cand_ids[k]))[:POOL_PER_NOUN]
+        order = order[:POOL_PER_NOUN if len(per_noun) < 8 else 2]
+        per_noun.append([(k, float(sc[k])) for k in order
+                         if sc[k] >= POOL_MIN and not QUESTION.search(rows[cand[k]]["name"])])
+    for rank in range(POOL_PER_NOUN):
+        for noun, lst in zip(nouns, per_noun):
+            if rank < len(lst) and len(pool) < POOL_SIZE and lst[rank][0] not in pool_noun:
+                pool.append(lst[rank][0])
+                pool_noun[lst[rank][0]] = noun
+    k_of = {cid: k for k, cid in enumerate(cand_ids)}
+    for p in pins:
+        if p in k_of and k_of[p] not in pool_noun:
+            pool.append(k_of[p])
+            pool_noun[k_of[p]] = "pinned"
+    in_pool = np.zeros(len(cand), dtype="float32")
+    for k in pool:
+        in_pool[k] = 0.04
+    for p in pins:
+        if p in k_of:
+            in_pool[k_of[p]] = 0.12
+
+    # every need's scores
+    scored = []
+    for n in all_needs:
+        if not n["queries"]:
+            scored.append(None)
+            continue
+        best = np.max(np.stack([sim[at[q]] * w for q, w in n["queries"]]), axis=0)
+        scored.append((best + lexical(n["words"]) + in_pool - face - fresh).round(4))
+
+    used, picks, q_times = {}, {}, []
+
+    def allowed(k, t):
+        if used.get(k, 0) >= reuse:
+            return False
+        if QUESTION.search(rows[cand[k]]["name"]):
+            if len(q_times) >= QUESTION_MAX or any(abs(t - x) < QUESTION_GAP for x in q_times):
+                return False
+        return True
+
+    def take(ni, k, score, how):
+        n = all_needs[ni]
+        used[k] = used.get(k, 0) + 1
+        if QUESTION.search(rows[cand[k]]["name"]):
+            q_times.append(n["t"])
+        picks[(n["beat"], n["slot"])] = {"id": cand_ids[k], "score": round(float(score), 4), "how": how,
+                                         "noun": pool_noun.get(k, "")}
+
+    # 1 global greedy: the best (scene, icon) pairs first
+    pairs = []
+    for ni, sc in enumerate(scored):
+        if sc is None:
+            continue
+        top = sorted(range(len(cand)), key=lambda k: (-float(sc[k]), cand_ids[k]))[:TOP_K]
+        pairs += [(-float(sc[k]), ni, cand_ids[k], k) for k in top if sc[k] >= MATCH_MIN]
+    pairs.sort()
+    done = set()
+    for neg, ni, _cid, k in pairs:
+        if ni in done or not allowed(k, all_needs[ni]["t"]):
+            continue
+        take(ni, k, -neg, "match")
+        done.add(ni)
+    # 2 scenes that found nothing: a looser match, best pairs first
+    pairs = []
+    for ni, sc in enumerate(scored):
+        if sc is None or ni in done:
+            continue
+        top = sorted(range(len(cand)), key=lambda k: (-float(sc[k]), cand_ids[k]))[:TOP_K]
+        pairs += [(-float(sc[k]), ni, cand_ids[k], k) for k in top if sc[k] >= NEAR_MIN]
+    pairs.sort()
+    for neg, ni, _cid, k in pairs:
+        if ni in done or not allowed(k, all_needs[ni]["t"]):
+            continue
+        take(ni, k, -neg, "near")
+        done.add(ni)
+    # 3 still nothing: the best unused pool icon for their words (scene order)
+    for ni, n in enumerate(all_needs):
+        if ni in done:
+            continue
+        sc = scored[ni]
+        if sc is None:
+            continue
+        free = [k for k in pool if allowed(k, n["t"]) and sc[k] >= POOL_FILL_MIN]
+        if not free:
+            continue
+        k = min(free, key=lambda k: (-float(sc[k]), cand_ids[k]))
+        take(ni, k, float(sc[k]), "pool")
+        done.add(ni)
+
+    return {"family": family, "picks": picks, "nouns": nouns,
+            "pool": [{"id": cand_ids[k], "noun": pool_noun[k]} for k in pool],
+            "report": report(beats, names, all_needs, picks, family, [cand_ids[k] for k in pool])}
+
+
+def report(beats, names, needs, picks, family, pool) -> dict:
+    """The repetition report of the Check page and the render log."""
+    counts = {}
+    for p in picks.values():
+        counts[p["id"]] = counts.get(p["id"], 0) + 1
+    most = max(sorted(counts), key=lambda i: counts[i]) if counts else ""
+    with_icon = {b for b, _ in picks}
+    rows = []
+    for n in needs:
+        p = picks.get((n["beat"], n["slot"]))
+        rows.append({"beat": n["beat"], "t": round(n["t"], 1), "text": n["text"], "icon": p["id"] if p else "",
+                     "score": p["score"] if p else 0, "how": p["how"] if p else "none"})
+    return {"family": family, "beats": len(beats), "wanted": len(needs), "icons": len(counts),
+            "placed": len(picks), "most_used": {"id": most, "count": counts.get(most, 0)},
+            "question_style": sum(c for i, c in counts.items() if is_question(i)),
+            "question_ids": sorted(i for i in counts if is_question(i)),
+            "beats_with_icon": len(with_icon), "percent_with_icon": round(100 * len(with_icon) / max(1, len(beats))),
+            "matched": sum(1 for p in picks.values() if p["how"] in ("match", "near")),
+            "from_pool": sum(1 for p in picks.values() if p["how"] == "pool"),
+            "without": [r["beat"] for r in rows if not r["icon"]], "pool_used": sum(1 for i in pool if i in counts),
+            "pool_size": len(pool), "rows": rows}
+
+
+def estimate_beats(parsed: dict) -> list:
+    """Beats for the Check page, before any voice exists: every segment's words spread evenly over its estimated
+    time. The real render cuts on Kokoro's timings, so a few clauses split differently there."""
+    from .. import assemble
+    from . import beats as B
+    tl = []
+    for seg in parsed["segments"]:
+        ws = seg["text"].split()
+        step = seg["est_dur"] / max(1, len(ws))
+        tl.append({"start": seg["est_start"], "dur": seg["est_dur"],
+                   "words": [[w, k * step, (k + 1) * step * 0.98] for k, w in enumerate(ws)]})
+    total = (tl[-1]["start"] + tl[-1]["dur"]) if tl else 0.0
+    spans = assemble._shot_spans(parsed, tl, total)
+    return B.split(parsed, tl, spans)
+
+
+def check_report(parsed: dict, history: dict = None) -> dict:
+    """What the Check page shows for a motion-graphics script: pool, picks, repetition numbers (estimated cuts)."""
+    beats = estimate_beats(parsed)
+    names = T.scene_names(beats)
+    p = plan(beats, names, parsed["meta"], history)
+    rep = p["report"]
+    rep["pool"] = p["pool"]
+    rep["nouns"] = p["nouns"]
+    rep["pinned"] = id_list(parsed["meta"].get("icons_pin"), p["family"])
+    rep["banned"] = id_list(parsed["meta"].get("icons_ban"), p["family"])
+    return rep

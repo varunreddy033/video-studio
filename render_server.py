@@ -233,6 +233,42 @@ def check():
     return jsonify(jobs.check_summary(script_parser.parse(text)))
 
 
+_icon_lock = threading.Lock()      # the icon search model is loaded once; one report at a time
+
+
+@app.post("/api/motion/icons")
+def motion_icons():
+    """Motion graphics: the icons the render would pick (topic pool + one per scene) and the repetition report.
+    Uses the parser's estimated timings, so a few scene cuts differ from the real render."""
+    from pipeline.motion_gfx import picker
+    from pipeline.util import PipelineError
+    parsed = script_parser.parse((request.get_json(force=True) or {}).get("text", ""))
+    if parsed["meta"].get("rendering_method") != "motion":
+        return jsonify({"error": "icons are only picked for rendering_method: motion"}), 400
+    if parsed["errors"]:
+        return jsonify({"error": "fix the script's errors first"}), 400
+    try:
+        with _icon_lock:
+            return jsonify(picker.check_report(parsed))
+    except PipelineError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.get("/api/icons/<set_id>/<name>.svg")
+def icon_svg(set_id, name):
+    from pipeline import icon_library
+    from pipeline.util import PipelineError
+    if set_id not in icon_library.PACKS or not re.fullmatch(r"[a-z0-9-]+", name):
+        abort(404)
+    try:
+        body = icon_library.svg(f"{set_id}:{name}")
+    except PipelineError:
+        abort(404)
+    resp = app.response_class(body, mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "private, max-age=86400"
+    return resp
+
+
 _preview_lock = threading.Lock()   # one art style preview at a time
 _caption_lock = threading.Lock()
 

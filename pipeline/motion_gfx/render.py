@@ -27,7 +27,7 @@ from .. import assemble, captions, encoder
 from .. import config as C
 from ..util import PipelineError, best_match, fmt_ts, log as _log, media_duration, run, sfx_files
 from . import beats as B
-from . import compose, hf
+from . import compose, hf, picker
 from . import design as D
 from . import templates as T
 
@@ -103,19 +103,31 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     order = D.palette_order(len(beats), seed)
     shutil.rmtree(project / "compositions", ignore_errors=True)
     compose.prepare(project, voice_wav)
-    cues, used_tpl, k_in_shot, last_shot = [], [], 0, -1
+    cues = []
+    used_tpl = T.scene_names(beats)
+    plan = picker.plan(beats, used_tpl, meta)                   # every scene's icon, decided for the whole video
+    for i, n in enumerate(used_tpl):                            # no icon for a figure scene -> kinetic words
+        if n == "figure" and (i, 0) not in plan["picks"]:       # (unless that would put two word scenes in a row)
+            near = [used_tpl[j] for j in (i - 1, i + 1) if 0 <= j < len(used_tpl)]
+            if "kinetic" not in near:
+                used_tpl[i] = "kinetic"
+    icons = {}
+    for (bi, slot), pk in plan["picks"].items():
+        if used_tpl[bi] != "kinetic":
+            icons.setdefault(bi, {})[slot] = dict(pk, uri=picker.data_uri(pk["id"]), sound=picker.sound_for(pk["id"]))
+    icon_rep = plan["report"]
+    (project / "icons.json").write_text(json.dumps(dict(icon_rep, pool=plan["pool"], nouns=plan["nouns"]), indent=1),
+                                        encoding="utf-8")
+    log(f"  icons ({plan['family']}): {icon_rep['icons']} different in {icon_rep['beats_with_icon']} of {len(beats)} scenes, "
+        f"most used {icon_rep['most_used']['count']}x, question-style {icon_rep['question_style']}, "
+        f"{icon_rep['from_pool']} from the topic pool of {icon_rep['pool_size']}, {len(icon_rep['without'])} scenes found none")
     for i, b in enumerate(beats):
         b["transition"] = compose.transition_for(beats, i)
         b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
-        k_in_shot = 0 if b["shot"] != last_shot else k_in_shot + 1
-        last_shot = b["shot"]
-        name = T.pick(b, k_in_shot)
-        if used_tpl and name == used_tpl[-1] and name in ("figure", "kinetic", "memo"):
-            name = "kinetic" if name != "kinetic" else "figure"          # never the same picture type twice in a row
-        used_tpl.append(name)
+        name = used_tpl[i]
         pal = D.PALETTES[order[i]]
         ctx = {"W": W, "H": H, "fmt": fmt, "pal": pal, "dur": b["dur"], "shot": parsed["shots"][b["shot"]],
-               "rnd": random.Random(seed + i)}
+               "rnd": random.Random(seed + i), "icons": icons.get(i, {})}
         P_ = compose.host(i) + "-"
         parts = T.build(name, P_, b, ctx)
         (project / "compositions" / f"scene_{i + 1:03d}.html").write_text(
@@ -226,7 +238,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "sfx_used": sfx_used, "chapters": chapters, "warnings": warnings, "music": music,
             "type": meta.get("type", "full"), "encoder": encoder.name(), "loudness_before": loud_in,
             "loudness_target": C.TARGET_LUFS, "rendering_method": "motion",
-            "motion": {"scenes": len(beats), "templates": counts, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1)}}
+            "motion": {"scenes": len(beats), "templates": counts, "icons": {k: icon_rep[k] for k in ("family", "icons", "most_used", "question_style", "beats_with_icon")}, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1)}}
 
 
 def _loudness(path: Path, job_dir: Path, what: str):

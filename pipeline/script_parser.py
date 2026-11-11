@@ -45,7 +45,8 @@ NUM_RE = re.compile(r"^[-+]?\d[\d,]*(\.\d+)?$")
 BAD_AI_WORDS = re.compile(r"\b(text|words?|logo|sign(age)?|caption|letters?|written|headline|label)\b", re.I)
 META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed", "thumbnail", "thumbnail_prompt",
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
-             "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method"}     # + voice / music: preset ids (presets/), see presets.py
+             "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method",
+             "icons", "icon_reuse", "icons_pin", "icons_ban"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -434,6 +435,17 @@ def parse(text: str) -> dict:
             meta["presets"]["captions"] = "chip"      # the reference look: a caption chip in the corner
         if not (meta.get("sfx_given")):
             meta["sfx"] = "auto"                      # motion videos get the animation's own sounds by default
+        fam = (meta.get("icons") or "").strip().lower()
+        if fam:
+            from . import icon_library as IL
+            fams = IL.usable_families() or IL.FAMILIES
+            if fam not in fams:
+                err(1, f"icons must be one of {', '.join(fams)}, got '{fam}'")
+        reuse = str(meta.get("icon_reuse") or "").strip()
+        if reuse and not (reuse.isdigit() and 1 <= int(reuse) <= 5):
+            err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
+    elif any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban")):
+        warn(1, "icons / icon_reuse / icons_pin / icons_ban only apply to rendering_method: motion")
     if not segments and not clip:
         err(start + 1, "no narration found")
 

@@ -111,6 +111,20 @@ motion graphics: kinetic words, stick figures, numbers, charts, memos and transi
 no AI images (docs/MOTION_GFX_PLAN.md). The same shot tags work; the narration words pick the figures' poses and props.
 Not with `character:` or `clip_from:`. Video Studio: the "Pictures" menu on the new-video screen writes this line.
 
+Icons (motion graphics only). Each stick-figure scene shows one icon from the icon library
+(assets/library/icons, docs/ASSET_PACKS_PLAN.md), chosen for the whole video at once: the script's topic words
+make a pool of ~40-60 icons, every scene gets the best match for its own words, one icon is used once per video,
+question/exclamation-style icons at most 3 times and one a minute, and a scene with no good match shows kinetic
+words (there is no "?"/"!" fallback). Same script = same icons. After **Check**, the "Icons" card shows the pool, the
+pick per scene and the repetition numbers; Pin / Ban write the lines below.
+
+| Key | Meaning |
+|---|---|
+| `icons: fluent_flat` | icon family: `fluent_flat` (default), `fluent_color`, `noto` |
+| `icon_reuse: 1` | how often one icon may appear in the video (1-5, default 1) |
+| `icons_pin: low-battery, rocket` | icons to prefer (added to the pool, ranked higher); `set:name` for another set |
+| `icons_ban: skull, pill` | icons never used in this video |
+
 ### Art style (`art_style:`)
 
 The look of every `[ai:]` and `[stock:]` image and the 2 AI thumbnails. After **Check**, Video Studio shows an

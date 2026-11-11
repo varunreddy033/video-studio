@@ -384,6 +384,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         emojilib 4.0.3 + unicode-emoji-json 0.9.0 (both MIT) instead of CLDR (Unicode licence isn't on the
         allow-list). `bin/python tools/icon_search.py "battery dies" [--set fluent_flat] [-n 10]`: low-battery
         first, 2 s, same result every run. Whole sentences search badly (the picker uses key nouns, step 3).
+  - [x] Step 3 picker (2026-11-11): pipeline/motion_gfx/picker.py plan(beats, names, meta) for the whole video:
+        topic pool (~20 topic words -> up to 60 icons), per-scene queries (key phrase, each content word, the clause,
+        the old RULES prop as words), score = similarity + name-word bonus (-0.15 for look-alikes: chip/chipmunk) +
+        pool bonus; global greedy best pairs >= 0.50, then >= 0.44, then the best unused pool icon >= 0.30; no
+        repeats (icon_reuse), question-style <= 3 and 60 s apart, no "?"/"!" fallback (no icon -> kinetic scene).
+        Icons drawn as <img> SVG data URIs (templates.icon_html). Header keys icons, icon_reuse, icons_pin, icons_ban
+        (parser checks them). render.py writes motion/icons.json + a log line. Check page: "Icons" card
+        (POST /api/motion/icons, GET /api/icons/<set>/<name>.svg) with pool, pick per scene, Pin/Ban. Old EarPods
+        beats: 63 different icons in 95 figure scenes, 0 repeats, 0 question-style (was exclaim 73x). Sample draft
+        79 s; classic sample draft 13 s; Remotion sample draft 29 s; presets clean.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
