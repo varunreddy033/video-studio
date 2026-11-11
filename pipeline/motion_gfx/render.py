@@ -29,6 +29,7 @@ from ..util import PipelineError, best_match, fmt_ts, log as _log, media_duratio
 from . import beats as B
 from . import compose, hf, history, picker
 from . import variety as V
+from . import planner as PL
 from . import design as D
 from . import templates as T
 
@@ -107,8 +108,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
 
     # 2 beats -> scenes
     progress("visuals", 0, 1)
-    beats = B.split(parsed, tl, spans)
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
+    beats = PL.rhythm(B.split(parsed, tl, spans), seed)          # bursts + breathers (docs/VARIETY_PLAN.md 5.4)
     T.set_look(look["fonts"])
     order = D.palette_order(len(beats), seed, D.PALETTE_SETS[look["palette"]])
     seen = history.recent(title)
@@ -129,8 +130,9 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     log(f"  icons ({plan['family']}): {icon_rep['icons']} different in {icon_rep['beats_with_icon']} of {len(beats)} scenes, "
         f"most used {icon_rep['most_used']['count']}x, question-style {icon_rep['question_style']}, "
         f"{icon_rep['from_pool']} from the topic pool of {icon_rep['pool_size']}, {len(icon_rep['without'])} scenes found none")
+    trans = PL.transitions(beats, used_tpl, seed)
     for i, b in enumerate(beats):
-        b["transition"] = compose.transition_for(beats, i)
+        b["transition"] = trans[i]
         b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]
@@ -144,7 +146,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         for t, kind in parts["cues"]:
             cues.append((b["start"] + t, kind))
         if b["transition"] != "cut":
-            cues.append((b["start"] - b["ov"] * 0.6, "swipe" if b["transition"] == "push" else "whoosh"))
+            cues.append((b["start"] - b["ov"] * 0.6, {"push": "swipe", "slide": "swipe", "push_up": "swoosh-up", "glitch": "glitch",
+                                                  "flash": "impact", "fade": "swipe"}.get(b["transition"], "whoosh")))
         b["template"] = name
         b["variant"] = variants[i]
         progress("visuals", i + 1, len(beats))

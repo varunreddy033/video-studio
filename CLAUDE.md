@@ -459,6 +459,17 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         20261111-125755-a5e140: 10 types in 194 scenes, figure 43.8 %, kinetic 38.7 %, top layout figure:2 x29,
         4 transition types (cut 48.5 %), A-B-A-B 89, 91.8 s without a data scene: 0 of 8 goals.
         Regression: sample_script draft 12 s; motion sample draft 176 s (HyperFrames slower than the 79 s before).
+  - [x] Step 2 (2026-11-11): pipeline/motion_gfx/planner.py replaces templates.scene_plan's figure/kinetic alternation:
+        roles per beat (statistic, comparison, list, process, cause, timeline, quote, definition, story, question,
+        warning, conclusion, transition), candidates per type with a fit test, budget (type <= 20 %, type+layout <= 6,
+        kinetic <= 15 % for punch lines, never twice in a row, no A-B-A-B; relaxed in order when nothing fits), each
+        chapter leaning on a seeded third of the types; rhythm = bursts on the hook / after chapter cards + a held
+        breather (two calm beats merged, slow drift) every ~45 s; 13 transitions (cut, fade, push, slide, push_up,
+        blinds, split, whip, zoom, zoom_out, flash, glitch, wipe = chapter signature) chosen by story relation,
+        none above 35 %. Windows (Check estimate): 12 transition types (top 23 %), 0 same type twice, 3/8 goals; the
+        scene mix stays figure 41 % / kinetic 37 % until step 4 adds types (today almost every beat can only be a
+        figure or words). A figure without an icon still turns into words unless a neighbour is words.
+        Regression: sample_script draft 11 s; motion sample draft 185 s, all 12 new transitions checked in frames.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

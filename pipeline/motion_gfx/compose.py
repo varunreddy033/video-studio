@@ -38,11 +38,23 @@ def _transition_js(kind, ov, W, H):
     if ov <= 0 or kind == "cut":
         return ""
     d = f'duration: {ov:.2f}, ease: "power3.out"'
+    if kind == "glitch":              # three quick offset jumps with a colour shift, then settle
+        return (f'scene.fromTo("#__H__-stage", {{x: {int(W * 0.04)}, filter: "hue-rotate(90deg) saturate(2)"}}, '
+                f'{{x: 0, filter: "hue-rotate(0deg) saturate(1)", duration: {ov:.2f}, ease: "steps(4)"}}, 0);')
+    if kind == "flash":               # a white flash: the scene starts burnt out and comes down to normal
+        return (f'scene.fromTo("#__H__-stage", {{filter: "brightness(3)"}}, {{filter: "brightness(1)", {d}}}, 0);')
     start, end = {
         "push": (f"{{x: {W}}}", f"{{x: 0, {d}}}"),
+        "slide": (f"{{x: {-W}}}", f"{{x: 0, {d}}}"),
+        "push_up": (f"{{y: {H}}}", f"{{y: 0, {d}}}"),
+        "fade": ("{opacity: 0}", f"{{opacity: 1, {d}}}"),
         "zoom": ("{scale: 1.6, opacity: 0}", f"{{scale: 1, opacity: 1, {d}}}"),
+        "zoom_out": ("{scale: 0.55, opacity: 0}", f"{{scale: 1, opacity: 1, {d}}}"),
         "whip": (f'{{x: {-int(W * 0.35)}, filter: "blur(24px)"}}', f'{{x: 0, filter: "blur(0px)", {d}}}'),
         "wipe": ('{clipPath: "circle(0% at 50% 55%)"}', f'{{clipPath: "circle(150% at 50% 55%)", {d}}}'),
+        "blinds": ('{clipPath: "inset(0% 0% 100% 0%)"}', f'{{clipPath: "inset(0% 0% 0% 0%)", {d}}}'),
+        "split": ('{clipPath: "polygon(50% 0%, 50% 0%, 50% 100%, 50% 100%)"}',
+                  f'{{clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", {d}}}'),
     }[kind]
     return f'scene.fromTo("#__H__-stage", {start}, {end}, 0);'
 
@@ -75,7 +87,7 @@ def scene_file(i, beat, parts, pal, ov, W, H):
 <script>
 const scene = gsap.timeline({{ paused: true }});
 {tr}
-scene.fromTo("#{hid}-cam", {{scale: 1}}, {{scale: 1.035, transformOrigin: "50% 50%", duration: {length:.2f}, ease: "none"}}, 0);
+scene.fromTo("#{hid}-cam", {{scale: 1, x: 0}}, {{scale: {1.09 if beat.get("breather") else 1.035}, x: {-int(W * 0.02) if beat.get("breather") else 0}, transformOrigin: "50% 50%", duration: {length:.2f}, ease: "{"sine.inOut" if beat.get("breather") else "none"}"}}, 0);
 const tl = gsap.timeline();
 (function (tl) {{
 {parts['js']}

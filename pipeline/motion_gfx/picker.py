@@ -442,18 +442,23 @@ def plan_video(beats: list, meta: dict, seen: dict, seed: int):
     words (or a figure scene when the neighbour is already words) and the icons are planned again; a figure scene
     without an icon becomes kinetic words. Returns (names, variants, info, plan)."""
     from . import extras as X
-    names, _variants, info = T.scene_plan(beats, seed)
+    from . import planner as PL
+    exclude = {}
+    names, info = PL.plan(beats, seed, exclude, meta.get("format_weights"))
     p = None
-    for _round in range(4):
+    for _round in range(5):
         extra = [n for i, (b, nm) in enumerate(zip(beats, names)) if nm in X.NEW for n in X.needs(i, b, nm)]
         p = plan(beats, names, meta, seen, extra)
         changed = False
-        for i, nm in enumerate(names):
-            if nm in X.NEW and any((i, n["slot"]) not in p["picks"] for n in extra if n["beat"] == i and n["required"]):
-                names[i] = "figure" if i and names[i - 1] == "kinetic" else "kinetic"
+        for i, nm in enumerate(names):          # a scene whose icons weren't found: plan that beat again without it
+            missing = nm in X.NEW and any((i, n["slot"]) not in p["picks"] for n in extra
+                                          if n["beat"] == i and n["required"])
+            if missing:
+                exclude.setdefault(i, set()).add(nm)
                 changed = True
         if not changed:
             break
+        names, info = PL.plan(beats, seed, exclude, meta.get("format_weights"))
     for i, n in enumerate(names):                               # no icon for a figure scene -> kinetic words
         if n == "figure" and (i, 0) not in p["picks"]:          # (unless that would put two word scenes in a row)
             near = [names[j] for j in (i - 1, i + 1) if 0 <= j < len(names)]
@@ -462,7 +467,7 @@ def plan_video(beats: list, meta: dict, seen: dict, seed: int):
     for r in p["report"]["rows"]:
         r["template"] = names[r["beat"]]
     p["report"]["templates"] = {n: names.count(n) for n in sorted(set(names))}
-    return names, T.scene_variants(names, seed, (seen or {}).get("templates")), info, p
+    return names, PL.variants(names, seed, (seen or {}).get("templates")), info, p
 
 
 def report(beats, names, needs, picks, family, pool, rows=None) -> dict:
@@ -505,7 +510,10 @@ def estimate_beats(parsed: dict) -> list:
                    "words": [[w, k * step, (k + 1) * step * 0.98] for k, w in enumerate(ws)]})
     total = (tl[-1]["start"] + tl[-1]["dur"]) if tl else 0.0
     spans = assemble._shot_spans(parsed, tl, total)
-    return B.split(parsed, tl, spans)
+    from . import planner as PL
+    import hashlib
+    seed = int(hashlib.sha1(parsed["meta"].get("title", "").encode()).hexdigest()[:6], 16)
+    return PL.rhythm(B.split(parsed, tl, spans), seed)
 
 
 def check_report(parsed: dict, history: dict = None) -> dict:
@@ -520,8 +528,8 @@ def check_report(parsed: dict, history: dict = None) -> dict:
     seen = Hs.recent(title) if history is None else history
     names, variants, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"]), seen, seed)
     rep = p["report"]
-    from . import compose, variety
-    trans = [compose.transition_for(beats, i) for i in range(len(beats))]
+    from . import planner as PL, variety
+    trans = PL.transitions(beats, names, seed)
     rep["variety"] = variety.report(names, variants, trans, beats, seen.get("videos"), look)
     rep["look"] = look
     rep["pool"] = p["pool"]
