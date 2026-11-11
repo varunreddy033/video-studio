@@ -41,6 +41,12 @@ def _transition_js(kind, ov, W, H):
     if kind == "glitch":              # three quick offset jumps with a colour shift, then settle
         return (f'scene.fromTo("#__H__-stage", {{x: {int(W * 0.04)}, filter: "hue-rotate(90deg) saturate(2)"}}, '
                 f'{{x: 0, filter: "hue-rotate(0deg) saturate(1)", duration: {ov:.2f}, ease: "steps(4)"}}, 0);')
+    if kind == "shake":               # Arcade: the new screen lands with a shake
+        return (f'scene.fromTo("#__H__-stage", {{x: {int(W * .03)}, y: {-int(H * .03)}}}, {{x: 0, y: 0, duration: {ov:.2f}, '
+                f'ease: "elastic.out(1.4, 0.18)"}}, 0);')
+    if kind == "pixel":               # Arcade: a stepped (pixel) iris
+        return (f'scene.fromTo("#__H__-stage", {{clipPath: "inset(50% 50% 50% 50%)"}}, {{clipPath: "inset(0% 0% 0% 0%)", '
+                f'duration: {ov:.2f}, ease: "steps(6)"}}, 0);')
     if kind == "flash":               # a white flash: the scene starts burnt out and comes down to normal
         return (f'scene.fromTo("#__H__-stage", {{filter: "brightness(3)"}}, {{filter: "brightness(1)", {d}}}, 0);')
     start, end = {
@@ -53,6 +59,9 @@ def _transition_js(kind, ov, W, H):
         "whip": (f'{{x: {-int(W * 0.35)}, filter: "blur(24px)"}}', f'{{x: 0, filter: "blur(0px)", {d}}}'),
         "wipe": ('{clipPath: "circle(0% at 50% 55%)"}', f'{{clipPath: "circle(150% at 50% 55%)", {d}}}'),
         "blinds": ('{clipPath: "inset(0% 0% 100% 0%)"}', f'{{clipPath: "inset(0% 0% 0% 0%)", {d}}}'),
+        "bars": ('{clipPath: "inset(0% 100% 0% 0%)"}', f'{{clipPath: "inset(0% 0% 0% 0%)", duration: {ov:.2f}, ease: "power4.out"}}'),
+        "draw": ('{clipPath: "inset(0% 0% 0% 100%)"}', f'{{clipPath: "inset(0% 0% 0% 0%)", duration: {ov:.2f}, ease: "none"}}'),
+        "flashlight": ('{clipPath: "circle(6% at 32% 40%)"}', f'{{clipPath: "circle(150% at 32% 40%)", duration: {ov + 0.1:.2f}, ease: "power2.in"}}'),
         "page": ('{rotationY: -85, transformPerspective: 1800, transformOrigin: "0% 50%"}', f"{{rotationY: 0, {d}}}"),
         "split": ('{clipPath: "polygon(50% 0%, 50% 0%, 50% 100%, 50% 100%)"}',
                   f'{{clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", {d}}}'),

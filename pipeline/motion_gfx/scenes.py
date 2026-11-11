@@ -986,6 +986,143 @@ def sticky(P, beat, ctx):
     return _out(html, "", js, [(0.1, "paper")] + [(0.1 + 0.3 * k, "paper") for k in range(1, n)])
 
 
+def lower_third(P, beat, ctx):
+    """Newsroom: an anchor desk with a faceless silhouette and a lower-third bar carrying the line's key phrase."""
+    W, H, pal, v = ctx["W"], ctx["H"], ctx["pal"], ctx.get("variant", 0) % OWN
+    x0, x1, y0, y1 = _box(ctx)
+    head = _phrase(beat["text"], 4)
+    sub = " ".join(X.picker_words(beat["text"])[:5]).upper()
+    cx = x0 + (x1 - x0) * (.5 if v == 0 else .72)
+    sw = (y1 - y0) * .55
+    html = [f'<div id="{P}scr" style="position:absolute;left:{int(x0 + (x1 - x0) * (.06 if v == 0 else .02))}px;top:{int(y0 - H * .04)}px;'
+            f'width:{int((x1 - x0) * (.88 if v == 0 else .45))}px;height:{int((y1 - y0) * .62)}px;background:{pal["soft"]};'
+            f'border:3px solid #111111;box-sizing:border-box"></div>' if v == 1 else "",
+            f'<div id="{P}sil" style="position:absolute;left:{int(cx - sw / 2)}px;top:{int(y0 + (y1 - y0) * .05)}px;width:{int(sw)}px;height:{int(sw * 1.1)}px">'
+            f'<div style="position:absolute;left:30%;width:40%;top:0;height:38%;border-radius:50%;background:#2B2B2B"></div>'
+            f'<div style="position:absolute;left:4%;width:92%;top:40%;height:60%;border-radius:45% 45% 0 0;background:#2B2B2B"></div></div>',
+            f'<div style="position:absolute;left:{int(x0 - W * .02)}px;right:{int(W - x1 - W * .02)}px;top:{int(y0 + (y1 - y0) * .58)}px;'
+            f'height:{int((y1 - y0) * .16)}px;background:#3A3A3A"></div>']
+    by = y0 + (y1 - y0) * .72
+    html.append(f'<div id="{P}bar" style="position:absolute;left:{x0}px;top:{int(by)}px;width:{int((x1 - x0) * .92)}px;height:{int(H * .11)}px;'
+                f'background:#FFFFFF;border-left:{int(W * .012)}px solid {pal["pop"]};box-sizing:border-box"></div>')
+    html.append(_txt(f"{P}hd", head, x0 + W * .025, by + H * .012, (x1 - x0) * .86, T.fit(head, (x1 - x0) * .84, int(H * .06), 20),
+                     "#111111", align="left"))
+    html.append(f'<div id="{P}sb" style="position:absolute;left:{x0}px;top:{int(by + H * .11)}px;padding:.15em .7em;background:{pal["pop"]};'
+                f'color:#FFFFFF;font-family:\'{T.BODY}\';font-size:{int(H * .03)}px">{_esc(sub[:48])}</div>')
+    js = [_in(f"#{P}sil", 0.02, "{opacity: 0, y: 40}"),
+          f'tl.fromTo("#{P}bar", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.4, ease: "{D.EASE_IN}"}}, 0.2);',
+          _in(f"#{P}hd", 0.4, "{opacity: 0, x: -40}", '{opacity: 1, x: 0, duration: 0.3}'),
+          _in(f"#{P}sb", 0.55, "{opacity: 0, y: -20}", '{opacity: 1, y: 0, duration: 0.25}')]
+    if v == 1:
+        js.insert(0, _in(f"#{P}scr", 0.02, "{opacity: 0}", '{opacity: 1, duration: 0.3}'))
+    return _out(html, "", js, [(0.2, "swipe"), (0.55, "click")])
+
+
+def evidence(P, beat, ctx):
+    """Case File: an evidence board, 2-3 blank polaroids with the line's words written under them, red string."""
+    W, H, pal, v, rnd = ctx["W"], ctx["H"], ctx["pal"], ctx.get("variant", 0) % OWN, ctx["rnd"]
+    x0, x1, y0, y1 = _box(ctx)
+    ws = [w.upper() for w in X.picker_words(beat["text"])][:3] or [_phrase(beat["text"], 2)]
+    n = len(ws)
+    html = [f'<div id="{P}bd" style="position:absolute;left:{x0 - int(W * .02)}px;top:{y0 - int(H * .05)}px;width:{(x1 - x0) + int(W * .04)}px;'
+            f'height:{(y1 - y0) + int(H * .08)}px;background:#6B4A2B;border:10px solid #3B2A1A;box-sizing:border-box"></div>']
+    pts, js = [], [_in(f"#{P}bd", 0.02, "{opacity: 0}", '{opacity: 1, duration: 0.3}')]
+    pw = (x1 - x0) / (n + 1.2)
+    for k, w in enumerate(ws):
+        px = x0 + (k + .4) * (x1 - x0) / (n + .2) - (0 if v == 0 else 0)
+        py = y0 + ((k % 2) * .25 if v == 0 else .12) * (y1 - y0)
+        rot = rnd.uniform(-7, 7)
+        ph = pw * 1.15
+        html.append(f'<div id="{P}p{k}" style="position:absolute;left:{int(px)}px;top:{int(py)}px;width:{int(pw)}px;height:{int(ph)}px;'
+                    f'background:#F4EFE4;transform:rotate({rot:.1f}deg);box-shadow:0 8px 16px rgba(0,0,0,.4)">'
+                    f'<div style="position:absolute;left:7%;right:7%;top:6%;height:68%;background:#2A2A2A;'
+                    f'background-image:radial-gradient(circle at 50% 42%,#555 0 18%,transparent 19%),'
+                    f'radial-gradient(ellipse at 50% 100%,#555 0 38%,transparent 39%)"></div>'
+                    f'<div style="position:absolute;left:5%;right:5%;bottom:5%;text-align:center;font-family:\'{T.BODY}\';'
+                    f'font-size:{T.fit(w, pw * 1.3, int(ph * .11), 12, 0.6)}px;color:#1C1712">{_esc(w)}</div>'
+                    f'<div style="position:absolute;left:46%;top:-4%;width:8%;height:7%;border-radius:50%;background:#B3261E"></div></div>')
+        pts.append((px + pw * .5, py + ph * .02))
+        js.append(f'tl.fromTo("#{P}p{k}", {{y: -60, opacity: 0, rotation: {rot - 15:.1f}}}, {{y: 0, opacity: 1, rotation: {rot:.1f}, '
+                  f'duration: 0.4, ease: "back.out(1.4)"}}, {0.15 + 0.25 * k:.2f});')
+    if len(pts) > 1:
+        d = "M" + " L".join(f"{x:.0f} {y:.0f}" for x, y in pts)
+        html.append(f'<svg style="position:absolute;left:0;top:0" width="{W}" height="{H}"><path id="{P}str" d="{d}" fill="none" '
+                    f'stroke="#C0201A" stroke-width="5" style="stroke-dasharray:4000;stroke-dashoffset:4000"/></svg>')
+        js.append(f'tl.to("#{P}str", {{strokeDashoffset: 0, duration: 0.7, ease: "power1.inOut"}}, {0.25 + 0.25 * n:.2f});')
+    if v == 1:
+        st = _phrase(beat["text"], 2)
+        html.append(f'<div id="{P}stp" style="position:absolute;left:{int(x1 - W * .26)}px;top:{int(y1 - H * .16)}px;padding:.1em .4em;'
+                    f'border:6px solid #B3261E;color:#B3261E;font-family:\'{T.HEAD}\';font-size:{int(H * .06)}px;transform:rotate(-10deg)">'
+                    f'{_esc((st or "CLASSIFIED")[:18])}</div>')
+        js.append(f'tl.fromTo("#{P}stp", {{scale: 2.4, opacity: 0}}, {{scale: 1, opacity: 1, duration: 0.25, ease: "power4.in"}}, {0.4 + 0.25 * n:.2f});')
+    return _out(html, "", js, [(0.15, "paper"), (0.3 + 0.25 * n, "stamp" if v == 1 else "paper")])
+
+
+def level(P, beat, ctx):
+    """Arcade Retro: a LEVEL card: the line's key phrase as the stage name, a health bar and coins."""
+    W, H, pal, v = ctx["W"], ctx["H"], ctx["pal"], ctx.get("variant", 0) % OWN
+    x0, x1, y0, y1 = _box(ctx)
+    head = _phrase(beat["text"], 3)
+    no = (beat.get("shot", 0) % 9) + 1
+    html = [_txt(f"{P}lv", f"LEVEL {no}" if v == 0 else f"STAGE {no}-{(beat.get('index', 0) % 4) + 1:.0f}", x0, y0, x1 - x0,
+                 H * .07, pal["hi"]),
+            _txt(f"{P}hd", head, x0, y0 + (y1 - y0) * .25, x1 - x0, T.fit(head, (x1 - x0) * .9, int(H * .085), 18), pal["ink"])]
+    js = [_in(f"#{P}lv", 0.05, "{opacity: 0, scale: 3}", '{opacity: 1, scale: 1, duration: 0.3, ease: "steps(5)"}'),
+          _in(f"#{P}hd", 0.35, "{opacity: 0}", '{opacity: 1, duration: 0.3, ease: "steps(4)"}')]
+    by = y0 + (y1 - y0) * .62
+    bw = (x1 - x0) * .6
+    bx = x0 + ((x1 - x0) - bw) / 2
+    html.append(f'<div style="position:absolute;left:{int(bx)}px;top:{int(by)}px;width:{int(bw)}px;height:{int(H * .06)}px;'
+                f'border:6px solid {pal["ink"]};box-sizing:border-box"><div id="{P}hp" style="position:absolute;left:4px;top:4px;'
+                f'bottom:4px;width:calc(100% - 8px);background:{pal["pop"]}"></div></div>')
+    js.append(f'tl.fromTo("#{P}hp", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: {0.75 if v == 0 else 0.4}, duration: 0.8, '
+              f'ease: "steps(8)"}}, 0.6);')
+    for k in range(5):
+        cx = bx + k * bw / 4.5
+        html.append(f'<div id="{P}c{k}" style="position:absolute;left:{int(cx)}px;top:{int(by + H * .1)}px;width:{int(H * .05)}px;'
+                    f'height:{int(H * .05)}px;background:#FFD23D;border:5px solid {pal["ink"]};box-sizing:border-box"></div>')
+        js.append(f'tl.fromTo("#{P}c{k}", {{y: -30, opacity: 0}}, {{y: 0, opacity: 1, duration: 0.2, ease: "steps(3)"}}, {0.8 + 0.1 * k:.2f});')
+    return _out(html, "", js, [(0.05, "glitch"), (0.6, "coin"), (0.9, "coin")])
+
+
+def diagram(P, beat, ctx):
+    """Blueprint: the line's subject as a part in the middle, callout lines drawing out to its other words."""
+    W, H, pal, v = ctx["W"], ctx["H"], ctx["pal"], ctx.get("variant", 0) % OWN
+    x0, x1, y0, y1 = _box(ctx)
+    words = [w.upper() for w in X.picker_words(beat["text"])]
+    main = _phrase(beat["text"], 2)
+    calls = [w for w in words if w not in main.split()][:3] or ["PART A", "PART B"]
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    bw, bh = (x1 - x0) * .3, (y1 - y0) * .32
+    ink = pal["ink"]
+    shape = "border-radius:50%" if v == 1 else "border-radius:6px"
+    html = [f'<div id="{P}m" style="position:absolute;left:{int(cx - bw / 2)}px;top:{int(cy - bh / 2)}px;width:{int(bw)}px;height:{int(bh)}px;'
+            f'border:4px solid {ink};{shape};box-sizing:border-box;background:rgba(255,255,255,0.06)"></div>',
+            _txt(f"{P}mt", main, cx - bw / 2, cy - H * .035, bw, T.fit(main, bw * .9, int(H * .065), 16), ink)]
+    js = [f'tl.fromTo("#{P}m", {{clipPath: "inset(0 100% 0 0)"}}, {{clipPath: "inset(0 0% 0 0)", duration: 0.5, ease: "none"}}, 0.05);',
+          _in(f"#{P}mt", 0.4)]
+    spots = [(x0 + (x1 - x0) * .05, y0 + (y1 - y0) * .05), (x1 - (x1 - x0) * .25, y0 + (y1 - y0) * .02),
+             (x1 - (x1 - x0) * .25, y1 - (y1 - y0) * .2)]
+    lines = []
+    for k, (lab, (lx, ly)) in enumerate(zip(calls, spots)):
+        ex, ey = (cx - bw / 2 if lx < cx else cx + bw / 2), cy + (k - 1) * bh * .3
+        tx = lx + (x1 - x0) * .2 if lx < cx else lx
+        lines.append(f'<path id="{P}l{k}" d="M{ex:.0f} {ey:.0f} L{tx:.0f} {ly + H * .05:.0f}" stroke="{ink}" stroke-width="3" '
+                     f'fill="none" style="stroke-dasharray:2000;stroke-dashoffset:2000"/>'
+                     f'<circle cx="{ex:.0f}" cy="{ey:.0f}" r="7" fill="{pal["pop"]}"/>')
+        html.append(_txt(f"{P}c{k}", lab, lx, ly, (x1 - x0) * .22, T.fit(lab, (x1 - x0) * .2, int(H * .045), 14), ink, T.BODY,
+                         extra=f"border-bottom:3px solid {ink};padding-bottom:4px"))
+        t = 0.6 + 0.25 * k
+        js += [f'tl.to("#{P}l{k}", {{strokeDashoffset: 0, duration: 0.4, ease: "none"}}, {t:.2f});', _in(f"#{P}c{k}", t + 0.3)]
+    html.insert(0, f'<svg style="position:absolute;left:0;top:0" width="{W}" height="{H}">{"".join(lines)}</svg>')
+    if v == 0:                                      # a dimension line under the part
+        html.append(f'<div id="{P}dim" style="position:absolute;left:{int(cx - bw / 2)}px;top:{int(cy + bh / 2 + H * .05)}px;width:{int(bw)}px;'
+                    f'height:0;border-top:3px solid {ink}"><div style="position:absolute;left:-2px;top:-12px;width:3px;height:22px;background:{ink}"></div>'
+                    f'<div style="position:absolute;right:-2px;top:-12px;width:3px;height:22px;background:{ink}"></div></div>')
+        js.append(f'tl.fromTo("#{P}dim", {{scaleX: 0}}, {{scaleX: 1, duration: 0.4, ease: "none"}}, 0.5);')
+    return _out(html, "", js, [(0.05, "swipe"), (0.6, "click")])
+
+
 # ---------------------------------------------------------------------------------------------- planner specs
 def _rx(p):
     c = re.compile(p, re.I)
@@ -1075,8 +1212,12 @@ SPECS.update({
     "dashboard": ({"statistic": 0.7, "story": 0.5, "comparison": 0.4}, True, _any),
     "terminal": ({"story": 0.6, "process": 0.5, "definition": 0.5}, False, _any),
     "sticky": ({"story": 0.6, "list": 0.5, "conclusion": 0.5}, False, _any),
+    "lower_third": ({"story": 0.7, "quote": 0.5, "definition": 0.4}, False, _any),
+    "evidence": ({"story": 0.7, "cause": 0.5, "question": 0.5}, False, _any),
+    "level": ({"story": 0.5, "comparison": 0.5, "statistic": 0.4}, False, _any),
+    "diagram": ({"definition": 0.8, "process": 0.6, "story": 0.5}, False, _any),
 })
-HOSTS = {"dashboard", "terminal", "sticky"}           # each format bans the ones that aren't its own
+HOSTS = {"dashboard", "terminal", "sticky", "lower_third", "evidence", "level", "diagram"}   # formats.ALL_HOSTS
 BUILDERS = {n: globals()[n] for n in SPECS}
 
 

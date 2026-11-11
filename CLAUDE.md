@@ -498,6 +498,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         the video capitalises mid-sentence are names everywhere (no apple for "Apple changed..."), "running" is filler.
         Preview: output/previews/formats_1-4.mp4 (2 x 2, the Windows opening, 18 s) + formats_1-4_sheet.jpg.
         Regression: sample_script draft 9 s, presets clean.
+  - [x] Step 6 (2026-11-11), WAITING FOR VARUN'S APPROVAL of formats 5-8: newsroom (white/red/navy, red top bar + LIVE
+        + ticker band, flat panels, host lower_third = faceless anchor silhouette + lower-third bar, bars / flash
+        transitions), case_file (noir, desk-lamp cone + vignette, manila cards, Cormorant SC + Courier Prime, host
+        evidence = board with blank polaroids + red string + stamp, flashlight transition), arcade_retro (CRT scanlines,
+        Press Start 2P, square corners, stepped easing, host level = LEVEL/STAGE card + health bar + coins, pixel iris
+        + shake), blueprint (blue grid + title block, light lines on blue cards, host diagram = part + callout lines +
+        dimension line, draw-on transition). Each format lists its own host scenes; every other format's hosts are
+        banned automatically (formats.ALL_HOSTS). Font added: Courier Prime (OFL). Windows (estimate) per format:
+        6-8 of 8 goals (Data Lab 4: a script with few numbers). Preview: output/previews/formats_5-8.mp4 + _sheet.jpg.
+        Regression: sample_script draft 11 s, presets clean.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
