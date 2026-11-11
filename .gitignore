@@ -47,3 +47,6 @@ node_modules/
 assets/library/icons/*/icons.json
 assets/library/icons/index.json
 assets/library/icons/embeddings.npy
+
+# each person's own notes for Claude Code (machine, accounts, to-dos): never shared
+CLAUDE.local.md

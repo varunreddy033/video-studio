@@ -1,45 +1,50 @@
-# Project: faceless YouTube automation (Varun)
+# Project: faceless YouTube automation (Varun + Raju)
 
-Read this first in every session. It is the single source of truth for how this
-pipeline works and what has already been decided. Don't re-propose decisions
-marked DECIDED unless I ask.
+Read this first in every session. It is the single source of truth for how this pipeline works and what has
+already been decided; it is shared by Varun and Raju, who both push to this repo. Each
+person also has a CLAUDE.local.md on their own Mac (gitignored): their machine, accounts and personal to-dos.
+Don't re-propose decisions marked DECIDED unless the person you're working with asks.
 
-## How I want you to work
-- I'm new to Claude Code and was burned by inconsistent, half-baked instructions before.
-  Give complete, working code only: no placeholders, no "adjust this to your setup".
-- Run commands yourself instead of telling me to copy-paste them. Ask before deleting files.
+## How to work (both of us)
+- Give complete, working code only: no placeholders, no "adjust this to your setup".
+- Run commands yourself instead of telling us to copy-paste them. Ask before deleting files.
 - One step at a time. Verify each step (run it, check output) before saying it's done.
 - Don't recommend a different architecture unless something is truly broken. If it is, say why in 2-3 lines.
 - Prices in Indian rupees.
-- Git (DECIDED 2026-11-08; two repos since 2026-11-10): after every change that is tested and working, commit
-  and push it to the PRIVATE repo https://github.com/varunreddy033/youtube-pipeline (branch main) without asking
-  me first. Then run `bin/python tools/publish_public.py` (also without asking): it copies the public part to the
-  PUBLIC repo https://github.com/varunreddy033/video-studio as one commit, and refuses if anything private would
-  leak. Private repo = everything; public repo = everything except PRIVATE.md and the paths in .publicignore
-  (scripts/, planning notes, old/, n8n/). Private details (real addresses, accounts) go ONLY in PRIVATE.md.
-  One clear commit per finished step. Never commit .env, old/n8n_data_backup_*, output/, models/, assets/audio/
-  (all in .gitignore). Run tools/check_secrets.sh before every commit. Don't push broken or untested code.
+- Git (DECIDED 2026-11-11, shared repo; CONTRIBUTING.md says the same in plain words):
+  - Always `git pull --rebase` first (on main, before starting a task).
+  - One short branch per task, named <name>/<task> (varun/style-tab, raju/arcade-fix). Small commits on it.
+  - When the task works: `bin/python tools/check_presets.py` (must say "presets: clean"), plus a draft of
+    docs/sample_motion_gfx_script.md and of docs/sample_script.md (both must render), then open a PR with
+    `gh pr create --fill`, and squash-merge it the same day (`gh pr merge --squash --delete-branch`), so the branch is
+    deleted. Then `git switch main && git pull --rebase`.
+  - Run `bash tools/check_secrets.sh` before every commit (must say "clean").
+  - Never force-push main. Never commit .env, data/, output/, models/, the generated icon indexes and packs
+    (assets/library/icons/*/icons.json, index.json, embeddings.npy), character pack images, or licensed music
+    (assets/audio/); .gitignore already covers them, don't override it.
+  - Don't push broken or untested code. Commit and push your own task branch without asking; merging the PR is part
+    of finishing the task.
+  - The public repo (varunreddy033/video-studio, tools/publish_public.py) is Varun's job only (his CLAUDE.local.md).
+    scripts/, PRIVATE.md and the .publicignore paths never go public.
 
 - Asset library rule (STANDING, 2026-11-11): "The asset library only grows. Any new icon, sound, music track or
   generated prop fetched or made for a video is stored in assets/library with its licence, source and tags,
-  indexed, and offered to later videos. Nothing is deleted without asking me."
+  indexed, and offered to later videos. Nothing is deleted without asking me." ("me" = the person you're working with.)
 
 ## Goal
 - 1 hour of new content per day (2x30 or 3x20 min preferred over 6x10: fewer uploads, less template-y).
-- I pick a trending topic each day and write the script with Claude (chat). Videos must be good enough that
+- We pick a trending topic each day and write the script with Claude (chat). Videos must be good enough that
   viewers like them and must not look mass-produced (YouTube "inauthentic content" policy judges the channel).
 - Cost: Rs 0/month. Everything runs on the Mac or on free services.
 
-## Machine
-- MacBook Air M5, 16 GB unified memory, 512 GB, fanless (long heavy renders throttle).
-- macOS user: varunreddy. Project folder: ~/youtube-pipeline (it is also a Python 3.11 venv:
-  ~/youtube-pipeline/bin/python).
-- Installed: Homebrew, ffmpeg-full 9.0.2 (linked as `ffmpeg`: libass, loudnorm, h264_videotoolbox), python@3.11,
-  espeak-ng, whisper-cpp (`whisper-cli`) + models/ggml-small.bin, kokoro 0.9.4, mflux 0.24, Pillow 13,
-  matplotlib 3.11. Docker Desktop UNINSTALLED 2026-11-08 (not needed). Old/unused: FastVideo repo, kokoro-mlx.
-- Image model: Runpod/FLUX.2-klein-4B-mflux-4bit (4.62 GB, Apache-2.0) in ~/.cache/huggingface/hub.
-  Kept loaded during a render by pipeline/image_worker.py: 18-28 s per 1280x720 image (slower when the Mac is
-  hot or swapping; the old one-process-per-image way took 20-30 s). Peak memory ~5.4 GB, freed after each render.
+## Requirements (each person's own Mac; specifics in CLAUDE.local.md)
+- Apple Silicon Mac (16 GB RAM recommended; fanless Airs throttle on long renders), macOS up to date, ~20 GB free.
+- setup.sh installs everything: Homebrew packages (ffmpeg-full with libass / loudnorm / h264_videotoolbox,
+  python@3.11, espeak-ng, whisper-cpp, Node 22), the venv in the project folder (bin/python), npm ci, the icon packs +
+  index, the models.
+- Image model: Runpod/FLUX.2-klein-4B-mflux-4bit (4.62 GB, Apache-2.0) in ~/.cache/huggingface/hub, kept loaded during
+  a render by pipeline/image_worker.py: ~18-28 s per 1280x720 image on an M5 Air (slower when hot or swapping).
+- Long jobs: plugged in, lid open (asleep = everything stops).
 
 ## Architecture (DECIDED 2026-11-08, final): "script.md -> Video Studio"
 ```
@@ -108,10 +113,10 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   and that amber_word writes the original caption file byte for byte, against a frozen copy of the old code).
 
 ## Look & sound (BUILT 2026-11-10): voice, music, captions, sound effects in Video Studio
-- DECIDED 2026-11-10: assets/library/ IS in git (I upload music/SFX through GitHub): music/<mood>/, sfx/<kind>/,
+- DECIDED 2026-11-10: assets/library/ IS in git (music/SFX are uploaded through GitHub): music/<mood>/, sfx/<kind>/,
   README.md = what to upload. Folder name = how a file is found. assets/audio/ stays local + ignored and still works.
-  13 starter SFX are synthesised by tools/make_starter_sfx.py (no licence; my own files in a folder win).
-  No music tracks uploaded yet (2026-11-10): videos have no music until I add some.
+  13 starter SFX are synthesised by tools/make_starter_sfx.py (no licence; your own files in a folder win).
+  Music: 28 tracks in assets/library/music/<mood>/ since 2026-11-11 (licence unknown, private repo only).
 - UI: one "Look & sound" card after Check (new-video screen + Script editor), tabs Voice / Music / Captions /
   Sound effects / Art style; every click writes a header line (voice:, music:, captions:, sfx:, art_style:).
   Clip Shorts show only Captions.
@@ -135,7 +140,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 ## Art styles (F6, BUILT 2026-11-09)
 - presets/art_styles/<id>.json: id, label, description, prefix, suffix, stock_suffix, realistic, lora (null only:
   the worker can't load LoRAs), lora_scale, steps (null = 4), licence. 8 styles: doc_photo (default), cinematic_film,
-  archival_bw, dark_oil_painting, graphic_novel, noir_neon, isometric_3d, paper_cut. Prompt words are my own text
+  archival_bw, dark_oil_painting, graphic_novel, noir_neon, isometric_3d, paper_cut. Prompt words are our own text
   (I wrote them; the brief's table didn't come through), adapted from twri/sdxl_prompt_styler (MIT).
 - ONE function visuals.style_prompt(prompt, style, stock) = "prefix, prompt, stock_suffix ([stock:] only), suffix".
   Used by [ai:]/[stock:] shots, the 2 AI thumbnails (thumbnails.thumb_prompt) and clip.py (with the SOURCE job's
@@ -178,11 +183,10 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   everything stops (this cost ~6 hours overnight on 2026-11-08).
 
 ## Decisions and why (don't undo these)
-- Scripts are written by me with Claude in chat, pasted as script.md. No LLM API in the pipeline (Rs 0, and I
+- Scripts are written by us with Claude in chat, pasted as script.md. No LLM API in the pipeline (Rs 0, and we
   review every fact). The Gemini script writer is retired (old/script_gen_gemini.py).
 - n8n is RETIRED (synchronous 30-min render call broke long videos). n8n/ folder kept for reference.
-  Docker is uninstalled; the old n8n_data volume (workflow + saved Gemini/YouTube credentials) is backed up in
-  old/n8n_data_backup_20261108.tar.gz (private file, keep it off the internet).
+  Docker isn't needed.
   old/render_server_v1.py and old/index_v1.html are the previous versions (nothing deleted).
 - NO stock video (DECIDED 2026-11-08): Pexels paused new API keys. Visual mix: ~65% AI images (6-10 s each,
   ~45-55 per 10 min) + ~35% cards/numbers/quotes/charts (3-6 s, instant). Parser warns above 12 s per photo shot,
@@ -194,25 +198,23 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   encoder.py picks nvenc/libx264 on other machines.
 - Server binds 127.0.0.1:8765. Port 8765, NOT 5000 (macOS AirPlay Receiver).
 - ONLINE (DECIDED 2026-11-08): reachable from anywhere at https://<your-name>.<your-tailnet>.ts.net through
-  Tailscale Funnel (each person sets their own: their own Tailscale account, hostname and tailnet; mine is in
-  PRIVATE.md, private repo only; `tailscale ... funnel status` prints it). Free, fixed HTTPS address,
+  Tailscale Funnel (each person sets their own: their own Tailscale account, hostname and tailnet;
+  `tailscale ... funnel status` prints it). Free, fixed HTTPS address,
   no router/domain. tailscaled runs in userspace mode (no admin password), state in ~/Library/Application Support/vs-tailscale. Funnel forwards to 127.0.0.1:8765.
 - Every page/API needs a login (pipeline/auth.py): users in data/users.json (scrypt hashes, data/ is private and
   gitignored), signed 14-day session cookie (Secure over https), X-VS header + Origin check against CSRF,
   5 wrong passwords for a username -> that username locked 15 min (visitor IPs are hidden by the tunnel), security headers, 2 MB request cap. First account via /setup with the
   one-time code printed in output/server.log. The admin can add/remove users on the Account screen.
   tools: 19-check security test passed. The X-Render-Token header (from .env) still works for curl on this Mac.
-- Friend: runs HIS OWN copy on HIS OWN Mac with his own login and Tailscale address (docs/FRIEND_SETUP.md).
-  He clones the public repo (or, with collaborator access, the private one). No shared server.
+- Each person runs their OWN copy of this repo on their OWN Mac with their own login and Tailscale address
+  (docs/FRIEND_SETUP.md: clone this repo as origin, no fork, no upstream). No shared server; the code is shared.
 - Upload is manual in YouTube Studio: the API project is unverified (uploads forced private) and Studio
   has thumbnail A/B tests and the AI-content disclosure checkbox.
 - Local Wan 2.1 video generation DROPPED (14B for image-to-video, NVIDIA-only tooling, far too slow on 16 GB).
 - Script rules: no invented facts/quotes about real people, no text/logos/real faces in AI prompts.
 
-## Accounts / keys (.env; I paste them myself, never in chat or code)
-- HF_TOKEN: optional Hugging Face read token for model downloads.
-- YouTube: the channel account, manual upload in Studio.
-- Unused now: RENDER_TOKEN, FAL_KEY lines in .env (harmless). Backups: output/.env.backup-20261108(b).
+## Accounts / keys
+- .env on each Mac, pasted by its owner, never in chat, code or git: HF_TOKEN (optional), RENDER_TOKEN.
 
 ## Assets
 - assets/library/ (in git, 2026-11-10): music/<mood>/ and sfx/<kind>/, see assets/library/README.md.
@@ -223,7 +225,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   Missed My Chance, Soaring; Jeremy Korpas: Elysian Fields). sfx has 3 typing sounds.
 - `music:` matches words in file names, so use a track name (misdirection, soaring, elysian ...); mood words like
   'dark' match nothing and pick a random track.
-- Still missing SFX: whoosh, sub-drop, riser, glitch, shutter (I download these from the YouTube Audio Library).
+- Since 2026-11-11 the library has 198 CC0 SFX in assets/library/sfx (tools/fetch_sfx_openverse.py).
 
 ## Current status (update this section as we go)
 - [x] setup.sh run, ffmpeg-full installed, setup.sh filter-check bug fixed (2026-11-08)
@@ -234,37 +236,15 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       -> metadata, loudness measured -14.0 LUFS.
 - [x] Pexels removed (keys paused); [stock:] now makes an AI documentary photo. Image model kept loaded
       (image_worker.py) with MLX cache clearing. Re-tested in the browser: draft 7 s, final 64 s, thumbnails OK.
-- [ ] Optional: paste HF_TOKEN into .env.
-- [x] Quit Docker Desktop (2026-11-08, n8n container stopped with it). Swap in use 12.3 -> 7.9 GB, AI images
-      22-28 s -> 18-19.5 s each. Keep Docker closed while rendering; a Mac restart clears the leftover swap.
-- [x] Mac restarted (swap 7.9 GB -> 4 MB). Docker Desktop uninstalled (app, helpers, CLI, 1.9 GB n8n image,
-      2.2 GB data; disk free 337 -> 341 GB). Only an empty macOS-protected stub folder remains.
-- [x] Asset folders cleaned (2026-11-08).
-- [ ] I add whoosh/riser/sub-drop/glitch/shutter SFX to assets/audio/sfx.
 - [x] First real video (2026-11-08): scripts/2026-11-08-ai-bubble.md, job 20261108-142648-792e8d.
       9:16 long, 76 shots (55 AI images incl. thumbnails, 23 graphics), -14.0 LUFS. Draft 66-119 s.
       Final 26 min (images avg 27.9 s, max 33 s as the Mac heated up) + 1 min thumbnails. Not uploaded yet.
       Fixed: [number: ... | prefix=$ suffix=B] in one slot was parsed as a literal label.
 - [ ] A 30-min video; time it (expect ~75-85 min final at ~28 s per image).
-- [ ] Ask me before deleting ~1.8 GB of stale *.incomplete files in
-      ~/.cache/huggingface/hub/models--Runpod--FLUX.2-klein-4B-mflux-4bit/blobs, and the test folders
-      output/vtest, output/atest.
-- [x] Login system + Account screen + online through Tailscale Funnel (2026-11-08). Account varunreddy (admin).
-- [x] Auto-start installed (2026-11-08, I approved): launchd agents com.videostudio.server (caffeinate -is +
-      render_server.py) and com.videostudio.tailscale (userspace tailscaled) in ~/Library/LaunchAgents.
-      Start at login, restart on crash (tested), Funnel comes back by itself. Mac stays awake when plugged in.
-- [x] Public address tested from outside (via Tailscale relay): login 200 with valid cert, everything else
-      401/302/403 when logged out. Funnel doesn't pass the visitor's IP, so lockout is per username only.
-- [ ] Friend: send docs/FRIEND_SETUP.md, add his GitHub username as a collaborator. Guide updated 2026-11-09:
-      own repo as origin + mine as upstream (push DISABLED) + his URL in his CLAUDE.md git rule, his own
-      character (miso/biscuit/nova or his own; Sterling is my brand), pack build ~2-2.5 h, keep-awake, both
-      video types. setup.sh now installs + import-checks rembg, onnxruntime, transformers, opencv (ran clean here).
-- [x] Code on GitHub (2026-11-08): private repo varunreddy033/youtube-pipeline, pushed after every verified change.
-- [x] Public repo (2026-11-10): varunreddy033/video-studio, fresh history, filled only by tools/publish_public.py
-      (leak checks: secrets, Tailscale/Gmail addresses, PRIVATE.md values, blocked files). The private repo's
-      history was also scrubbed of the address + Gmail (backup: output/backups/); its 13 old commits are still
-      reachable by ID on GitHub and a friend's private fork has the old history (details in PRIVATE.md), which is why the private repo
-      stays private. check_secrets.sh blocks personal data outside PRIVATE.md / .publicignore paths.
+- [x] Login system + Account screen + online through Tailscale Funnel (2026-11-08); auto-start via
+      tools/install_autostart.sh (launchd: server + userspace tailscaled, restart on crash).
+- [x] Code on GitHub (2026-11-08): private repo varunreddy033/youtube-pipeline. Shared with Raju (write access)
+      since 2026-11-11: branches + PRs (CONTRIBUTING.md). Public copy varunreddy033/video-studio (Varun publishes).
 - [x] Presenter build (2026-11-08/09), timings:
       step 1 format + parser: draft of the Sterling script 7:34 rendered in 102 s.
       step 2 Sterling pack: poses 13 min, 84 mouth/blink edits ~100 min of real work (55-75 s each + 8 s cool-down),
@@ -273,7 +253,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       steps 3-5: lip-sync test clip 4 s in 10 s; parallax 5 s 1080p clip in 11 s (first run +2 min model download).
       step 6 final (scripts/ai_bubble_sterling.md, job 20261108-184222-d0b89e): 7:44, 67 shots (27 talk, 15 act),
       -14.0 LUFS, 250 s with cached images (first full run ~35-45 min); Short 50 s in 38 s; thumbnails 1 s;
-      upload_pack.zip 239 MB. Not uploaded yet (I upload from the web page).
+      upload_pack.zip 239 MB. Not uploaded yet.
 - [x] docs/CLAUDE_SCRIPT_PROMPT.md: prompt A = Sterling presents (character:, [talk:], [act:], his persona and
       catchphrases, pacing + today's lessons), prompt B = no presenter. Prompt A's format passes Check clean.
 - [ ] Packs for other characters (docs/characters/biscuit.md, nova.md) when needed (~2 h each, plugged in).
@@ -285,7 +265,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         words with label tags + word-by-word headline pill; line chart draws while -5.5% counts, calendar page flips,
         shake on "slammed"; push-from-right with shadow band; zoom-through into the chart's red end dot; doors with
         "?" bubbles, coin pile, dashed arrow. Render: Remotion 16.4 s, total 19 s (concurrency 4). -14.0 LUFS.
-        Approved by Varun 2026-11-10.
+        Approved 2026-11-10.
   - [x] Phase 2 bridge (2026-11-10): `style: motion` in the header -> pipeline/motion.py (jobs.py routes it; classic
         untouched apart from per-stage timings). Contract docs/MOTION_TIMELINE.md + motion/src/motion/types.ts:
         scenes (from/frames/transition/background/headline), elements with enter/exit cues = word index + frame.
@@ -333,7 +313,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         generated in 88 s (29-32 s each incl. cool-down), whole final 114 s; same final again 19 s, 0 generated.
         Remotion draws plates dimmed toward the palette with a slow drift. Lesson: the server must be restarted
         after code changes (a render ran the old code once).
-  - [x] Phase 6 = 3D Sterling inside motion scenes (DECIDED by Varun 2026-11-10: no 2D conversion; quality first).
+  - [x] Phase 6 = 3D Sterling inside motion scenes (DECIDED 2026-11-10: no 2D conversion; quality first).
         [char:] is the normal 3D pack, lip-synced + blinking in Remotion (Placed.tsx CharView, pack mouth pictures,
         Kokoro phoneme timings), pose switches mid-scene; [act:]/[talk:]/[ai:] are full-frame motion scenes.
         Sterling Flat is PARKED (benchmark passed: docs/presenter_bench/RESULTS_FLAT.md, docs/characters/sterling_flat.md,
@@ -344,16 +324,15 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         First full motion video: scripts/2026-11-10-earpods-motion.md, job 20261110-205101-d56969: 8:55, 66 shots
         (29 scenes, 21 talk, 10 act, 6 ai), final 635 s = images/presenter 73 s (0 new AI images, cache seeded from
         the classic job) + Remotion 530 s for 16,064 frames + audio 26 s + mux 5 s; -14.0 LUFS; on battery.
-        WAITING FOR VARUN'S FEEDBACK on this video. Known weak spots: thin white rim around the 3D cut-out on navy,
+        Feedback on this video pending. Known weak spots: thin white rim around the 3D cut-out on navy,
         scenes are navy-only (no plates used), [talk:] shots are the classic studio look.
-  - [x] Weak-spot fixes for the EarPods motion video (2026-11-10, previews checked, FINAL NOT RE-RENDERED YET: battery
-        was 13%): puppet cut-outs get a clean edge (motion._clean_edge, PUPPET_VERSION 2, no white rim) + a soft glow
+  - [x] Weak-spot fixes for the EarPods motion video (2026-11-10, previews checked, FINAL NOT RE-RENDERED YET): puppet cut-outs get a clean edge (motion._clean_edge, PUPPET_VERSION 2, no white rim) + a soft glow
         behind the presenter; `plate=<known name>` works on any scene and shares one plate; 7 plates in
         assets/library/plates (city_night, city_day, home, stage, office, street, trading_floor), drawn blurred and
         dimmed; navy vignette on full-frame [talk:]/[ai:]/[act:] shots; narrow tiles taller; script got plates on 14
         scenes and pose switches/labels in slow stretches (Check: 1 pacing warning left, bose). Still to do: render
         the final plugged in and look at it; unbothered scene label touches the quote's last word.
-- [x] MOTION GRAPHICS = Raju's stick-figure renderer, ported in (DECIDED by Varun 2026-11-11: this is the motion look
+- [x] MOTION GRAPHICS = Raju's stick-figure renderer, ported in (DECIDED 2026-11-11: this is the motion look
       going forward; the Remotion `style: motion` with Sterling stays in the code, parked). Header
       `rendering_method: motion` (UI: Pictures = Motion graphics). Code in pipeline/motion_gfx/ (his pipeline/motion/,
       renamed because pipeline/motion.py is the Remotion renderer): kinetic words, stick figures, numbers/charts/
@@ -362,10 +341,9 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       d3275cc..b09e3bf (NOT a history merge: his history still holds the scrubbed address). Not taken: his CLAUDE.md,
       .claude/skills (627 files), skills-lock.json. His docs: docs/MOTION_GFX_PLAN.md, sample
       docs/sample_motion_gfx_script.md (Load sample with Pictures = Motion graphics). Also from him: 28 music tracks in
-      assets/library/music/<mood>/ (licence unknown -> in .publicignore, private repo only, until Varun confirms the
-      source), 46 SFX (assets/library/sfx/CREDITS.md), tools/fetch_sfx_openverse.py, sfx: rich.
-      style: motion + rendering_method: motion together = Check error. Side clone ~/youtube-pipeline-raju (push
-      disabled) and local branches port-raju-motion / merge-raju-b09e3bf: ask before deleting.
+      assets/library/music/<mood>/ (licence unknown -> in .publicignore, private repo only, until the source is
+      confirmed), 46 SFX (assets/library/sfx/CREDITS.md), tools/fetch_sfx_openverse.py, sfx: rich.
+      style: motion + rendering_method: motion together = Check error.
       Tests on the Mac 2026-11-11: presets clean; classic sample draft 13 s; Remotion sample draft 24 s; stick-figure
       sample draft 1:14 in 74 s; EarPods final scripts/2026-11-11-earpods-gfx.md, job 20261111-085018-292260: 8:53,
       209 scenes, 171 SFX, 611 s (HyperFrames 502 s). Weak spots seen: narration still says "I'm Sterling / a cat in
@@ -458,7 +436,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         8 goals) in render.log, the job page and the Check page (Variety card). BASELINE, Windows vs MacBook final
         20261111-125755-a5e140: 10 types in 194 scenes, figure 43.8 %, kinetic 38.7 %, top layout figure:2 x29,
         4 transition types (cut 48.5 %), A-B-A-B 89, 91.8 s without a data scene: 0 of 8 goals.
-        Regression: sample_script draft 12 s; motion sample draft 176 s (HyperFrames slower than the 79 s before).
+        Regression: sample_script draft 12 s; motion sample draft 176 s.
   - [x] Step 2 (2026-11-11): pipeline/motion_gfx/planner.py replaces templates.scene_plan's figure/kinetic alternation:
         roles per beat (statistic, comparison, list, process, cause, timeline, quote, definition, story, question,
         warning, conclusion, transition), candidates per type with a fit test, budget (type <= 20 %, type+layout <= 6,
@@ -488,7 +466,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         now imports it once at start. Fonts added: Patrick Hand + Space Mono (OFL, assets/fonts/licences).
         Formats scaffolding in the same commit (pipeline/motion_gfx/formats.py, header show:, default Pop Poster).
         Regression: sample_script draft 12 s; motion sample draft 216 s.
-  - [x] Step 5 (2026-11-11), WAITING FOR VARUN'S APPROVAL of the 4 formats: pipeline/motion_gfx/formats.py, header
+  - [x] Step 5 (2026-11-11), approved: pipeline/motion_gfx/formats.py, header
         show: (format: already means landscape/vertical) = pop_poster (default) | tech_desk | data_lab |
         paper_notebook. Per format: palette sets + font pairs (new: tech, lab, hand), icon style, card/line colours,
         line weight, shadow (offset / soft / glow), backdrop (none / UI grid + brackets / dot grid + glow / ruled paper
@@ -498,7 +476,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         the video capitalises mid-sentence are names everywhere (no apple for "Apple changed..."), "running" is filler.
         Preview: output/previews/formats_1-4.mp4 (2 x 2, the Windows opening, 18 s) + formats_1-4_sheet.jpg.
         Regression: sample_script draft 9 s, presets clean.
-  - [x] Step 6 (2026-11-11), WAITING FOR VARUN'S APPROVAL of formats 5-8: newsroom (white/red/navy, red top bar + LIVE
+  - [x] Step 6 (2026-11-11), approved: newsroom (white/red/navy, red top bar + LIVE
         + ticker band, flat panels, host lower_third = faceless anchor silhouette + lower-third bar, bars / flash
         transitions), case_file (noir, desk-lamp cone + vignette, manila cards, Cormorant SC + Courier Prime, host
         evidence = board with blank polaroids + red string + stamp, flashlight transition), arcade_retro (CRT scanlines,
@@ -522,7 +500,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         in 187 scenes, top type kinetic 15.0 %, top type+layout 6, 8 transition types, kinetic 15.0 % = every acceptance
         number met; 7:41 in 1481 s. EarPods (job 20261111-162741-a1f91e) got Case File (different format, reserved at
         queue time) but the server restart stopped it mid-render: press Make final again, then make the 1-frame-every-10-s
-        side-by-side contact sheet. Since then (committed untested at Varun's request; he tests): format + look
+        side-by-side contact sheet. Since then (committed untested; Varun tests): format + look
         reserved when a motion job is QUEUED (re-renders too, status "rendering", back to done/draft after);
         layouts = own arrangements x (plain + 4 frames) (15 older / 10 newer types); Style tab in Look & sound
         (Auto + 8 formats with preview strips from assets/format_previews, writes show:), GET /api/formats.
@@ -563,11 +541,11 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - Auto-start install/remove: `bash tools/install_autostart.sh` / `bash tools/install_autostart.sh remove`
 - Copy a character pack to the other machine: `bin/python tools/export_character_pack.py sterling`, then there:
   `python tools/import_character_pack.py sterling-pack-<date>.zip` (add `--force` to replace an existing pack)
-- Save + upload a finished change: `cd ~/youtube-pipeline && git add -A && bash tools/check_secrets.sh && git commit -m "..." && git push`
+- Start a task: `cd ~/youtube-pipeline && git switch main && git pull --rebase && git switch -c <name>/<task>`
+- Finish a task: `bash tools/check_secrets.sh && git commit -am "..." && git push -u origin HEAD && gh pr create --fill && gh pr merge --squash --delete-branch`, then `git switch main && git pull --rebase`
 - Secret check before every commit (must say "clean"): `bash tools/check_secrets.sh`
 - Preset check (must say "presets: clean"): `bin/python tools/check_presets.py`
-- GitHub login (gh CLI, account varunreddy033): `gh auth status`. Commits use the no-reply email
-  150993157+varunreddy033@users.noreply.github.com.
+- GitHub login (gh CLI, your own account): `gh auth status`.
 - Start Video Studio, then open http://localhost:8765 : `~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py`
 - Restart Video Studio (after code changes): `launchctl kickstart -k gui/$(id -u)/com.videostudio.server`
 - Stop it until next login: `launchctl bootout gui/$(id -u)/com.videostudio.server` (killing the process just restarts it)

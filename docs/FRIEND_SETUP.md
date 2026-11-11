@@ -1,8 +1,9 @@
-# Video Studio on your own Mac (setup for a friend)
+# Video Studio on your own Mac (setup for a new team member)
 
-You get your own copy of Video Studio, on **your** Mac, with **your** login, **your** web address
-(`https://video-studio.<your-tailnet>.ts.net`), **your** GitHub repository and **your** presenter character.
-Your renders use your Mac, never Varun's. Cost: Rs 0.
+You run Video Studio on **your** Mac, with **your** login, **your** web address
+(`https://video-studio.<your-tailnet>.ts.net`) and **your** presenter character, and you work on the **same** code
+as everyone else: one shared GitHub repository, everyone pushes there through short branches and pull requests
+(CONTRIBUTING.md). Your renders use your Mac, never someone else's. Cost: Rs 0.
 
 **You need:** a MacBook with Apple Silicon (M1 or newer, 16 GB RAM recommended; tested on an M5 Air 16 GB),
 macOS up to date, about **20 GB free disk**, a GitHub account, about 1 hour for setup (mostly downloads), and
@@ -17,8 +18,9 @@ What is NOT in the code, and what you make yourself:
 ---
 
 ## 1. Get access to the code (5 min)
-Make a free GitHub account at https://github.com if you don't have one (step 4 puts your own copy there).
-The code is public (github.com/varunreddy033/video-studio), so anyone can clone it; no invite needed.
+Make a free GitHub account at https://github.com if you don't have one and send Varun your username. He adds you
+as a collaborator with **write** access to github.com/varunreddy033/youtube-pipeline (private); accept the
+invitation in the e-mail GitHub sends you (or at https://github.com/notifications).
 
 ## 2. Install the basic tools (15 min)
 Open the **Terminal** app (Cmd+Space, type "Terminal") and run these one at a time.
@@ -38,38 +40,34 @@ gh auth login --hostname github.com --git-protocol https --web
 ```
 Press Enter at each question, then open the link it shows, paste the code, and click **Authorize**. Then:
 ```bash
-git clone https://github.com/varunreddy033/video-studio ~/youtube-pipeline
+git clone https://github.com/varunreddy033/youtube-pipeline ~/youtube-pipeline
 ```
 
-## 4. Make it YOUR repository (5 min, do this before anything else)
-Right now the copy points at Varun's public repository. Point it at your own, so you never push to his:
+## 4. Set it up for working together (5 min, do this before anything else)
+Your copy points at the shared repository as **origin**. That is all: no fork, no second "upstream" remote.
 ```bash
 cd ~/youtube-pipeline
-git remote rename origin upstream
-git remote set-url --push upstream DISABLED
-gh repo create youtube-pipeline --private --source=. --remote=origin
-git push -u origin main
 git remote -v
 ```
-`git remote -v` must now show **origin** = `github.com/<your-username>/youtube-pipeline` (fetch and push) and
-**upstream** = Varun's repo with push `DISABLED` (a push to it fails instead of reaching his code).
+It must show only **origin** = `github.com/varunreddy033/youtube-pipeline` (fetch and push).
 
-Then change the git rule at the top of `CLAUDE.md` (Claude Code reads it and pushes after every change), so it
-points at your repo. Replace `YOUR-USERNAME` with your GitHub username:
+Then make your own notes file for Claude Code. `CLAUDE.md` is shared (how everything works, decisions, status);
+`CLAUDE.local.md` is only yours and never leaves your Mac (it is in `.gitignore`):
 ```bash
-cd ~/youtube-pipeline
-sed -i '' "s#github.com/varunreddy033/youtube-pipeline#github.com/YOUR-USERNAME/youtube-pipeline#" CLAUDE.md
-grep -n "YOUR-USERNAME\|github.com/" CLAUDE.md
+cat > ~/youtube-pipeline/CLAUDE.local.md <<'NOTE'
+# <your name>'s local notes (CLAUDE.local.md: on this Mac only, gitignored)
+## Me
+- GitHub account: <your-username>. Branches are named <your-name>/<task> (CONTRIBUTING.md).
+## My machine
+- <Mac model, RAM>, macOS user <you>, project folder ~/youtube-pipeline.
+## My accounts / keys
+- .env on this Mac only. My Video Studio login: <your username>. My Tailscale address: <after step 10>.
+## My to-dos
+NOTE
 ```
-The `grep` must show your username in the "Git (DECIDED ...)" line. That rule also tells Claude Code to run
-`tools/publish_public.py`, which publishes to Varun's public repo: open `CLAUDE.md` and delete the sentences from
-"Then run `bin/python tools/publish_public.py`" to the end of the line that mentions .publicignore (you only have
-one repo; the script can't push to Varun's repo anyway). Then:
-```bash
-git commit -am "My own repo in the git rule" && git push
-``` The rest of `CLAUDE.md` describes Varun's
-Mac and accounts: the first time you open Claude Code in this folder, ask it to update the "Machine",
-"Accounts / keys" and "Current status" sections for you.
+The first time you open Claude Code in this folder, ask it to fill in that file for you (your Mac, accounts). Read
+**CONTRIBUTING.md** once: every change you make goes on a short branch, gets tested, then a pull request that is
+merged the same day. Claude Code knows the rules (they are in CLAUDE.md) and does the git steps when you ask.
 
 ## 5. Install everything Video Studio needs (30-45 min, mostly downloading)
 ```bash
@@ -187,19 +185,19 @@ paste it, **Check**, **Save & make draft** (about a minute), then **Make final**
 Every video is saved in `~/youtube-pipeline/output/jobs/<id>/` (final.mp4, thumbnails, metadata.txt,
 upload_pack.zip). That folder isn't in git, so back up what you keep. Upload by hand in YouTube Studio.
 
-## Getting updates from Varun
+## Getting the latest code
 ```bash
-cd ~/youtube-pipeline && git pull upstream main && bash setup.sh && git push
+cd ~/youtube-pipeline && git switch main && git pull --rebase && bash setup.sh
 ```
 then restart Video Studio: `launchctl kickstart -k gui/$(id -u)/com.videostudio.server` (or log out and in).
-If git reports a conflict in `CLAUDE.md`, keep **your** git rule line (your repo URL); Claude Code can resolve
-it for you if you ask.
+To change something yourself, follow CONTRIBUTING.md (branch, test, pull request, squash-merge the same day).
 
 ## If something goes wrong
 | Problem | Fix |
 |---|---|
 | `setup.sh` stops with an error | Run it again; it continues where it stopped. |
-| `git push` says "DISABLED" | You tried to push to Varun's repo. Use `git push` (origin = yours); check `git remote -v`. |
+| `git push` is refused for `main` | Work on a branch (CONTRIBUTING.md), then open a pull request. Never force-push main. |
+| `git pull --rebase` stops with a conflict | Ask Claude Code to resolve it keeping both changes, then `git rebase --continue`. |
 | Final says "waiting for <name>'s character pack" | Build the pack (step 8); the final starts by itself when it's done. |
 | Pack build stopped overnight | The Mac slept (step 6). Plug in, lid open, run the same command again; it resumes. |
 | Address doesn't open | Is the Mac awake and online? Is Video Studio running (step 9 or 10)? |
