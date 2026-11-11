@@ -366,7 +366,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       sample draft 1:14 in 74 s; EarPods final scripts/2026-11-11-earpods-gfx.md, job 20261111-085018-292260: 8:53,
       209 scenes, 171 SFX, 611 s (HyperFrames 502 s). Weak spots seen: narration still says "I'm Sterling / a cat in
       a blazer", no earphone props, filler kinetic words, a near-empty frame around 6:05.
-- [ ] ASSET PACKS for motion graphics (docs/ASSET_PACKS_PLAN.md, build order = its section 7; branch main):
+- [x] ASSET PACKS for motion graphics (docs/ASSET_PACKS_PLAN.md, build order = its section 7; branch main):
   - [x] Step 1 importer (2026-11-11): pipeline/icon_library.py (PACKS, licence allow-list, svg(id), credit_lines) +
         tools/import_icon_packs.py (`--check` = stale test). Packs from pinned @iconify-json npm packages (root
         package.json): fluent_flat 1,594, fluent_color 1,590, noto 1,680, phosphor fill+duotone 3,024, tabler 6,287,
@@ -421,6 +421,11 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         licence, likely Pixabay = not on the allow-list); BLOCKED.txt (util.music_blocked) keeps 3 tagged covers out:
         dark/unsolved_mystery (Radiohead cover), dark/creepy_melody, dark/horror_piano. Test reel: 35 different SFX
         files in 50 effects (was 15), -14.2 LUFS; classic draft 13 s; Remotion 27 s; presets clean.
+  - [x] Step 7 test (2026-11-11): EarPods final re-rendered, job 20261111-111507-480c21: 8:53, 209 scenes, 602 s
+        (HyperFrames 494 s), -14.0 LUFS, look noto/warm/comic/sticker. 72 different icons, none twice, 2 question-style
+        (white + red question mark): all three checks PASS. 157 SFX from 58 different files. Contact sheet old vs new:
+        output/contact_sheets/earpods_old_vs_new.jpg (scratchpad contact_sheet.py). This final is the first entry in
+        data/asset_history.json. Old job 20261111-085018-292260 kept (ask before deleting).
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
