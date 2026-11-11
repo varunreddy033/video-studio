@@ -129,6 +129,14 @@ pick per scene and the repetition numbers; Pin / Ban write the lines below.
 | `fonts: poster` | font pairing: `poster` (Anton + Poppins), `condensed` (Barlow Condensed + Barlow), `comic` (Bangers + Poppins) |
 | `icon_style: sticker` | `sticker` (white rounded badge, dark outline, shadow; default) or `plain` |
 
+Scene types (motion graphics). Besides kinetic words, stick figures, numbers, charts, quotes, memos and title
+cards, the narration's words start six more scene types: a **country** ("Singapore", "Chinese") = world map with the
+country lit + its flag (each country once per video); a **year** ("twenty sixteen", 2021) = a timeline of the
+video's years; a **percentage** ("twenty percent", "seven out of ten") or "battery" = a bar, battery or gauge;
+**"X or Y" / "X versus Y" / "instead of"** = two icons face off; a **list** of 3-4 short items = a row of icons;
+**"thousands of" / "thirteen pairs of"** = one icon raining into a pile. Each type waits 25 s before it shows again,
+and every scene type has 3 layouts that take turns. Write the list or the comparison in one sentence to get them.
+
 With `look: auto` each part not pinned is the one the last 5 finished videos used least (data/asset_history.json,
 written after every final; icons used there rank a little lower too). A video already in that file keeps its look,
 so re-rendering a script gives the same video.

@@ -109,17 +109,12 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     shutil.rmtree(project / "compositions", ignore_errors=True)
     compose.prepare(project, voice_wav)
     cues = []
-    used_tpl = T.scene_names(beats)
-    plan = picker.plan(beats, used_tpl, dict(meta, look_icons=look["icons"]), seen)                   # every scene's icon, decided for the whole video
-    for i, n in enumerate(used_tpl):                            # no icon for a figure scene -> kinetic words
-        if n == "figure" and (i, 0) not in plan["picks"]:       # (unless that would put two word scenes in a row)
-            near = [used_tpl[j] for j in (i - 1, i + 1) if 0 <= j < len(used_tpl)]
-            if "kinetic" not in near:
-                used_tpl[i] = "kinetic"
+    used_tpl, variants, info, plan = picker.plan_video(beats, dict(meta, look_icons=look["icons"]), seen, seed)
+    from . import extras as X
+    video_years = sorted({y for b in beats for y in X.years(b["text"])})
     icons = {}
     for (bi, slot), pk in plan["picks"].items():
-        if used_tpl[bi] != "kinetic":
-            icons.setdefault(bi, {})[slot] = dict(pk, uri=picker.data_uri(pk["id"]), sound=picker.sound_for(pk["id"]))
+        icons.setdefault(bi, {})[slot] = dict(pk, uri=picker.data_uri(pk["id"]), sound=picker.sound_for(pk["id"]))
     icon_rep = plan["report"]
     (project / "icons.json").write_text(json.dumps(dict(icon_rep, pool=plan["pool"], nouns=plan["nouns"]), indent=1),
                                         encoding="utf-8")
@@ -133,7 +128,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         pal = D.PALETTES[order[i]]
         ctx = {"W": W, "H": H, "fmt": fmt, "pal": pal, "dur": b["dur"], "shot": parsed["shots"][b["shot"]],
                "rnd": random.Random(seed + i), "icons": icons.get(i, {}),
-               "look": look}
+               "look": look, "variant": variants[i], "years": video_years, **info[i]}
         P_ = compose.host(i) + "-"
         parts = T.build(name, P_, b, ctx)
         (project / "compositions" / f"scene_{i + 1:03d}.html").write_text(
@@ -143,6 +138,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         if b["transition"] != "cut":
             cues.append((b["start"] - b["ov"] * 0.6, "swipe" if b["transition"] == "push" else "whoosh"))
         b["template"] = name
+        b["variant"] = variants[i]
         progress("visuals", i + 1, len(beats))
     words = B.video_words(tl)
     cap = meta["presets"]["captions"]
@@ -152,7 +148,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             compose.captions_file([w[:3] for w in words], total, W, H, fmt), encoding="utf-8")
     (project / "index.html").write_text(compose.index_file(beats, total, W, H, C.FPS, title, chip), encoding="utf-8")
     (project / "beats.json").write_text(json.dumps(
-        [{k: b[k] for k in ("shot", "kind", "index", "start", "end", "template", "transition", "text")} for b in beats],
+        [dict({k: b[k] for k in ("shot", "kind", "index", "start", "end", "template", "transition", "text")},
+              variant=b["variant"], icons=[x["id"] for _s, x in sorted(icons.get(i, {}).items())]) for i, b in enumerate(beats)],
         indent=1), encoding="utf-8")
     counts = {n: used_tpl.count(n) for n in sorted(set(used_tpl))}
     log(f"  {len(beats)} scenes (one every {total / max(1, len(beats)):.1f} s): " +
@@ -236,8 +233,9 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     shutil.rmtree(work, ignore_errors=True)
     if mode == "final":                                          # freshness for the next videos (data/, private)
         history.record(title, job_dir.name, {
-            "look": look, "icons": sorted({pk["id"] for (bi, _s), pk in plan["picks"].items() if used_tpl[bi] != "kinetic"}),
-            "templates": sorted(set(used_tpl)), "palettes": sorted({D.PALETTES[k]["name"] for k in order}),
+            "look": look, "icons": sorted({pk["id"] for (bi, _s), pk in plan["picks"].items()}),
+            "templates": sorted({f"{'title' if n == 'chapter' else n}:{v}" for n, v in zip(used_tpl, variants)}),
+            "palettes": sorted({D.PALETTES[k]["name"] for k in order}),
             "fonts": [look["fonts"]], "music": sorted({m["track"] for m in music or []}),
             "sfx": sorted({u.split(" -> ")[-1] for u in sfx_used})})
     secs = time.time() - t_start

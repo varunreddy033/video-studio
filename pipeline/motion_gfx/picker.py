@@ -53,7 +53,7 @@ BORING = re.compile(
     r"hindu-temple|church|shinto-shrine|prayer-beads|pile-of-poo|middle-finger|bikini|briefs|lipstick|kiss-mark|"
     r"syringe|pill|drop-of-blood|coffin|funeral-urn|headstone|cigarette|water-pistol|bomb|pistol|dagger|"
     r"crossed-swords|baby-bottle|breast-feeding|pregnant-.*|toilet|roll-of-paper|plunger|condom)$")
-FACES = ("Smileys & Emotion", "People & Body")
+FACES = ("Smileys & Emotion", "People & Body")          # ranked a little lower: a generic face/person rarely fits
 NUMBER_WORDS = set("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
                    "sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety hundred "
                    "thousand million billion trillion first second third half percent".split())
@@ -63,7 +63,7 @@ FILLER = set("thing things people person year years time times day days way ways
              "meanwhile already never ever always actually simply exactly almost around between during without "
              "became become becomes started stopped put putting come comes goes going went gone getting gets "
              "used using uses made make makes took take takes found find finds little big small more most less "
-             "least many few own sterling here there week pair lost wearing wear wore worn thats youre theyre best better good great real true whole same other another every each still even just only also again last next new old".split())
+             "least many few own sterling isnt dont doesnt cant wont didnt arent wasnt work works keep keeps explained explain here there week pair lost wearing wear wore worn thats youre theyre best better good great real true whole same other another every each still even just only also again last next new old".split())
 # words that are also an icon's name but nearly never mean it (fly = the insect, shorts = the clothes ...)
 AMBIGUOUS = set("fly short rose box jack case light right watch chip trap honey match bug cell mouse".split())
 # what the old RULES table showed for a clause -> words to search with (question / exclaim are not searched)
@@ -94,10 +94,20 @@ def stem(w: str) -> str:
     return w
 
 
-def content_words(text: str) -> list:
-    """The words of a clause worth searching an icon for, in spoken order (no repeats)."""
+NAME = re.compile(r"\b[A-Z][a-z]+-[A-Z][a-z]+\b|(?<![.!?:]\s)(?<!^)\b[A-Z][a-z]+(?:[-'’][A-Za-z]+)*\b|\b[A-Z]{2,}[a-z]*\b")
+
+
+def without_names(text: str) -> str:
+    """The clause without names: "Apple", "Lily-Rose Depp", "Bose" mean a company or a person, not an apple or a rose.
+    A capitalised word counts as a name unless it starts the clause or a sentence."""
+    return re.sub(r"\s+", " ", NAME.sub(" ", text.strip())).strip()
+
+
+def content_words(text: str, names: bool = False) -> list:
+    """The words of a clause worth searching an icon for, in spoken order (no repeats). Names are left out unless
+    names=True."""
     out = []
-    for w in re.findall(r"[A-Za-z][A-Za-z'’-]*", text):
+    for w in re.findall(r"[A-Za-z][A-Za-z'’-]*", text if names else without_names(text)):
         lw = w.lower().strip("'’-").replace("'", "").replace("’", "")
         if len(lw) < 3 or lw in T.STOP or lw in T.WEAK or lw in NUMBER_WORDS or lw in FILLER or stem(lw) in FILLER:
             continue
@@ -146,14 +156,14 @@ def figure_need(i: int, beat: dict) -> dict:
     """What a figure scene asks the picker for: one icon that shows what the clause is about."""
     text = beat["text"]
     qs = []
-    phrase = T.key_phrase(text, 3).lower()
-    if phrase and content_words(phrase):
+    phrase = " ".join(w for w in T.key_phrase(text, 3).lower().split() if w in content_words(text))
+    if phrase:
         qs.append((phrase, 1.0))
     for w in content_words(text):
         if stem(w) not in AMBIGUOUS:
             qs.append((w, 0.94))
     if len(content_words(text)) >= 2:
-        qs.append((re.sub(r"\s+", " ", text).strip(" .,;:!?").lower(), 0.86))
+        qs.append((without_names(text).strip(" .,;:!?").lower(), 0.86))
     for rx, (_pose, _outfit, props, _two) in T.RULES:
         if rx.search(text):
             qs += [(HINTS[p], 0.98) for p in props if p in HINTS]
@@ -167,18 +177,28 @@ def topic_nouns(meta: dict, beats: list) -> list:
     score, first = {}, {}
     order = 0
 
-    def add(text, weight):
+    def add(text, weight, with_names=False):
         nonlocal order
-        for w in content_words(text):
+        for w in content_words(text, with_names):
             s = stem(w)
             score[s] = score.get(s, 0) + weight
             first.setdefault(s, order)
             order += 1
 
-    add(meta.get("title", ""), 3)
+    caps, lower = {}, {}
+    for b in beats:                                   # a word is a name when it is mostly said capitalised
+        for m in NAME.finditer(b["text"]):
+            for p in re.split(r"[-'’]", m.group(0)):
+                caps[stem(p.lower())] = caps.get(stem(p.lower()), 0) + 1
+        for w in re.findall(r"\b[a-z][a-z'’-]+\b", b["text"]):
+            lower[stem(w)] = lower.get(stem(w), 0) + 1
+    names = {w for w, c in caps.items() if c > lower.get(w, 0)}
+    add(meta.get("title", ""), 3, True)
     add(str(meta.get("tags", "")).replace(",", " "), 2)
     for b in beats:
         add(b["text"], 1)
+    for w in names:
+        score.pop(w, None)
     keep = [w for w in score if score[w] >= 2 and len(w) >= 4 and w not in AMBIGUOUS]
     keep.sort(key=lambda w: (-score[w], first[w], w))
     return keep[:NOUNS]
@@ -222,7 +242,7 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
     name_words = [{stem(w) for w in rows[i]["name"].split("-")} for i in cand]
     name_last = [stem(rows[i]["name"].split("-")[-1]) for i in cand]
     key_words = [{stem(w) for w in rows[i]["words"]} for i in cand]
-    face = np.array([0.05 if rows[i]["category"] in FACES else 0.0 for i in cand], dtype="float32")
+    face = np.array([0.07 if rows[i]["category"] in FACES else 0.0 for i in cand], dtype="float32")
     stale = (history or {}).get("icons", {})
     fresh = np.array([0.05 if cid in stale else 0.0 for cid in cand_ids], dtype="float32")
 
@@ -230,6 +250,8 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
     for i, (b, n) in enumerate(zip(beats, names)):
         if n == "figure":
             all_needs.append(figure_need(i, b))
+        elif n == "kinetic" and not b.get("chapter_card"):    # words scenes take an icon only on a strong match
+            all_needs.append(dict(figure_need(i, b), optional=True))
     all_needs.sort(key=lambda n: (n["beat"], n["slot"]))
     nouns = topic_nouns(meta, beats)
 
@@ -287,7 +309,8 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
             scored.append(None)
             continue
         best = np.max(np.stack([sim[at[q]] * w for q, w in n["queries"]]), axis=0)
-        scored.append((best + lexical(n["words"]) + in_pool - face - fresh).round(4))
+        opt = 0.03 if n.get("optional") else 0.0                 # scenes that need an icon choose first
+        scored.append((best + lexical(n["words"]) + in_pool - face - fresh - opt).round(4))
 
     used, picks, q_times = {}, {}, []
 
@@ -330,13 +353,13 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
         pairs += [(-float(sc[k]), ni, cand_ids[k], k) for k in top if sc[k] >= NEAR_MIN]
     pairs.sort()
     for neg, ni, _cid, k in pairs:
-        if ni in done or not allowed(k, all_needs[ni]["t"]):
+        if ni in done or all_needs[ni].get("optional") or not allowed(k, all_needs[ni]["t"]):
             continue
         take(ni, k, -neg, "near")
         done.add(ni)
     # 3 still nothing: the best unused pool icon for their words (scene order)
     for ni, n in enumerate(all_needs):
-        if ni in done:
+        if ni in done or n.get("optional"):
             continue
         sc = scored[ni]
         if sc is None:
@@ -353,18 +376,52 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
             "report": report(beats, names, all_needs, picks, family, [cand_ids[k] for k in pool])}
 
 
-def report(beats, names, needs, picks, family, pool) -> dict:
+def plan_video(beats: list, meta: dict, seen: dict, seed: int):
+    """Templates, layout variants and icons of a whole video, settled together (renderer and Check page).
+
+    A newer template whose required icons can't all be found (a list item with no good icon) becomes plain kinetic
+    words (or a figure scene when the neighbour is already words) and the icons are planned again; a figure scene
+    without an icon becomes kinetic words. Returns (names, variants, info, plan)."""
+    from . import extras as X
+    names, _variants, info = T.scene_plan(beats, seed)
+    p = None
+    for _round in range(4):
+        extra = [n for i, (b, nm) in enumerate(zip(beats, names)) if nm in X.NEW for n in X.needs(i, b, nm)]
+        p = plan(beats, names, meta, seen, extra)
+        changed = False
+        for i, nm in enumerate(names):
+            if nm in X.NEW and any((i, n["slot"]) not in p["picks"] for n in extra if n["beat"] == i and n["required"]):
+                names[i] = "figure" if i and names[i - 1] == "kinetic" else "kinetic"
+                changed = True
+        if not changed:
+            break
+    for i, n in enumerate(names):                               # no icon for a figure scene -> kinetic words
+        if n == "figure" and (i, 0) not in p["picks"]:          # (unless that would put two word scenes in a row)
+            near = [names[j] for j in (i - 1, i + 1) if 0 <= j < len(names)]
+            if "kinetic" not in near:
+                names[i] = "kinetic"
+    for r in p["report"]["rows"]:
+        r["template"] = names[r["beat"]]
+    p["report"]["templates"] = {n: names.count(n) for n in sorted(set(names))}
+    return names, T.scene_variants(names, seed, (seen or {}).get("templates")), info, p
+
+
+def report(beats, names, needs, picks, family, pool, rows=None) -> dict:
     """The repetition report of the Check page and the render log."""
     counts = {}
     for p in picks.values():
         counts[p["id"]] = counts.get(p["id"], 0) + 1
     most = max(sorted(counts), key=lambda i: counts[i]) if counts else ""
     with_icon = {b for b, _ in picks}
-    rows = []
-    for n in needs:
-        p = picks.get((n["beat"], n["slot"]))
-        rows.append({"beat": n["beat"], "t": round(n["t"], 1), "text": n["text"], "icon": p["id"] if p else "",
-                     "score": p["score"] if p else 0, "how": p["how"] if p else "none"})
+    if rows is None:
+        rows = []
+        for n in needs:
+            p = picks.get((n["beat"], n["slot"]))
+            rows.append({"beat": n["beat"], "slot": n["slot"], "t": round(n["t"], 1), "text": n["text"],
+                         "icon": p["id"] if p else "", "score": p["score"] if p else 0, "how": p["how"] if p else "none",
+                         "template": names[n["beat"]]})
+    else:
+        rows = [r if (r["beat"], r.get("slot", 0)) in picks else dict(r, icon="", score=0, how="none") for r in rows]
     return {"family": family, "beats": len(beats), "wanted": len(needs), "icons": len(counts),
             "placed": len(picks), "most_used": {"id": most, "count": counts.get(most, 0)},
             "question_style": sum(c for i, c in counts.items() if is_question(i)),
@@ -395,12 +452,14 @@ def estimate_beats(parsed: dict) -> list:
 def check_report(parsed: dict, history: dict = None) -> dict:
     """What the Check page shows for a motion-graphics script: pool, picks, repetition numbers (estimated cuts)."""
     from . import history as Hs
+    import hashlib
     beats = estimate_beats(parsed)
-    names = T.scene_names(beats)
     meta = parsed["meta"]
     title = meta.get("title", "")
     look = Hs.choose_look(meta, title)
-    p = plan(beats, names, dict(meta, look_icons=look["icons"]), Hs.recent(title) if history is None else history)
+    seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
+    names, _v, _info, p = plan_video(beats, dict(meta, look_icons=look["icons"]),
+                                     Hs.recent(title) if history is None else history, seed)
     rep = p["report"]
     rep["look"] = look
     rep["pool"] = p["pool"]

@@ -402,6 +402,15 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         Header keys look, palette (motion gfx meaning), fonts, icon_style. Icons of the last 5 videos rank 0.05 lower.
         Templates read the fonts via templates.set_look (HEAD/BODY/CHAR_W). Sample draft 79 s (noto/bold/comic);
         classic draft 12 s; Remotion draft 26 s; presets clean. Draft renders never write the history.
+  - [x] Step 5 templates (2026-11-11): pipeline/motion_gfx/extras.py: icon_list, versus, pile, timeline, meter,
+        map_flag (Natural Earth shapes + flag pack), triggered by the words (countries incl. demonyms, spoken years,
+        percentages, "X or/versus/instead of Y", lists, "thousands of"; 25 s cooldown per type, each country once).
+        Every template (old 7 + new 6) has 3 layout variants (ctx["variant"]; templates.scene_variants rotates them,
+        starting at the variant the last 5 videos used least). picker.plan_video settles templates + variants +
+        icons together (a newer template whose required icons aren't found becomes words; kinetic scenes take an icon
+        on a strong match only; names like Apple / Lily-Rose are left out of icon searches). beats.json now has
+        variant + icons. Test reel (scratchpad all_templates.md, 2:54, 58 scenes): all 13 templates x variants
+        rendered, hyperframes check 3 warnings, draft 171 s. Sample draft 81 s; classic 12 s; Remotion 26 s.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

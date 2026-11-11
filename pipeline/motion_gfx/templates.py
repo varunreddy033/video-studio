@@ -178,6 +178,12 @@ def _words_rel(beat):
 def kinetic(P, beat, ctx):
     W, H, pal = ctx["W"], ctx["H"], ctx["pal"]
     x0, x1, y0, y1 = _box(ctx)
+    icon = (ctx.get("icons") or {}).get(0)
+    icon_part = ""
+    if icon and ctx["fmt"] == "landscape":                   # a strong icon match: words on the left, icon right
+        s = int(min((x1 - x0) * 0.24, (y1 - y0) * 0.5))
+        icon_part = icon_html(f"{P}kic", icon, x1 - s, (y0 + y1) // 2 - s // 2, s, ctx)
+        x1 = x1 - s - int(W * 0.03)
     ws = _words_rel(beat)
     if not ws:
         return title(P, beat, ctx, text=key_phrase(beat["text"]) or "…", sub="")
@@ -197,8 +203,16 @@ def kinetic(P, beat, ctx):
                          f'<span class="tx">{esc(words[j])}</span></span>')
         html_lines.append(f'<div class="ln">{" ".join(spans)}</div>')
     rot = ctx["rnd"].choice([-3, -2, 2, 3])
-    html = (f'<div id="{P}kin" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{y0}px;height:{y1 - y0}px;'
-            f'display:flex;flex-direction:column;justify-content:center;align-items:center">{"".join(html_lines)}</div>')
+    v = ctx.get("variant", 0)
+    align = "flex-start" if v == 1 else "center"
+    block = ""
+    if v == 1:                                   # variant 1: left-aligned on a tilted block of the soft colour
+        bh = int(size * 1.08 * len(lines) + size * 0.5)
+        block = (f'<div id="{P}blk" data-layout-ignore style="position:absolute;left:{x0 - int(W * 0.03)}px;'
+                 f'top:{(y0 + y1) // 2 - bh // 2}px;width:{int((x1 - x0) * 0.9)}px;height:{bh}px;background:{pal["soft"]};'
+                 f'border-radius:18px;transform:rotate(-2deg)"></div>')
+    html = block + (f'<div id="{P}kin" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{y0}px;height:{y1 - y0}px;'
+                    f'display:flex;flex-direction:column;justify-content:center;align-items:{align}">{"".join(html_lines)}</div>')
     css = (f"#{P}kin .ln {{ font-family:'{HEAD}'; font-size:{size}px; line-height:1.04; color:{pal['ink']}; "
            f"text-align:center; letter-spacing:-0.01em; white-space:nowrap; }}"
            f"#{P}kin .kw {{ display:inline-block; position:relative; margin:0 0.06em; }}"
@@ -206,8 +220,13 @@ def kinetic(P, beat, ctx):
            f"#{P}kin .key .tx {{ color:{'#FFFFFF' if pal['hi'] == '#111111' else '#111111'}; }}"
            f"#{P}kin .mk {{ position:absolute; left:-0.08em; right:-0.08em; top:0.04em; bottom:-0.02em; "
            f"background:{pal['hi']}; border-radius:0.08em; }}"
-           f"#{P}kin .kw:not(.key) .mk {{ display:none; }}")
+           f"#{P}kin .kw:not(.key) .mk {{ display:none; }}"
+           + (f"#{P}kin .ln {{ text-align:left; }}" if v == 1 else "")
+           + (f"#{P}kin .kw:not(.key) {{ font-size:0.72em; }} #{P}kin .key {{ font-size:1.12em; }}" if v == 2 else ""))
     js, cues = [], []
+    if v == 1:
+        js.append(f'tl.fromTo("#{P}blk", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.35, '
+                  f'ease: "{D.EASE_IN}"}}, 0);')
     last = 0.0
     for j, (w, t0, t1) in enumerate(ws):
         t = max(last + D.STAGGER, t0 - 0.04) if j else max(0.0, t0 - 0.04)
@@ -222,8 +241,13 @@ def kinetic(P, beat, ctx):
             if not cues:
                 cues.append((t + 0.05, ctx["rnd"].choice(["pop", "click"])))
     js.append(f'tl.fromTo("#{P}kin", {{scale: 1}}, {{scale: 1.04, duration: {max(0.5, ctx["dur"]):.2f}, ease: "none"}}, 0);')
+    if icon_part:
+        js.append(f'tl.fromTo("#{P}kic", {{scale: 0, rotation: 20, transformOrigin: "50% 50%"}}, {{scale: 1, rotation: 0, '
+                  f'duration: 0.42, ease: "{D.EASE_POP}"}}, 0.25);')
+        cues.append((0.27, icon.get("sound", "pop")))
+        css += " .prop { position:absolute; }"
     a_html, a_css, a_js = ambient(P, ctx, 3)
-    return {"html": a_html + html, "css": a_css + css, "js": a_js + "\n" + "\n".join(js), "cues": cues}
+    return {"html": a_html + html + icon_part, "css": a_css + css, "js": a_js + "\n" + "\n".join(js), "cues": cues}
 
 
 # -------------------------------------------------------------------------------------------------- figures
@@ -276,7 +300,12 @@ def figure(P, beat, ctx, extra=""):
                       f'{{x: 0, opacity: 1, duration: 0.45, ease: "{D.EASE_IN}"}}, {0.05 + 0.08 * n:.2f});')
         cx = (x0 + x1) // 2
     else:
+        v = ctx.get("variant", 0) if land else 0
         fx = x0 + int((x1 - x0) * (0.1 if land else 0.0))
+        if v == 1:                                           # variant 1: mirrored (figure right, icon left)
+            fx = x1 - fw - int((x1 - x0) * 0.1)
+        elif v == 2:                                         # variant 2: figure at the edge, a big icon in a bubble
+            fx = x0
         sr = int(fh * 0.62)                                  # spotlight disc behind the figure (depth, fills the frame)
         parts.append(f'<div id="{P}spot" data-layout-ignore style="position:absolute;left:{fx + fw // 2 - sr}px;'
                      f'top:{ground - int(fh * 0.55) - sr}px;width:{2 * sr}px;height:{2 * sr}px;border-radius:50%;'
@@ -294,13 +323,32 @@ def figure(P, beat, ctx, extra=""):
         else:
             js.append(f'tl.fromTo("#{P}fig0", {{y: {int(H * 0.45)}}}, {{y: 0, duration: 0.5, ease: "{D.EASE_POP}"}}, 0.02);')
         cx = fx + fw + (x1 - fx - fw) // 2 if land else (x0 + x1) // 2
-    ps = int(min(W, H) * (0.3 if land else 0.24))
+        if v == 1:
+            cx = x0 + (fx - x0) // 2
+    v = 0 if two else (ctx.get("variant", 0) if land else 0)
+    ps = int(min(W, H) * (0.3 if land else 0.24) * (1.3 if v == 2 else 1))
     icon = (ctx.get("icons") or {}).get(0)                   # the scene's icon, chosen for the whole video by picker.py
     if icon:
         px = cx - ps // 2
         py = (y0 + int((y1 - y0) * 0.42)) if two else (y0 + int((y1 - y0) * 0.38))
         if not land:
             py = y0 + int((y1 - y0) * 0.05)
+        if v == 2:                                           # thought bubble: a big soft disc + two small dots
+            py = y0 + int((y1 - y0) * 0.22)
+            br = int(ps * 0.8)
+            parts.append(f'<div id="{P}bub" data-layout-ignore style="position:absolute;left:{cx - br}px;'
+                         f'top:{py + ps // 2 - br}px;width:{2 * br}px;height:{2 * br}px;border-radius:50%;'
+                         f'background:{pal["soft"]};border:6px solid {ink}"></div>'
+                         + "".join(f'<div id="{P}dot{k}" data-layout-ignore style="position:absolute;'
+                                   f'left:{fx + fw + int((cx - br - fx - fw) * (0.3 + 0.4 * k))}px;'
+                                   f'top:{py + ps // 2 + int(br * (0.6 - 0.35 * k))}px;width:{24 + 14 * k}px;'
+                                   f'height:{24 + 14 * k}px;border-radius:50%;background:{pal["soft"]};'
+                                   f'border:5px solid {ink}"></div>' for k in range(2)))
+            js.append(f'tl.fromTo("#{P}bub", {{scale: 0, transformOrigin: "50% 50%"}}, {{scale: 1, duration: 0.4, '
+                      f'ease: "{D.EASE_POP}"}}, 0.22);')
+            for k in range(2):
+                js.append(f'tl.fromTo("#{P}dot{k}", {{scale: 0}}, {{scale: 1, duration: 0.2, ease: "{D.EASE_POP}"}}, '
+                          f'{0.1 + 0.06 * k:.2f});')
         parts.append(icon_html(f"{P}prop0", icon, px, py, ps, ctx))
         t = 0.32
         js.append(f'tl.fromTo("#{P}prop0", {{scale: 0, rotation: -25, transformOrigin: "50% 50%"}}, {{scale: 1, rotation: 0, '
@@ -312,6 +360,8 @@ def figure(P, beat, ctx, extra=""):
     if head:
         hs = fit(head, (x1 - x0) * (0.46 if land else 0.9), int(H * 0.11), int(H * 0.05))
         hx = (cx - int((x1 - x0) * 0.25)) if land and not two else x0
+        if v == 2:
+            hx = max(x0, cx - int((x1 - x0) * 0.25))
         hw = int((x1 - x0) * 0.5) if land and not two else (x1 - x0)
         hy = y0 - int(H * 0.02) if land else y1 - int(H * 0.02)
         hwords = head.split()
@@ -336,7 +386,16 @@ def number(P, beat, ctx):
     size = fit(final, (x1 - x0) * 0.9, int(H * 0.36), int(H * 0.12), 0.55)
     label = (sh.get("label") or "").upper()
     cy = y0 + int((y1 - y0) * 0.42)
+    v = ctx.get("variant", 0)
     rays = "".join(f'<div class="ray" style="transform:rotate({a}deg)"></div>' for a in range(0, 360, 30))
+    if v == 1:                                   # variant 1: the number in a big round badge
+        size = int(size * 0.8)
+        rr = int(max(size * len(final) * 0.3, size) * 0.95)
+        rays = (f'<div style="position:absolute;left:{-rr}px;top:{-rr}px;width:{2 * rr}px;height:{2 * rr}px;'
+                f'border-radius:50%;background:{pal["soft"]};border:10px solid {pal["ink"]};box-sizing:border-box"></div>')
+    elif v == 2:                                 # variant 2: an underline bar sweeping in under the number
+        rays = (f'<div style="position:absolute;left:{-int((x1 - x0) * 0.4)}px;top:{int(size * 0.5)}px;'
+                f'width:{int((x1 - x0) * 0.8)}px;height:{max(14, size // 9)}px;background:{pal["pop"]};border-radius:12px"></div>')
     html = (f'<div id="{P}rays" data-layout-ignore style="position:absolute;left:{W // 2}px;top:{cy}px;width:0;height:0">{rays}</div>'
             f'<div id="{P}num" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy - int(size * 0.6)}px;'
             f'text-align:center;font-family:\'{HEAD}\';font-size:{size}px;line-height:1.1;color:{pal["ink"]};'
@@ -351,7 +410,9 @@ def number(P, beat, ctx):
            f"transform-origin:0 50%; background:linear-gradient(90deg, {pal['soft']}, rgba(255,255,255,0)); }}")
     count = 1.0
     js = [f'tl.fromTo("#{P}rays", {{rotation: 0, opacity: 0, scale: 0.6}}, {{rotation: 40, opacity: 1, scale: 1, '
-          f'duration: {max(1, dur):.2f}, ease: "power1.out"}}, 0);',
+          f'duration: {max(1, dur):.2f}, ease: "power1.out"}}, 0);' if v == 0 else
+          f'tl.fromTo("#{P}rays", {{opacity: 0, scale: {0.2 if v == 1 else 1}, scaleX: {0.2 if v == 1 else 0}}}, '
+          f'{{opacity: 1, scale: 1, scaleX: 1, duration: 0.5, ease: "{D.EASE_POP}"}}, 0);',
           f'tl.fromTo("#{P}num", {{scale: 0.3, opacity: 0}}, {{scale: 1, opacity: 1, duration: 0.4, ease: "{D.EASE_POP}"}}, 0.05);',
           f'const cnt = {{v: 0}}; tl.to(cnt, {{v: {val}, duration: {count}, ease: "power2.out", onUpdate: () => {{ '
           f'document.querySelector("#{P}numtx").textContent = {pre!r} + cnt.v.toLocaleString("en-US", '
@@ -380,20 +441,34 @@ def title(P, beat, ctx, text=None, sub=None, kicker=""):
     cy = y0 + int((y1 - y0) * 0.45)
     lines_html = "".join("<div>" + " ".join(f'<span id="{P}t{j}" class="tw">{esc(words[j])}</span>' for j in ln)
                          + "</div>" for ln in lines)
-    html = (f'<div id="{P}stripe" data-layout-allow-overflow style="position:absolute;left:-5%;width:110%;top:{cy - stripe_h // 2}px;height:{stripe_h}px;'
-            f'background:{pal["soft"]}"></div>'
-            + (f'<div id="{P}kick" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy - stripe_h // 2 - int(H * 0.08)}px;'
-               f'text-align:center;font-family:\'{BODY}\';font-size:{int(H * 0.035)}px;letter-spacing:0.3em;'
+    v = ctx.get("variant", 0)
+    if v == 1:                                   # variant 1: a framed card instead of the full-width stripe
+        stripe = (f'<div id="{P}stripe" style="position:absolute;left:{x0 + int((x1 - x0) * 0.04)}px;'
+                  f'width:{int((x1 - x0) * 0.92)}px;top:{cy - stripe_h // 2 - int(size * 0.2)}px;'
+                  f'height:{stripe_h + int(size * 0.4)}px;background:{pal["soft"]};border:8px solid {pal["ink"]};'
+                  f'border-radius:24px;box-sizing:border-box;box-shadow:12px 12px 0 {pal["ink"]}"></div>')
+    elif v == 2:                                 # variant 2: a thick bar on the left, text left-aligned
+        stripe = (f'<div id="{P}stripe" style="position:absolute;left:{x0}px;width:{max(16, size // 6)}px;'
+                  f'top:{cy - stripe_h // 2}px;height:{stripe_h}px;background:{pal["pop"]};border-radius:10px"></div>')
+    else:
+        stripe = (f'<div id="{P}stripe" data-layout-allow-overflow style="position:absolute;left:-5%;width:110%;'
+                  f'top:{cy - stripe_h // 2}px;height:{stripe_h}px;background:{pal["soft"]}"></div>')
+    html = (stripe
+            + (f'<div id="{P}kick" style="position:absolute;left:{x0 + (int(size * 0.5) if v == 2 else 0)}px;width:{x1 - x0}px;'
+               f'top:{cy - stripe_h // 2 - int(H * 0.08)}px;text-align:{"left" if v == 2 else "center"};font-family:\'{BODY}\';font-size:{int(H * 0.035)}px;letter-spacing:0.3em;'
                f'color:{pal["ink"]}">{esc(kicker.upper())}</div>' if kicker else "")
-            + f'<div id="{P}title" style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy - stripe_h // 2 + int(size * 0.05)}px;'
-              f'text-align:center;font-family:\'{HEAD}\';font-size:{size}px;line-height:1.08;color:{pal["ink"]}">{lines_html}</div>')
+            + f'<div id="{P}title" style="position:absolute;left:{x0 + (int(size * 0.5) if v == 2 else 0)}px;width:{x1 - x0}px;'
+              f'top:{cy - stripe_h // 2 + int(size * 0.05)}px;'
+              f'text-align:{"left" if v == 2 else "center"};font-family:\'{HEAD}\';font-size:{size}px;line-height:1.08;color:{pal["ink"]}">{lines_html}</div>')
     if sub:
         ss = fit(sub, (x1 - x0) * 0.8, int(H * 0.06), int(H * 0.032), 0.52)
         html += (f'<div style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{cy + stripe_h // 2 + int(H * 0.03)}px;'
                  f'text-align:center"><span id="{P}sub" style="display:inline-block;background:{pal["ink"]};color:{pal["bg"]};'
                  f'font-family:\'{BODY}\';font-size:{ss}px;padding:0.2em 0.8em;border-radius:999px">{esc(sub)}</span></div>')
     css = f".tw {{ display:inline-block; margin:0 0.05em; }}"
-    js = [f'tl.fromTo("#{P}stripe", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.35, ease: "{D.EASE_IN}"}}, 0);']
+    js = [f'tl.fromTo("#{P}stripe", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.35, ease: "{D.EASE_IN}"}}, 0);'
+          if v != 2 else
+          f'tl.fromTo("#{P}stripe", {{scaleY: 0, transformOrigin: "50% 0%"}}, {{scaleY: 1, duration: 0.35, ease: "{D.EASE_IN}"}}, 0);']
     if kicker:
         js.append(f'tl.fromTo("#{P}kick", {{opacity: 0, letterSpacing: "0.8em"}}, {{opacity: 1, letterSpacing: "0.3em", '
                   f'duration: 0.5, ease: "{D.EASE_IN}"}}, 0.05);')
@@ -415,12 +490,20 @@ def quote(P, beat, ctx):
     words = sh["text"].split()
     size = fit(" " * 22, (x1 - x0) * 0.86, int(H * 0.085), int(H * 0.04), 0.48)
     spans = " ".join(f'<span id="{P}q{j}" class="qw">{esc(w)}</span>' for j, w in enumerate(words))
+    v = ctx.get("variant", 0)
+    look = {0: "background:#FFFFFF;border:8px solid #111111;border-radius:28px;box-shadow:14px 14px 0 #111111",
+            1: f"background:#FFFFFF;border:8px solid #111111;border-radius:{int(size * 1.6)}px",
+            2: "background:transparent;border:0"}[v]
+    tail = (f'<div style="position:absolute;left:{int((x1 - x0) * 0.12)}px;bottom:-{int(size * 1.1)}px;width:0;height:0;'
+            f'border-left:{int(size * 0.7)}px solid transparent;border-right:{int(size * 0.7)}px solid transparent;'
+            f'border-top:{int(size * 1.2)}px solid #111111"></div>' if v == 1 else "")
+    text_col = pal["ink"] if v == 2 else "#111111"
     html = (f'<div id="{P}card" style="position:absolute;box-sizing:border-box;left:{x0 + int((x1 - x0) * 0.04)}px;width:{int((x1 - x0) * 0.92)}px;'
-            f'top:{y0 + int((y1 - y0) * 0.08)}px;padding:{int(size * 0.8)}px {int(size)}px;background:#FFFFFF;border:8px solid #111111;'
-            f'border-radius:28px;box-shadow:14px 14px 0 #111111">'
+            f'top:{y0 + int((y1 - y0) * 0.08)}px;padding:{int(size * 0.8)}px {int(size)}px;{look}">{tail}'
             f'<div id="{P}qm" style="position:absolute;left:{int(size * 0.3)}px;top:{-int(size * 1.4)}px;font-family:\'{HEAD}\';'
             f'font-size:{int(size * 3)}px;color:{pal["pop"]};line-height:1">“</div>'
-            f'<div style="font-family:\'{BODY}\';font-size:{size}px;line-height:1.25;color:#111111">{spans}</div>'
+            f'<div style="font-family:\'{HEAD if v == 2 else BODY}\';font-size:{int(size * (1.25 if v == 2 else 1))}px;'
+            f'line-height:1.2;color:{text_col}">{spans}</div>'
             + (f'<div style="margin-top:{int(size * 0.5)}px"><span id="{P}by" style="display:inline-block;background:#111111;'
                f'color:#FFFFFF;font-family:\'{BODY}\';font-size:{int(size * 0.6)}px;padding:0.2em 0.8em;'
                f'border-radius:999px">{esc(sh.get("by", ""))}</span></div>' if sh.get("by") else "")
@@ -455,13 +538,41 @@ def chart(P, beat, ctx):
             f'<div style="position:absolute;left:{x0}px;width:{x1 - x0}px;top:{area_bot}px;height:8px;background:{pal["ink"]}"></div>']
     js = [f'tl.fromTo("#{P}ct", {{opacity: 0, y: -30}}, {{opacity: 1, y: 0, duration: 0.35, ease: "{D.EASE_IN}"}}, 0);']
     unit = sh.get("unit", "")
+    var = ctx.get("variant", 0)
+    if var == 1:                                 # variant 1: horizontal bars, labels on the left
+        html = html[:1]
+        rh = int((area_bot - area_top) / n * 0.7)
+        lw = int((x1 - x0) * 0.24)
+        for k, (lab, v) in enumerate(data):
+            w = int((x1 - x0 - lw - int(W * 0.08)) * v / top)
+            by = int(area_top + (area_bot - area_top) / n * k)
+            c = cols[k % len(cols)]
+            fs = int(min(rh * 0.55, H * 0.045))
+            html.append(f'<div style="position:absolute;left:{x0}px;width:{lw - 20}px;top:{by + rh // 2 - fs // 2 - 4}px;'
+                        f'text-align:right;font-family:\'{BODY}\';font-size:{fs}px;color:{pal["ink"]}">{esc(lab)}</div>')
+            html.append(f'<div id="{P}b{k}" style="position:absolute;left:{x0 + lw}px;top:{by}px;width:{max(8, w)}px;height:{rh}px;'
+                        f'background:{c};border:6px solid #111111;border-left:0;border-radius:0 14px 14px 0"></div>')
+            html.append(f'<div id="{P}v{k}" style="position:absolute;left:{x0 + lw + max(8, w) + 14}px;top:{by + rh // 2 - fs // 2 - 4}px;'
+                        f'font-family:\'{HEAD}\';font-size:{fs}px;color:{pal["ink"]};white-space:nowrap">{v:g}{esc(unit)}</div>')
+            t = 0.3 + k * 0.12
+            js.append(f'tl.fromTo("#{P}b{k}", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.55, '
+                      f'ease: "{D.EASE_POP}"}}, {t:.2f});')
+            js.append(f'tl.fromTo("#{P}v{k}", {{opacity: 0, x: -20}}, {{opacity: 1, x: 0, duration: 0.25}}, {t + 0.4:.2f});')
+        return {"html": "".join(html), "css": "", "js": "\n".join(js), "cues": [(0.25, "riser")]}
     for k, (lab, v) in enumerate(data):
         h = int((area_bot - area_top - ts) * v / top)
         bx = int(x0 + slot * k + (slot - bw) / 2)
         c = cols[k % len(cols)]
         vs = int(min(bw * 0.45, H * 0.05))
-        html.append(f'<div id="{P}b{k}" style="position:absolute;left:{bx}px;width:{bw}px;top:{area_bot - h}px;height:{h}px;'
-                    f'background:{c};border:6px solid #111111;border-bottom:0;border-radius:14px 14px 0 0"></div>')
+        if var == 2:                             # variant 2: lollipops (a stick and a ball)
+            d = int(min(bw * 0.7, H * 0.08))
+            html.append(f'<div id="{P}b{k}" style="position:absolute;left:{bx + bw // 2 - 6}px;width:12px;top:{area_bot - h}px;'
+                        f'height:{h}px;background:#111111"><div style="position:absolute;left:{6 - d // 2}px;top:{-d // 2}px;'
+                        f'width:{d}px;height:{d}px;border-radius:50%;background:{c};border:6px solid #111111;'
+                        f'box-sizing:border-box"></div></div>')
+        else:
+            html.append(f'<div id="{P}b{k}" style="position:absolute;left:{bx}px;width:{bw}px;top:{area_bot - h}px;height:{h}px;'
+                        f'background:{c};border:6px solid #111111;border-bottom:0;border-radius:14px 14px 0 0"></div>')
         html.append(f'<div id="{P}v{k}" style="position:absolute;left:{bx - 40}px;width:{bw + 80}px;top:{area_bot - h - vs * 1.4}px;'
                     f'text-align:center;font-family:\'{HEAD}\';font-size:{vs}px;color:{pal["ink"]}">{v:g}{esc(unit)}</div>')
         html.append(f'<div style="position:absolute;left:{bx - 40}px;width:{bw + 80}px;top:{area_bot + 14}px;text-align:center;'
@@ -482,14 +593,25 @@ def memo(P, beat, ctx):
     dw = int((x1 - x0) * (0.36 if land else 0.8))
     dh = int((y1 - y0) * (0.9 if land else 0.56))
     dx = x0 + int((x1 - x0) * (0.04 if land else 0.1))
+    v = ctx.get("variant", 0) if land else 0
+    if v == 1:
+        dx = x1 - dw - int((x1 - x0) * 0.04)
+    elif v == 2:
+        dw, dh = int((x1 - x0) * 0.42), int((y1 - y0) * 0.7)
+        dx = (x0 + x1) // 2 - dw // 2
     stamp = "DENIED" if DENY_WORDS.search(beat["text"]) else rnd.choice(["REPORTED", "ALLEGED"])
     outlet = re.search(r"\b(New York Times|Financial Times|Wall Street Journal|Reuters|Bloomberg|BBC)\b", beat["text"])
     head = outlet.group(1).upper() if outlet else (key_phrase(beat["text"], 3) or "REPORT")
-    hw = (x1 - x0) - dw - int(W * 0.06) if land else (x1 - x0)
+    hw = (x1 - x0) - dw - int(W * 0.06) if land and v != 2 else (x1 - x0)
     hs = fit(max(head.split(), key=len), hw * 0.95, int(H * 0.12), int(H * 0.05))
     kind_word = "REPORT" if re.search(r"report|times|journal|newspaper", beat["text"], re.I) else "MEMO"
     lines = "".join(f'<div id="{P}l{k}" class="ml" style="width:{rnd.randint(55, 95)}%"></div>' for k in range(7))
-    html = (f'<div id="{P}doc" style="position:absolute;box-sizing:border-box;left:{dx}px;top:{y0}px;width:{dw}px;height:{dh}px;'
+    doc_top = y0 + (int((y1 - y0) * 0.28) if v == 2 else 0)
+    if v == 2:
+        hs = min(hs, int((y1 - y0) * 0.2))
+    mhx = {0: dx + dw + int(W * 0.05), 1: x0, 2: x0}[v] if land else x0
+    mhy = ({0: y0 + int(dh * 0.22), 1: y0 + int(dh * 0.22), 2: y0}[v]) if land else y0 + dh + int(H * 0.03)
+    html = (f'<div id="{P}doc" style="position:absolute;box-sizing:border-box;left:{dx}px;top:{doc_top}px;width:{dw}px;height:{dh}px;'
             f'background:#FFFFFF;border:8px solid #111111;border-radius:18px;box-shadow:16px 16px 0 #111111;'
             f'padding:{int(dh * 0.08)}px {int(dw * 0.1)}px">'
             f'<div style="font-family:\'{HEAD}\';font-size:{int(dh * 0.09)}px;color:#111111;letter-spacing:0.08em">{kind_word}</div>'
@@ -497,13 +619,14 @@ def memo(P, beat, ctx):
             f'<div id="{P}stamp" style="position:absolute;right:{int(dw * 0.08)}px;bottom:{int(dh * 0.12)}px;'
             f'font-family:\'{HEAD}\';font-size:{int(dh * 0.13)}px;color:#E0222F;border:8px solid #E0222F;border-radius:12px;'
             f'padding:0.02em 0.25em;letter-spacing:0.06em">{stamp}</div></div>'
-            f'<div id="{P}mh" style="position:absolute;left:{dx + dw + int(W * 0.05) if land else x0}px;'
-            f'width:{hw}px;top:{y0 + int(dh * 0.22) if land else y0 + dh + int(H * 0.03)}px;'
+            f'<div id="{P}mh" style="position:absolute;left:{mhx}px;'
+            f'width:{hw}px;top:{mhy}px;text-align:{"center" if v == 2 else "left"};'
             f'font-family:\'{HEAD}\';font-size:{hs}px;line-height:1.02;color:{pal["ink"]}">'
             + "".join(f'<span id="{P}mw{j}" class="mw">{esc(w)}</span> ' for j, w in enumerate(head.split())) + "</div>")
     css = (f"#{P}doc .ml {{ height:{max(10, int(dh * 0.035))}px; background:#D6D6D0; border-radius:8px; "
            f"margin:{int(dh * 0.035)}px 0; }} .mw {{ display:inline-block; }}")
-    js = [f'tl.fromTo("#{P}doc", {{x: {-int(W * 0.5)}, rotation: -14}}, {{x: 0, rotation: -3, duration: 0.5, '
+    js = [f'tl.fromTo("#{P}doc", {{x: {int(W * 0.5) if v == 1 else -int(W * 0.5)}, rotation: {14 if v == 1 else -14}}}, '
+          f'{{x: 0, rotation: {3 if v == 1 else -3}, duration: 0.5, '
           f'ease: "{D.EASE_IN}"}}, 0);']
     for k in range(7):
         js.append(f'tl.fromTo("#{P}l{k}", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.18, '
@@ -532,17 +655,56 @@ def pick(beat, k_in_shot):
     return "figure" if (i + k_in_shot) % 2 == 0 else "kinetic"
 
 
-def scene_names(beats):
-    """The template of every beat of a video (pick + never the same picture type twice in a row)."""
-    names, k_in_shot, last_shot = [], 0, -1
+def scene_plan(beats, seed=0):
+    """(names, variants, info) for every beat of a video.
+
+    names     the template: pick() + the six newer templates when the words ask for them (extras.trigger: a country,
+              a year, a percentage, "X or Y", a list, "thousands of"), never the same template twice in a row
+    variants  0-2: the layout variant; each template walks through its 3 layouts in turn, starting at a place
+              set by the video's seed, so neighbouring uses of one template never share a layout
+    info      per beat: {"country": ...} for map scenes (the first country not shown before)
+    """
+    from . import extras as X
+    names, info, state, k_in_shot, last_shot = [], [], {}, 0, -1
     for b in beats:
         k_in_shot = 0 if b["shot"] != last_shot else k_in_shot + 1
         last_shot = b["shot"]
         name = pick(b, k_in_shot)
+        extra = {}
+        if name in ("figure", "kinetic", "memo") and not b.get("chapter_card"):
+            new = X.trigger(b, state)
+            if new and (not names or names[-1] != new):
+                name = new
         if names and name == names[-1] and name in ("figure", "kinetic", "memo"):
             name = "kinetic" if name != "kinetic" else "figure"
+        if name == "map_flag":
+            extra["country"] = next(c for c in X.countries(b["text"]) if c[0] not in state.get("countries", set()))
+        if name in X.NEW:
+            X.remember(name, b, state)
         names.append(name)
-    return names
+        info.append(extra)
+    return names, scene_variants(names, seed), info
+
+
+def scene_variants(names, seed=0, recent=None):
+    """Layout variant per scene. recent = {"figure:2": n, ...} from the last videos (history.recent): each template
+    starts at the variant those videos used least, so a template's first layout changes from video to video."""
+    import hashlib
+    count, out, start_of = {}, [], {}
+    for n in names:
+        base = "title" if n == "chapter" else n
+        if base not in start_of:
+            h = int(hashlib.sha1(f"{seed}:{base}".encode()).hexdigest()[:4], 16)
+            order = [(h + k) % 3 for k in range(3)]
+            start_of[base] = min(order, key=lambda v: ((recent or {}).get(f"{base}:{v}", 0), order.index(v)))
+        start = start_of[base]
+        out.append((start + count.get(base, 0)) % 3)
+        count[base] = count.get(base, 0) + 1
+    return out
+
+
+def scene_names(beats):
+    return scene_plan(beats)[0]
 
 
 def build(name, P, beat, ctx):
@@ -550,5 +712,8 @@ def build(name, P, beat, ctx):
         return title(P, beat, ctx, text=beat["chapter"], sub="", kicker="Chapter")
     if beat.get("chapter_card"):
         return title(P, beat, ctx, text=beat["chapter"], sub="", kicker="Chapter")
+    from . import extras as X
+    if name in X.NEW:
+        return X.build(name, P, beat, ctx)
     return {"kinetic": kinetic, "figure": figure, "number": number, "title": title, "quote": quote, "chart": chart,
             "memo": memo}[name](P, beat, ctx)
