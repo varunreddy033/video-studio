@@ -1,6 +1,6 @@
 """Download free sound effects from Openverse (openverse.org) into assets/library/sfx/<kind>/.
 
-    bin/python tools/fetch_sfx_openverse.py                 3 sounds for every kind below
+    bin/python tools/fetch_sfx_openverse.py                 3 sounds for every kind below (-n 8: top up to 8)
     bin/python tools/fetch_sfx_openverse.py whoosh pop -n 5  only these kinds, 5 each
     bin/python tools/fetch_sfx_openverse.py --query "door slam" --kind door
 
@@ -34,6 +34,12 @@ KINDS = {
     "paper": ("paper page turn", 200, 2000), "stamp": ("stamp thud", 100, 1500), "swipe": ("swipe slide", 100, 900),
     "bubble": ("bubble pop", 60, 900), "success": ("success chime", 300, 2500), "error": ("error buzz wrong", 200, 2000),
     "coin": ("coin", 100, 1500),
+    # added for the asset packs plan (docs/ASSET_PACKS_PLAN.md section 6)
+    "notification": ("notification sound", 150, 2000), "swoosh-up": ("swoosh up rising whoosh", 200, 2000),
+    "boing": ("boing spring cartoon", 150, 1800), "record-scratch": ("record scratch vinyl", 150, 2500),
+    "crowd-gasp": ("crowd gasp", 400, 3500), "keyboard-enter": ("keyboard enter key", 60, 800),
+    "coin-drop": ("coin drop", 150, 2500), "door": ("door close", 200, 3000),
+    "crowd-cheer": ("crowd cheer applause", 600, 4000),
 }
 
 

@@ -411,6 +411,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         on a strong match only; names like Apple / Lily-Rose are left out of icon searches). beats.json now has
         variant + icons. Test reel (scratchpad all_templates.md, 2:54, 58 scenes): all 13 templates x variants
         rendered, hyperframes check 3 warnings, draft 171 s. Sample draft 81 s; classic 12 s; Remotion 26 s.
+  - [x] Step 6 sound (2026-11-11): tools/fetch_sfx_openverse.py -n 8 + new kinds (notification, swoosh-up, boing,
+        record-scratch, crowd-gasp, keyboard-enter, coin-drop, door, crowd-cheer): 198 CC0 files in
+        assets/library/sfx (7.3 MB, 4-9 per kind, crowd-cheer 1), each in sfx/CREDITS.md; 7 wrong downloads (spoken
+        "postage stamp" words, cymbal, doll laugh, disco clap) moved to the session scratchpad, not in git. Scenes cue
+        the new kinds (memo stamp, coin-drop piles, boing versus, record-scratch on "But...", crowd-gasp on shocked
+        figures, success/error meters). Freshness: SfxPicker(stale) + music_tracks(music_stale) put files/tracks of the
+        last 5 motion videos last (classic unchanged). Music audit: assets/library/music/CREDITS.md (all 28 UNKNOWN
+        licence, likely Pixabay = not on the allow-list); BLOCKED.txt (util.music_blocked) keeps 3 tagged covers out:
+        dark/unsolved_mystery (Radiohead cover), dark/creepy_melody, dark/horror_piano. Test reel: 35 different SFX
+        files in 50 effects (was 15), -14.2 LUFS; classic draft 13 s; Remotion 27 s; presets clean.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

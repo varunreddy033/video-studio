@@ -34,10 +34,15 @@ from . import templates as T
 # a cue's kind -> what to use when the library has no such folder
 FALLBACK = {"stamp": "impact", "tick": "click", "coin": "cash", "bubble": "pop", "swipe": "whoosh", "paper": "swipe",
             "typing": "click", "riser": "whoosh", "ding": "pop", "cash": "ding", "alert": "ding", "error": "impact",
-            "glitch": "click", "shutter": "click", "heartbeat": "impact"}
+            "glitch": "click", "shutter": "click", "heartbeat": "impact",
+            "notification": "ding", "swoosh-up": "riser", "boing": "pop", "record-scratch": "glitch",
+            "crowd-gasp": "impact", "keyboard-enter": "click", "coin-drop": "coin", "door": "impact",
+            "crowd-cheer": "success", "success": "ding"}
 GAIN = {"whoosh": 0.55, "swipe": 0.55, "pop": 0.6, "bubble": 0.55, "click": 0.6, "tick": 0.5, "impact": 0.75,
         "ding": 0.65, "cash": 0.7, "riser": 0.55, "paper": 0.6, "typing": 0.45, "alert": 0.5, "error": 0.55,
-        "glitch": 0.5, "shutter": 0.6, "heartbeat": 0.6, "coin": 0.65}
+        "glitch": 0.5, "shutter": 0.6, "heartbeat": 0.6, "coin": 0.65, "stamp": 0.7, "notification": 0.55,
+        "swoosh-up": 0.5, "boing": 0.55, "record-scratch": 0.5, "crowd-gasp": 0.5, "keyboard-enter": 0.55,
+        "coin-drop": 0.6, "door": 0.6, "crowd-cheer": 0.45, "success": 0.55}
 # sfx: header -> seconds between two animation effects. rich ~ 25 a minute (the references' density), auto ~ 15
 GAPS = {"rich": 1.4, "auto": 2.2}
 QUALITY = {"draft": "draft", "final": "standard"}
@@ -214,7 +219,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     vpk = float(np.abs(sf.read(voice_wav, dtype="float32")[0]).max() or 0.5)
     for a in timed:                         # no effect peaks above the voice: keeps -14 LUFS reachable (true peak)
         a["limit"] = max(0.0625, min(1.0, vpk * 0.7))
-    parsed = dict(parsed, segments=segs, sfx_timed=timed)          # the animation's cues replace sfx: auto rules
+    parsed = dict(parsed, segments=segs, sfx_timed=timed,           # the animation's cues replace sfx: auto rules
+                  sfx_stale=set(seen["sfx"]), meta=dict(meta, music_stale=set(seen["music"])))
     rng = random.Random(title)
     norm, bgm, sfx_used, loud_in, music = assemble._mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng)
     norm = _top_up(norm, job_dir)

@@ -224,6 +224,8 @@ def kinetic(P, beat, ctx):
            + (f"#{P}kin .ln {{ text-align:left; }}" if v == 1 else "")
            + (f"#{P}kin .kw:not(.key) {{ font-size:0.72em; }} #{P}kin .key {{ font-size:1.12em; }}" if v == 2 else ""))
     js, cues = [], []
+    if re.match(r"\s*(but|wait|except|however|nope|no)\b", beat["text"], re.I):
+        cues.append((0.02, "record-scratch"))              # a turn in the story
     if v == 1:
         js.append(f'tl.fromTo("#{P}blk", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.35, '
                   f'ease: "{D.EASE_IN}"}}, 0);')
@@ -239,7 +241,7 @@ def kinetic(P, beat, ctx):
             js.append(f'tl.fromTo("#{P}w{j}", {{scale: 1}}, {{scale: 1.1, duration: 0.12, yoyo: true, repeat: 1, '
                       f'ease: "power2.out"}}, {t + 0.3:.3f});')
             if not cues:
-                cues.append((t + 0.05, ctx["rnd"].choice(["pop", "click"])))
+                cues.append((t + 0.05, ctx["rnd"].choice(["pop", "click", "keyboard-enter"])))
     js.append(f'tl.fromTo("#{P}kin", {{scale: 1}}, {{scale: 1.04, duration: {max(0.5, ctx["dur"]):.2f}, ease: "none"}}, 0);')
     if icon_part:
         js.append(f'tl.fromTo("#{P}kic", {{scale: 0, rotation: 20, transformOrigin: "50% 50%"}}, {{scale: 1, rotation: 0, '
@@ -317,6 +319,8 @@ def figure(P, beat, ctx, extra=""):
         pj, pc = F.pose_js(P, 0, pose, dur, word_times, seed=rnd.random())
         js.append(pj)
         cues += pc
+        if pose == "shocked":
+            cues.append((0.12, "crowd-gasp"))
         if pose in ("walk", "sneak"):
             js.append(f'tl.fromTo("#{P}fig0", {{x: {-int(W * 0.12)}}}, {{x: {int(W * 0.06)}, duration: {max(0.8, dur):.2f}, '
                       f'ease: "none"}}, 0);')
@@ -638,7 +642,7 @@ def memo(P, beat, ctx):
     for j in range(len(head.split())):
         js.append(f'tl.fromTo("#{P}mw{j}", {{opacity: 0, x: 40}}, {{opacity: 1, x: 0, duration: 0.3, ease: "{D.EASE_IN}"}}, '
                   f'{0.2 + j * D.STAGGER:.3f});')
-    return {"html": html, "css": css, "js": "\n".join(js), "cues": [(0.05, "paper"), (st + 0.18, "impact")]}
+    return {"html": html, "css": css, "js": "\n".join(js), "cues": [(0.05, "paper"), (st + 0.18, "stamp")]}
 
 
 # --------------------------------------------------------------------------------------------- choice per beat

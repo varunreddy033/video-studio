@@ -424,7 +424,7 @@ def versus(P, beat, ctx):
     if v == 1:                                                # the two icons nudge each other
         js.append(f'tl.fromTo("#{P}i0", {{x: 0}}, {{x: 18, duration: 0.12, yoyo: true, repeat: 3, ease: "power1.inOut"}}, '
                   f'{t_r + 0.5:.2f});')
-    cues = [(0.15, (icons.get(0) or {}).get("sound", "swipe")), (max(0.3, t_r - 0.18), "impact"),
+    cues = [(0.15, (icons.get(0) or {}).get("sound", "swipe")), (max(0.3, t_r - 0.18), "boing" if v == 1 else "impact"),
             (t_r, (icons.get(1) or {}).get("sound", "pop"))]
     return {"html": "".join(parts), "css": ".prop { position:absolute; }", "js": "\n".join(js), "cues": cues}
 
@@ -468,7 +468,8 @@ def pile(P, beat, ctx):
                 parts.append(T.icon_html(f"{P}p{k}", ic, cx, cy, s, dict(ctx, look={"icon_style": "plain"})))
                 js.append(f'tl.fromTo("#{P}p{k}", {{x: 0, y: 0, scale: 0.2, rotation: 0}}, {{x: {dx}, y: {dy}, scale: 1, '
                           f'rotation: {rnd.randint(-30, 30)}, duration: 0.6, ease: "{D.EASE_IN}"}}, {0.2 + k * 0.03:.2f});')
-    cues = [(0.2, (ic or {}).get("sound", "pop")), (0.6, "pop" if v else "impact")]
+    coins = (ic or {}).get("sound") == "cash"
+    cues = [(0.2, (ic or {}).get("sound", "pop")), (0.6, "coin-drop" if coins else ("pop" if v else "impact"))]
     css = ".prop { position:absolute; } .hw { display:inline-block; }"
     return {"html": "".join(parts), "css": css, "js": "\n".join(js), "cues": cues}
 
@@ -545,7 +546,7 @@ def timeline(P, beat, ctx):
                 parts.append(T.icon_html(f"{P}ic", ic, ix, iy, s, ctx))
                 js.append(_pop(f"#{P}ic", t + 0.3))
     return {"html": "".join(parts), "css": ".prop { position:absolute; }", "js": "\n".join(js),
-            "cues": [(0.05, "swipe"), (0.3 + shown.index(this) * 0.12, "ding")]}
+            "cues": [(0.05, "swipe"), (0.3, "tick"), (0.3 + shown.index(this) * 0.12 + 0.45, "ding")]}
 
 
 def meter(P, beat, ctx):
@@ -600,7 +601,7 @@ def meter(P, beat, ctx):
     js.append(f'const m{P.replace("-", "")} = {{v: 0}}; tl.to(m{P.replace("-", "")}, {{v: {val:.0f}, duration: 0.9, ease: "power2.out", '
               f'onUpdate: () => {{ document.querySelector("#{P}val").textContent = Math.round(m{P.replace("-", "")}.v) + "%"; }}}}, 0.3);')
     js.append(f'tl.call(() => {{ document.querySelector("#{P}val").textContent = "{val:.0f}%"; }}, null, 1.25);')
-    cues = [(0.3, "tick"), (1.2, "alert" if val < 20 else "ding")]
+    cues = [(0.3, "tick"), (1.2, "error" if val < 20 else ("success" if val >= 60 else "ding"))]
     return {"html": "".join(parts), "css": ".hw { display:inline-block; }", "js": "\n".join(js), "cues": cues}
 
 
@@ -667,7 +668,7 @@ def map_flag(P, beat, ctx):
                  f'{T.esc(name.upper())}</span></div>')
     js.append(f'tl.fromTo("#{P}nm", {{opacity: 0, x: -40}}, {{opacity: 1, x: 0, duration: 0.3, ease: "{D.EASE_IN}"}}, '
               f'{0.65 if v != 2 else 0.3:.2f});')
-    return {"html": "".join(parts), "css": "", "js": "\n".join(js), "cues": [(0.05, "whoosh"), (0.5, "swipe")]}
+    return {"html": "".join(parts), "css": "", "js": "\n".join(js), "cues": [(0.05, "swoosh-up"), (0.5, "swipe")]}
 
 
 def build(name, P, beat, ctx):

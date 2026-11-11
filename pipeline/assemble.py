@@ -24,7 +24,7 @@ import soundfile as sf
 
 from . import config as C
 from . import captions, encoder, visuals, voice
-from .util import PipelineError, SfxPicker, best_match, fmt_ts, log, media_duration, music_files, run, sfx_files
+from .util import PipelineError, SfxPicker, best_match, best_matches, fmt_ts, log, media_duration, music_files, run, sfx_files
 
 SR = voice.SR
 
@@ -81,8 +81,14 @@ def music_tracks(meta, rng):
         return [C.BGM_DIR / C.BGM_FILE]
     names = [n.strip() for n in (meta.get("music") or "").split(",") if n.strip()] or [""]
     out = []
+    stale = meta.get("music_stale")                  # motion graphics: tracks of the last videos go last
     for n in names:
-        f = best_match(n, files, fallback_random=True, rng=rng)
+        if stale:
+            cands = best_matches(n, files) or ([] if n else sorted(files))
+            fresh = [c for c in cands if c.name not in stale and c not in out] or cands
+            f = rng.choice(sorted(fresh)) if fresh else best_match(n, files, fallback_random=True, rng=rng)
+        else:
+            f = best_match(n, files, fallback_random=True, rng=rng)
         if f and f not in out:
             out.append(f)
     return out
@@ -148,7 +154,7 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
         if not parsed["meta"].get("music_off"):
             warnings.append("no music files (>= 60 s) in assets/library/music or assets/audio/bgm")
     used = []
-    picker = SfxPicker(sfx_all, rng)                     # each file of a kind in turn (no file three times in a row)
+    picker = SfxPicker(sfx_all, rng, parsed.get("sfx_stale"))   # each file of a kind in turn (no file 3x in a row)
     for seg, s in zip(parsed["segments"], tl):
         for cue in seg["sfx"]:
             f = picker.pick(cue)

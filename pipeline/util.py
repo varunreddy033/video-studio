@@ -121,9 +121,25 @@ def _long_enough(files, min_sec: float):
     return out
 
 
+def music_blocked() -> set:
+    """Library tracks that are never picked (assets/library/music/BLOCKED.txt: one path per line, relative to
+    assets/library/music; '#' starts a comment). For tracks whose licence is known to be a problem."""
+    p = C.MUSIC_LIB / "BLOCKED.txt"
+    if not p.exists():
+        return set()
+    out = set()
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            out.add(line)
+    return out
+
+
 def music_files(min_sec: float = 60.0):
-    """Every usable music track: assets/audio/bgm (local) + assets/library/music/<mood>/ (in git)."""
-    return list_audio(C.BGM_DIR, min_sec) + _long_enough(_lib_audio(C.MUSIC_LIB), min_sec)
+    """Every usable music track: assets/audio/bgm (local) + assets/library/music/<mood>/ (in git), minus BLOCKED.txt."""
+    blocked = music_blocked()
+    lib = [f for f in _lib_audio(C.MUSIC_LIB) if Path(f).relative_to(C.MUSIC_LIB).as_posix() not in blocked]
+    return list_audio(C.BGM_DIR, min_sec) + _long_enough(lib, min_sec)
 
 
 def sfx_files():
@@ -177,8 +193,11 @@ class SfxPicker:
     """Spreads a video's sound effects over the whole library: each cue takes the least-used file among its best
     matches (ties in a fixed order, then by rng), so three whoosh files play in turn instead of one three times."""
 
-    def __init__(self, files, rng):
-        self.files, self.rng, self.used = files, rng, {}
+    def __init__(self, files, rng, stale=None):
+        # stale = file names the last videos used (motion graphics, history.py): they start one use behind, so a
+        # video plays the files the previous videos didn't first
+        self.files, self.rng = files, rng
+        self.used = {f: 1 for f in files if stale and Path(f).name in stale}
 
     def pick(self, cue):
         cands = best_matches(cue, self.files)
