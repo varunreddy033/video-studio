@@ -62,7 +62,7 @@ SCHEMA = {
 }
 # fields a preset may leave out (checked when present)
 OPTIONAL = {
-    "captions": {"enabled": bool, "blur_ratio": NUM, "shadow_ratio": NUM, "spacing_ratio": NUM, "angle": NUM,
+    "captions": {"enabled": bool, "box_style": bool, "alignment": int, "blur_ratio": NUM, "shadow_ratio": NUM, "spacing_ratio": NUM, "angle": NUM,
                  "pop": bool, "box_colour": "colour", "box_pad_ratio": NUM},
     "voices": {"description": str, "gender": str, "accent": str, "grade": str},
     # motion style (pipeline/props_gen.py): words for a cut-out prop and for a background set plate
@@ -337,6 +337,7 @@ def job_spec(job_id: str, mode: str, parsed: dict) -> dict:
             "music": load("music", chosen["music"]),
         },
         "overrides": _config_overrides(meta),
+        "rendering_method": meta.get("rendering_method", "ai_image"),
         "output": {"resolution": f"{W}x{H}", "fps": C.FPS, "video_bitrate": C.VIDEO_BITRATE[
             "final" if mode == "final" else "draft"]},
     }

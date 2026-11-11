@@ -1,0 +1,28 @@
+{
+  "label": "Caption chip",
+  "description": "A white pill in the top-left corner, 2-4 words at a time, the spoken word on a yellow marker (motion graphics videos).",
+  "licence": "Barlow (SIL Open Font License 1.1, assets/fonts/licences/barlow-OFL.txt)",
+  "highlight": "word",
+  "case": "as_is",
+  "font": "Barlow Black",
+  "font_file": "Barlow-Black.ttf",
+  "bold": false,
+  "italic": false,
+  "text_colour": "#111111",
+  "highlight_colour": "#C2410C",
+  "outline_colour": "#FFFFFF",
+  "shadow_colour": "#000000",
+  "shadow_transparency": 160,
+  "outline_ratio": 0.2,
+  "outline_min_px": 6,
+  "position": "top-left",
+  "box_style": true,
+  "alignment": 7,
+  "group": {"max_gap_sec": 0.35, "break_after": ".?!:;,", "linger_sec": 0.3, "min_word_sec": 0.02},
+  "layouts": {
+    "landscape": {"size": 0.042, "margin_v": 0.07, "margin_l": 0.06, "margin_r": 0.45, "max_words": 4, "max_chars": 26},
+    "vertical": {"size": 0.028, "margin_v": 0.1, "margin_l": 0.07, "margin_r": 0.3, "max_words": 3, "max_chars": 18},
+    "short": {"size": 0.032, "margin_v": 0.1, "margin_l": 0.07, "margin_r": 0.3, "max_words": 3, "max_chars": 16}
+  },
+  "srt": {"max_chars": 84, "line_chars": 42}
+}

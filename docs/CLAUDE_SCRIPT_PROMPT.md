@@ -6,6 +6,8 @@ warnings, paste them back to Claude and ask it to fix the script.
   B. NO PRESENTER        (documentary style: AI images + cards only)
   C. STERLING SHORT      (a 30-90 s vertical Short from scratch; for a Short cut from a finished video, use
                           Make Short -> From a video I already made instead: no script needed)
+  D. MOTION GRAPHICS     (bright-pop animated explainer: kinetic words, stick figures, transitions, caption chip;
+                          no AI images, fast to render. Example: docs/sample_motion_gfx_script.md)
 
 ================================================================================================================
 A. STERLING PRESENTS
@@ -27,7 +29,7 @@ STEP 2, the script. Output it as ONE markdown code block, in exactly this format
 title: <honest, high-curiosity title, max 90 characters>
 character: sterling
 format: landscape
-music: <one track: misdirection, a dyin breed, drop of a hat, at all costs, missed my chance, soaring, elysian fields>
+music: <one mood: calm, dark, emotional, epic, mystery, tech, tense, uplifting (or one per chapter: mystery, tense, epic)>
 thumbnail: <2-4 word thumbnail text, ALL CAPS, ends with ? or !>
 thumbnail_prompt: <Sterling's reaction + one striking background, e.g. "looking shocked in front of a huge red crashing chart">
 tags: <8-12 comma separated search tags>
@@ -111,7 +113,7 @@ description: |
   <3-5 hashtags>
 tags: <8-12 comma separated search tags>
 format: landscape
-music: <one track: misdirection, a dyin breed, drop of a hat, at all costs, missed my chance, soaring, elysian fields>
+music: <one mood: calm, dark, emotional, epic, mystery, tech, tense, uplifting (or one per chapter: mystery, tense, epic)>
 art_style: doc_photo
 thumbnail: <2-4 word thumbnail text>
 thumbnail_prompt: <one striking image idea for the thumbnail, no text in it>
@@ -161,7 +163,7 @@ STEP 2, the script, as ONE markdown code block in exactly this format:
 title: <max 90 characters, ends with #Shorts>
 type: short
 character: sterling
-music: <one track: misdirection, a dyin breed, drop of a hat, at all costs, missed my chance, soaring, elysian fields>
+music: <one mood: calm, dark, emotional, epic, mystery, tech, tense, uplifting (or one per chapter: mystery, tense, epic)>
 thumbnail: <2-4 words, ALL CAPS>
 tags: <6-10 comma separated tags>
 description: |
@@ -188,3 +190,68 @@ RULES (Video Studio's Check enforces the numbers)
 - The LAST line must loop back into the FIRST line (so the replay sounds continuous). No sign-off, no
   "subscribe", no question for the comments.
 - Facts only from your research list; numbers written as words in the narration; no stage directions.
+
+================================================================================================================
+D. MOTION GRAPHICS (bright-pop animated explainer, no presenter, no AI images)
+================================================================================================================
+
+You are my scriptwriter for a faceless YouTube explainer channel. The video is rendered as bright-pop motion
+graphics: kinetic words that land on the spoken word, anonymous stick figures with props, big numbers, quotes,
+charts and memos with REPORTED / DENIED stamps. The picture changes every 1.2-3 seconds on the narration's commas
+and full stops, and the words of each line decide what is drawn. Write a complete script for:
+
+TOPIC: <today's trending topic>
+LENGTH: <8 / 10 / 15> minutes of narration (about 150 spoken words per minute), or "1-2 minute test"
+MY ANGLE: <my opinion / what to emphasise / what to avoid>
+
+STEP 1, research. Search the web for the latest facts. List every fact you will use with its source (publication,
+date, link) so I can check them. Use only facts from that list.
+
+STEP 2, the script. Output it as ONE markdown code block, in exactly this format:
+
+---
+title: <honest, high-curiosity title, max 90 characters>
+description: |
+  <2 short paragraphs for the YouTube description; if the topic is allegations, say so>
+  Sources:
+  <one line per source: publication, date: link>
+  <3-5 hashtags>
+tags: <8-12 comma separated search tags>
+rendering_method: motion
+music: <one mood: calm, dark, emotional, epic, mystery, tech, tense, uplifting (or one per chapter: mystery, tense, epic)>
+sfx: auto
+thumbnail: <2-4 word thumbnail text, ALL CAPS, ends with ? or !>
+---
+
+## <Chapter 1 heading>
+[card: <BIG TEXT> | <small line>]
+<narration>
+[ai: <a short description of the scene, e.g. "crates of computer chips at a border crossing at night">]
+<narration>
+[number: 3.2 | trillion dollars | prefix=$ suffix=T]
+<the sentence that says that number>
+...
+
+Rules:
+1. Start with "## " chapter headings: at least 3, the first one before any narration. Each chapter gets an
+   animated chapter card.
+2. A shot tag every 1-3 sentences:
+   - [card: BIG TEXT | small line]  for the big ideas and turning points (title slam animation).
+   - [number: 96.2 | label | prefix=$ suffix=B]  for every key number (count-up animation).
+   - [quote: exact words | who said it, where]  only real, sourced quotes.
+   - [chart: bar | title | label: number, label: number, ...]  for comparisons.
+   - [ai: short scene description]  for everything else. In motion videos the scene is NOT drawn from the prompt:
+     the narration's words pick the stick figure's pose and props, so the narration under it must be concrete.
+     Keep the prompt short and sensible anyway (the same script can then be rendered with AI images).
+3. Write concrete, visual words in every line: who (the CEO, officials, a company), what (chips, money, a report,
+   a memo, a phone call), where (China, a border, an office), and verbs like reported, denied, investigated,
+   smuggled, rose, fell, warned. A line that cites a report ("The Financial Times reported ...") becomes a memo
+   with a REPORTED stamp; a denial gets a DENIED stamp.
+4. Use commas and full stops generously: every clause is one picture (1.2-3 seconds). Short sentences.
+5. Real people: the figures are anonymous stick figures, never drawn as the real person. Never invent quotes,
+   facts, dates or actions. Attribute every claim ("X reported", "according to Y"), give the other side
+   (denials, official responses), and say clearly when something is an allegation and not proven.
+6. Write for the ear: contractions, numbers in narration written as words ("ninety-six point two billion
+   dollars"), no abbreviations, no stage directions, no emojis.
+7. Hook in the first 8 seconds. End with a question for the comments. Include my angle and one honest opinion
+   moment so it feels like a real person's take.

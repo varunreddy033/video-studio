@@ -14,8 +14,11 @@ import re
 
 from .util import best_match
 
-MIN_GAP = 3.0            # seconds between two automatic effects
-SAME_KIND_GAP = 9.0      # seconds before the same kind may play again
+# density: auto = a few well-placed effects (about 4-6 a minute); rich = something on almost every cut, like
+# animated explainers (15-20 a minute), still never the same sound twice in a row
+DENSITY = {"auto": {"min_gap": 3.0, "same_kind_gap": 9.0, "every_shot": False},
+           "rich": {"min_gap": 1.2, "same_kind_gap": 3.5, "every_shot": True}}
+CUT_KINDS = ["whoosh", "swipe", "pop", "click", "bubble", "paper"]     # rich: rotated on plain picture changes
 GAIN = 0.8               # automatic effects sit a little under the script's own [sfx:] tags
 
 # kind -> how early it starts before the cut (s): a whoosh straddles the cut, a riser ends on it
@@ -41,7 +44,7 @@ KEYWORDS = [
 KEYWORDS = [(k, re.compile(rf"\b({p})\b", re.I)) for k, p in KEYWORDS]
 
 # shot type -> kinds to try in order
-BY_SHOT = {"card": ["whoosh"], "quote": ["typing", "click"], "chart": ["riser", "whoosh"]}
+BY_SHOT = {"card": ["whoosh", "stamp"], "quote": ["typing", "paper", "click"], "chart": ["riser", "whoosh"]}
 
 
 def _has(kind, files, cache):
@@ -50,11 +53,13 @@ def _has(kind, files, cache):
     return cache[kind]
 
 
-def auto_cues(segments, shots, chapters, files):
+def auto_cues(segments, shots, chapters, files, density="auto"):
     """Adds seg["sfx_auto"] = [{"kind", "lead", "gain"}] to the first segment of chosen shots.
     Returns (cues, missing): cues = [{line, at, kind, why}] for the Check page, missing = kinds the rules wanted
     but that have no file."""
-    cache, cues, missing = {}, [], set()
+    D = DENSITY[density]
+    MIN_GAP, SAME_KIND_GAP = D["min_gap"], D["same_kind_gap"]
+    cache, cues, missing, rot = {}, [], set(), 0
     chapter_starts = {c["segment"] for c in chapters if c["segment"] > 0}
     last_at, last_kind_at = -99.0, {}
     for seg in segments:
@@ -76,12 +81,16 @@ def auto_cues(segments, shots, chapters, files):
                 break
         if sh["type"] == "number":
             money = bool(re.search(r"[$₹€£]", sh.get("prefix", "") + sh.get("suffix", "")))
-            want += [(k, "a number appears") for k in (["cash", "ding", "pop"] if money else ["ding", "pop"])]
+            want += [(k, "a number appears") for k in (["cash", "coin", "ding", "pop"] if money else ["ding", "pop"])]
         for k in BY_SHOT.get(sh["type"], []):
             want.append((k, {"card": "a title card appears", "quote": "a quote appears",
                              "chart": "a chart appears"}[sh["type"]]))
         if si in chapter_starts:
             want.append(("whoosh", "a new chapter starts"))
+        if D["every_shot"] and sh["type"] != "talk":     # rich: a light sound on every picture change
+            for i in range(len(CUT_KINDS)):
+                want.append((CUT_KINDS[(rot + i) % len(CUT_KINDS)], "the picture changes"))
+            rot += 1
         at = seg["est_start"]
         if not want or at - last_at < MIN_GAP or (at < 0.5 and sh["type"] not in ("card", "number")):
             continue

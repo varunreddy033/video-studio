@@ -91,7 +91,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Word,{p["font"]},{size},{primary},{primary},{_col(p["outline_colour"])},{_col(p["shadow_colour"], p["shadow_transparency"])},{-1 if p["bold"] else 0},{-1 if p["italic"] else 0},0,0,100,100,{_num(size * p.get("spacing_ratio", 0))},{_num(p.get("angle", 0))},1,{outline},{shadow},2,{margin_l},{margin_r},{mv},1
+Style: Word,{p["font"]},{size},{primary},{primary},{_col(p["outline_colour"])},{_col(p["shadow_colour"], p["shadow_transparency"])},{-1 if p["bold"] else 0},{-1 if p["italic"] else 0},0,0,100,100,{_num(size * p.get("spacing_ratio", 0))},{_num(p.get("angle", 0))},{3 if p.get("box_style") else 1},{outline},{shadow},{p.get("alignment", 2)},{margin_l},{margin_r},{mv},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

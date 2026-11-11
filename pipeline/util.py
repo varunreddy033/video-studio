@@ -157,6 +157,39 @@ def is_starter(f: Path) -> bool:
     return Path(f).stem.startswith("starter_")
 
 
+def best_matches(cue: str, files):
+    """Every file tied for the best match of a cue, or []. A cue that names a library folder
+    (assets/library/sfx/<kind>/) gets every file in it as equals: your own files, or the starter one if there are none."""
+    if not files or not cue:
+        return []
+    folder = [f for f in files if library_group(f) == cue.strip().lower()]
+    if folder:
+        own = [f for f in folder if not is_starter(f)]
+        return own or folder
+    exact = _tokens(cue)
+    want = _expand(exact)
+    scored = [((len(want & _name_tokens(f)), len(exact & _name_tokens(f)), not is_starter(f)), f) for f in files]
+    top = max(s for s, _ in scored)
+    return [f for s, f in scored if s == top] if top[0] > 0 else []
+
+
+class SfxPicker:
+    """Spreads a video's sound effects over the whole library: each cue takes the least-used file among its best
+    matches (ties in a fixed order, then by rng), so three whoosh files play in turn instead of one three times."""
+
+    def __init__(self, files, rng):
+        self.files, self.rng, self.used = files, rng, {}
+
+    def pick(self, cue):
+        cands = best_matches(cue, self.files)
+        if not cands:
+            return None
+        low = min(self.used.get(f, 0) for f in cands)
+        f = self.rng.choice([c for c in cands if self.used.get(c, 0) == low])
+        self.used[f] = self.used.get(f, 0) + 1
+        return f
+
+
 def best_match(cue: str, files, fallback_random=False, rng=random):
     """The file whose name words fit the cue best. Order: most matching words (synonyms count), then exact cue
     words before synonyms, then your own files before the generated starter pack; ties are picked by rng."""

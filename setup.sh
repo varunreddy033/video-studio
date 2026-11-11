@@ -97,6 +97,18 @@ if not bad:
 sys.exit(1 if bad else 0)
 EOF
 
+echo "== extra: motion graphics renderer (rendering_method: motion; HyperFrames + GSAP, all local)"
+NODE_MAJOR=$(node --version 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/' || echo 0)
+if [ "${NODE_MAJOR:-0}" -lt 22 ]; then
+  if command -v node >/dev/null; then brew upgrade node || brew install node; else brew install node; fi
+fi
+npm ci --no-fund --no-audit        # exactly the tested HyperFrames 0.9.26 + GSAP 3.15.1 (package-lock.json)
+HF="$P/node_modules/.bin/hyperframes"
+export HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_NO_UPDATE_CHECK=1
+"$HF" telemetry disable >/dev/null 2>&1 || true
+"$HF" browser ensure >/dev/null 2>&1 && echo "   ok: HyperFrames $("$HF" --version), Node $(node --version), Chrome for rendering" \
+  || echo "   WARNING: HyperFrames couldn't find or download Chrome; run: $HF browser ensure"
+
 echo
 echo "SETUP DONE. Start Video Studio with:"
 echo "   $PY $P/render_server.py"

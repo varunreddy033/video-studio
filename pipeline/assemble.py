@@ -24,7 +24,7 @@ import soundfile as sf
 
 from . import config as C
 from . import captions, encoder, visuals, voice
-from .util import PipelineError, best_match, fmt_ts, log, media_duration, music_files, run, sfx_files
+from .util import PipelineError, SfxPicker, best_match, fmt_ts, log, media_duration, music_files, run, sfx_files
 
 SR = voice.SR
 
@@ -148,9 +148,10 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
         if not parsed["meta"].get("music_off"):
             warnings.append("no music files (>= 60 s) in assets/library/music or assets/audio/bgm")
     used = []
+    picker = SfxPicker(sfx_all, rng)                     # each file of a kind in turn (no file three times in a row)
     for seg, s in zip(parsed["segments"], tl):
         for cue in seg["sfx"]:
-            f = best_match(cue, sfx_all, rng=rng)
+            f = picker.pick(cue)
             if not f:
                 continue
             ms = int(max(0, s["start"] - 0.15) * 1000)
@@ -162,7 +163,7 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
             used.append(f"{cue} -> {f.name}")
             k += 1
         for a in seg.get("sfx_auto") or []:              # sfx: auto (pipeline/sfx.py)
-            f = best_match(a["kind"], sfx_all, rng=rng)
+            f = picker.pick(a["kind"])
             if not f:
                 continue
             ms = int(max(0, s["start"] - a["lead"]) * 1000)
@@ -173,6 +174,19 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
             mix.append(f"[s{k}]")
             used.append(f"auto {a['kind']} -> {f.name}")
             k += 1
+    for a in parsed.get("sfx_timed") or []:              # the motion renderer: cues at exact animation moments
+        f = picker.pick(a["kind"])
+        if not f:
+            continue
+        ms = int(max(0, a["t"]) * 1000)
+        inputs += ["-i", f]
+        lim = f",alimiter=limit={a['limit']:.4f}:attack=1:release=60:level=false" if a.get("limit") else ""
+        fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{C.SFX_MAX_SEC},"
+                  f"afade=t=out:st={max(0.0, C.SFX_MAX_SEC - 0.5)}:d=0.5,volume={C.SFX_VOLUME * a['gain']:.3f}{lim},"
+                  f"adelay={ms}|{ms}[s{k}]")
+        mix.append(f"[s{k}]")
+        used.append(f"{a['t']:.1f}s {a['kind']} -> {f.name}")
+        k += 1
     fc.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:normalize=0,"
               f"aformat=channel_layouts=stereo[aout]")
     mixed = work / "mix.wav"

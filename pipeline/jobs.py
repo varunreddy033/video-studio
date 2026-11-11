@@ -83,6 +83,8 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
     """What the page shows after Check (no huge lists)."""
     out = _summary(parsed)
     try:
+        if parsed["meta"].get("rendering_method") == "motion":
+            raise presets.PresetError("motion graphics use no art style")
         st = presets.load("art_styles", parsed["meta"]["presets"]["art_style"])
         out["art_style"] = {"id": st["id"], "label": st["label"], "realistic": st["realistic"],
                             "images": ai_images_needed(parsed, job_dir)}
@@ -119,7 +121,8 @@ def save_script(job_id: str, text: str) -> dict:
     st = read_state(job_id)
     fields = {"check": summ, "title": parsed["meta"].get("title") or "Untitled",
               "est_seconds": parsed["stats"]["est_seconds"], "format": parsed["meta"]["format"],
-              "type": parsed["meta"]["type"], "clip": parsed["meta"].get("clip")}
+              "type": parsed["meta"]["type"], "clip": parsed["meta"].get("clip"),
+              "rendering_method": parsed["meta"].get("rendering_method", "ai_image")}
     if st.get("status") not in ("queued", "rendering"):
         fields["status"] = st.get("status") if st.get("status") in ("draft_ready", "done") else "script"
     set_state(job_id, **fields)
@@ -176,9 +179,13 @@ def _metadata(parsed, result, thumbs) -> str:
         track = (Path(t).stem.replace("---", "|").replace("-_-", ", ").replace("-", " ")
                  .replace("|", " - ").title())
         parts += [f"Music: {track} (YouTube Audio Library)", ""]
+    disclosure = ("- Studio > Details > 'Altered or synthetic content': the pictures are animated drawings, not realistic: "
+                  "answer NO (YES only if a scene makes a real person or event look real)."
+                  if meta.get("rendering_method") == "motion" else
+                  "- Studio > Details > 'Altered or synthetic content': answer YES (the pictures are AI-generated and realistic).")
     parts += ["TAGS", ", ".join(tags), "",
               "UPLOAD CHECKLIST",
-              "- Studio > Details > 'Altered or synthetic content': answer YES (the pictures are AI-generated and realistic).",
+              disclosure,
               ("- Short: upload from the YouTube app or Studio; pick thumb_1.jpg (or a frame) as the cover."
                if meta.get("type") == "short" else
                "- Thumbnails: upload thumb_1/2/3.jpg with 'Test & compare'." if thumbs else ""),
@@ -248,17 +255,25 @@ def _run(job_id: str, mode: str):
     def progress(stage, done=0, total=0):
         set_state(job_id, stage=stage, done=done, total=total)
 
+    gfx = parsed["meta"].get("rendering_method") == "motion"
     if parsed["meta"].get("clip"):
         result = clip.render(parsed, d, mode, progress)
     elif parsed["meta"].get("style") == "motion":
         from . import motion
         result = motion.render(parsed, d, mode, progress)
+    elif gfx:
+        from .motion_gfx import render as motion_render        # separate renderer; ai_image never loads it
+        result = motion_render.render(parsed, d, mode, progress)
     else:
         result = assemble.render(parsed, d, mode, progress)
     thumbs = []
     if mode == "final":
         shots = json.loads((d / "timeline_final.json").read_text(encoding="utf-8"))["shots"]
-        if is_short:
+        if gfx and not is_short:
+            progress("thumbnails", 0, 3)
+            from .motion_gfx import render as motion_render
+            thumbs = motion_render.thumbnails(parsed, d, d / "final.mp4")
+        elif is_short:
             progress("thumbnails", 0, 1)
             pick = next((t for t in shots if t["type"] in ("talk", "act", "ai", "stock")), shots[0] if shots else
                         {"start": 0.5, "dur": 1.0})

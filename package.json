@@ -1,0 +1,10 @@
+{
+  "name": "youtube-pipeline-html-engine",
+  "private": true,
+  "description": "Pinned Node tools for the HTML animation renderer (pipeline/html_engine). Install with: npm ci",
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "hyperframes": "0.9.26",
+    "gsap": "3.15.1"
+  }
+}

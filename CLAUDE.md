@@ -349,6 +349,23 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         dimmed; navy vignette on full-frame [talk:]/[ai:]/[act:] shots; narrow tiles taller; script got plates on 14
         scenes and pose switches/labels in slow stretches (Check: 1 pacing warning left, bose). Still to do: render
         the final plugged in and look at it; unbothered scene label touches the quote's last word.
+- [x] MOTION GRAPHICS = Raju's stick-figure renderer, ported in (DECIDED by Varun 2026-11-11: this is the motion look
+      going forward; the Remotion `style: motion` with Sterling stays in the code, parked). Header
+      `rendering_method: motion` (UI: Pictures = Motion graphics). Code in pipeline/motion_gfx/ (his pipeline/motion/,
+      renamed because pipeline/motion.py is the Remotion renderer): kinetic words, stick figures, numbers/charts/
+      quotes/memos, caption chip (captions: chip), SFX on every beat, no AI images, no character:. HyperFrames 0.9.26 +
+      GSAP 3.15.1 pinned in the ROOT package.json (`npm ci` in the project folder). Ported as a patch of his changes
+      d3275cc..b09e3bf (NOT a history merge: his history still holds the scrubbed address). Not taken: his CLAUDE.md,
+      .claude/skills (627 files), skills-lock.json. His docs: docs/MOTION_GFX_PLAN.md, sample
+      docs/sample_motion_gfx_script.md (Load sample with Pictures = Motion graphics). Also from him: 28 music tracks in
+      assets/library/music/<mood>/ (licence unknown -> in .publicignore, private repo only, until Varun confirms the
+      source), 46 SFX (assets/library/sfx/CREDITS.md), tools/fetch_sfx_openverse.py, sfx: rich.
+      style: motion + rendering_method: motion together = Check error. Side clone ~/youtube-pipeline-raju (push
+      disabled) and local branches port-raju-motion / merge-raju-b09e3bf: ask before deleting.
+      Tests on the Mac 2026-11-11: presets clean; classic sample draft 13 s; Remotion sample draft 24 s; stick-figure
+      sample draft 1:14 in 74 s; EarPods final scripts/2026-11-11-earpods-gfx.md, job 20261111-085018-292260: 8:53,
+      209 scenes, 171 SFX, 611 s (HyperFrames 502 s). Weak spots seen: narration still says "I'm Sterling / a cat in
+      a blazer", no earphone props, filler kinetic words, a near-empty frame around 6:05.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

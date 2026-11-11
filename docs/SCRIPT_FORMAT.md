@@ -3,6 +3,15 @@
 A script is plain text: a short header, then narration with shot tags.
 Paste it into Video Studio (http://localhost:8765), press **Check**, then **Make draft**.
 
+Two ways to make the pictures (the **Pictures** menu on the new-video screen writes the header line for you):
+
+| `rendering_method:` | Pictures | Samples (**Load sample** follows the Pictures menu) |
+|---|---|---|
+| `ai_image` (default, no line needed) | AI images with camera moves + cards, numbers, quotes, charts | `docs/sample_script.md` |
+| `motion` | bright-pop motion graphics: kinetic words, stick figures, transitions, caption chip, sound on every beat | `docs/sample_motion_gfx_script.md` |
+
+The same shot tags work for both, so one script can be rendered either way.
+
 ## 1. Header (between two `---` lines)
 
 ```
@@ -14,8 +23,11 @@ description: |                                (optional, indent the lines below 
   #AI #Stocks
 tags: ai bubble, stock market, nvidia         (comma separated)
 type: full                                    (full = 16:9 long video (default), short = 9:16 Short, 15 s-2:00)
-music: misdirection, soaring                  (track names from assets/audio/bgm; full videos: one per
-                                               chapter in this order, crossfaded; one name = one track)
+rendering_method: motion                      (optional: ai_image (default) or motion, see the table above)
+music: mystery, tense, epic                   (a mood folder of assets/library/music (calm, dark, emotional,
+                                               epic, mystery, tech, tense, uplifting) or track names; full
+                                               videos: one per chapter in this order, crossfaded)
+sfx: auto                                     (optional: script / auto / rich / off; motion default auto)
 voice: am_michael                             (optional: a voice preset id, or a Kokoro voice: am_adam, am_eric,
                                                bm_george, bm_lewis, af_heart ...)
 speed: 1.0                                    (optional voice speed)
@@ -70,6 +82,7 @@ header replaces a character's own voice.
 | `pixel` | retro game lettering |
 | `clean_lower` | friendly lowercase |
 | `none` | nothing burned in (the .srt for YouTube is still made) |
+| `chip` | white pill at the top left, spoken word on a yellow marker (default for `rendering_method: motion`) |
 
 Each style is a file in `presets/captions/` (font, colours, words per phrase, sizes for full videos / vertical /
 Shorts); the fonts are in `assets/fonts` (all SIL Open Font License).
@@ -86,8 +99,17 @@ name` = that track, `music: calm, tense, epic` = one per chapter (full videos), 
 `sfx: script` (default) plays only the `[sfx: ...]` tags in the script. `sfx: auto` also places effects by fixed
 rules (pipeline/sfx.py): whoosh on title cards and new chapters, ding / cash on numbers, typing on quotes, riser
 on charts, and narration words like "crashed" (impact), "suddenly" (riser), "hacked" (glitch); at most one per
-shot, at least 3 s apart. `sfx: off` plays none. Sounds are `assets/library/sfx/<kind>/` (13 starter sounds
+shot, at least 3 s apart. `sfx: rich` adds a light
+sound on almost every picture change as well. With `rendering_method: motion` (default `auto` there) the
+animations place the effects themselves: auto >= 2.2 s apart, rich >= 1.4 s, rotating through every file of a folder. `sfx: off` plays none. Sounds are `assets/library/sfx/<kind>/` (13 starter sounds
 included; your own file in a folder replaces the starter one).
+
+### Pictures (`rendering_method:`)
+
+`rendering_method: ai_image` (default) = AI images + graphics, as always. `rendering_method: motion` = bright-pop
+motion graphics: kinetic words, stick figures, numbers, charts, memos and transitions, a new picture every 1.2-3 s,
+no AI images (docs/MOTION_GFX_PLAN.md). The same shot tags work; the narration words pick the figures' poses and props.
+Not with `character:` or `clip_from:`. Video Studio: the "Pictures" menu on the new-video screen writes this line.
 
 ### Art style (`art_style:`)
 
@@ -147,14 +169,19 @@ The page does this for you: **Make Short → From a video I already made**.
 
 ### Shot tags
 
-| Tag | What you get |
-|---|---|
-| `[ai: a giant soap bubble floating above a skyline at dusk, cinematic]` | An AI image (FLUX.2, made on the Mac) with a slow camera move (8 different moves). No text, logos or real people's faces. |
-| `[stock: crowded city street at rush hour]` | The same, styled as a real-world documentary photo. Use it for everyday scenes. |
-| `[card: THE REAL QUESTION \| small line under it]` | Big text card |
-| `[number: 3.2 \| trillion dollars \| prefix=$ suffix=T]` | Animated count-up number (`$3.2T`, `45%` also work as the value) |
-| `[quote: The exact quote. \| Who said it, where]` | Quote card. Only real, checked quotes. |
-| `[chart: bar \| Title \| 2022: 0.4, 2023: 1.2, 2024: 3.3]` | Animated bar chart (`line` for a line chart; add `\| unit=%` for a unit) |
+| Tag | AI images (default) | Motion graphics (`rendering_method: motion`) |
+|---|---|---|
+| `[ai: a giant soap bubble floating above a skyline at dusk, cinematic]` | An AI image (FLUX.2, made on the Mac) with a slow camera move (8 different moves). No text, logos or real people's faces. | Animated scenes picked from the **narration words** (the prompt itself isn't drawn): stick figures with a pose and props (spy, chip, money, globe, heart, magnifier ...), kinetic words, memo/report with a stamp when the line cites a report. A new scene every 1.2-3 s. |
+| `[stock: crowded city street at rush hour]` | The same, styled as a real-world documentary photo. Use it for everyday scenes. | Same as `[ai:]` |
+| `[card: THE REAL QUESTION \| small line under it]` | Big text card | Title slam card, then kinetic words / figures for the rest of the line |
+| `[number: 3.2 \| trillion dollars \| prefix=$ suffix=T]` | Animated count-up number (`$3.2T`, `45%` also work as the value) | Big count-up number with a label pill |
+| `[quote: The exact quote. \| Who said it, where]` | Quote card. Only real, checked quotes. | Animated quote card |
+| `[chart: bar \| Title \| 2022: 0.4, 2023: 1.2, 2024: 3.3]` | Animated bar chart (`line` for a line chart; add `\| unit=%` for a unit) | Animated bar chart |
+
+In motion videos the words of each line decide the figure's pose and props, so write concrete words: "spy",
+"chips", "China", "denied", "report", "money", "investigated". Lines that cite a report ("The New York Times
+reported ...") become a memo with a REPORTED stamp; denials get a DENIED stamp. `character:` and `clip_from:`
+can't be used with motion (Check error); `art_style:` is ignored.
 
 ### Other tags
 
@@ -187,9 +214,21 @@ Check shows the character's share of the runtime (aim for 50-70%).
 - The first 8 seconds are the hook. End with a question for the comments.
 - Write for the ear: short sentences, no abbreviations ("for example", not "e.g.").
 
+### Pacing for motion videos
+
+- Keep the usual shot tags every 1-3 sentences; the renderer cuts every shot into beats of 1.2-3 s on your
+  commas and full stops, so commas matter: they are where the picture changes. Check doesn't warn about long
+  shots in motion videos.
+- Use a `[card:]` or `[number:]` for every big fact, `[quote:]` for real quotes; everything else can be `[ai:]`
+  lines with clear, concrete narration.
+- Draft = the real animation at 960x540 (about 2.5 minutes per minute of video on the Mac); final = 1080p at
+  about the same speed. No AI images, so nothing gets slower when you change the script.
+
 ## 4. Example
 
-See `docs/sample_script.md` (the **Load sample** button in Video Studio).
+- AI images: `docs/sample_script.md` (**Load sample** with Pictures = AI images).
+- Motion graphics: `docs/sample_motion_gfx_script.md`, the Nvidia "honey trap" story (**Load sample** with
+  Pictures = Motion graphics).
 
 ## 5. Motion style (`style: motion`)
 

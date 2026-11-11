@@ -206,8 +206,8 @@ def page():
 
 @app.get("/docs/<name>")
 def docs(name):
-    name = {"sample": "sample_script.md"}.get(name, name)
-    if name not in ("SCRIPT_FORMAT.md", "CLAUDE_SCRIPT_PROMPT.md", "sample_script.md"):
+    name = {"sample": "sample_script.md", "sample_motion": "sample_motion_gfx_script.md"}.get(name, name)
+    if name not in ("SCRIPT_FORMAT.md", "CLAUDE_SCRIPT_PROMPT.md", "sample_script.md", "sample_motion_script.md", "sample_motion_gfx_script.md"):
         abort(404)
     return send_file(C.BASE_DIR / "docs" / name, mimetype="text/plain; charset=utf-8")
 
@@ -422,7 +422,7 @@ def preview_file(key, name):
 @app.get("/api/jobs")
 def list_jobs():
     keep = ("id", "title", "status", "stage", "done", "total", "mode", "created", "updated", "est_seconds", "format",
-            "type")
+            "type", "rendering_method")
     out = []
     for j in jobs.list_jobs():
         row = {k: j.get(k) for k in keep}

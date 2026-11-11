@@ -45,7 +45,7 @@ NUM_RE = re.compile(r"^[-+]?\d[\d,]*(\.\d+)?$")
 BAD_AI_WORDS = re.compile(r"\b(text|words?|logo|sign(age)?|caption|letters?|written|headline|label)\b", re.I)
 META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed", "thumbnail", "thumbnail_prompt",
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
-             "language", "captions", "art_style", "sfx", "style", "palette"}     # + voice / music: preset ids (presets/), see presets.py
+             "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -344,10 +344,11 @@ def parse(text: str) -> dict:
     meta["music_off"] = header["music"].strip().lower() in ("none", "off", "no")
     if meta["music_off"]:
         meta["music"] = ""            # music: none = a video without background music
+    meta["sfx_given"] = bool(meta.get("sfx"))
     sfx_mode = (meta.get("sfx") or "script").strip().lower()
-    if sfx_mode not in ("script", "auto", "off"):
-        err(1, f"sfx must be script (only the [sfx:] tags, the default), auto (Video Studio adds effects) or off, "
-               f"got '{sfx_mode}'")
+    if sfx_mode not in ("script", "auto", "rich", "off"):
+        err(1, f"sfx must be script (only the [sfx:] tags, the default), auto (Video Studio adds effects), rich "
+               f"(an effect on almost every cut) or off, got '{sfx_mode}'")
         sfx_mode = "script"
     meta["sfx"] = sfx_mode
     try:
@@ -412,6 +413,27 @@ def parse(text: str) -> dict:
         errors[:] = [e for e in errors if not e["msg"].startswith(("narration starts before", "missing 'title:'"))]
         segments, shots, chapters = [], [], []
     meta["clip"] = clip
+    # ---------------------------------------------------------------- rendering method
+    rm = (meta.get("rendering_method") or "ai_image").strip().lower()
+    if rm not in C.RENDERING_METHODS:
+        err(1, f"rendering_method must be one of {', '.join(C.RENDERING_METHODS)}, got '{rm}'")
+        rm = "ai_image"
+    meta["rendering_method"] = rm
+    if rm == "motion" and (meta.get("style") or "").strip().lower() == "motion":
+        err(1, "use either style: motion (animated scenes with the presenter) or rendering_method: motion "
+               "(stick-figure motion graphics), not both")
+    if rm == "motion":
+        if char or any(sh["type"] in CHARACTER_SHOTS for sh in shots):
+            err(1, "character videos ([talk:] / [act:]) need rendering_method: ai_image; motion graphics use "
+                   "anonymous stick figures")
+        if clip:
+            err(1, "clip Shorts reuse a finished AI-image video: remove rendering_method: motion")
+        if header["art_style"]:
+            warn(1, "art_style applies to AI images only; motion graphics use the bright-pop palette")
+        if not header["captions"]:
+            meta["presets"]["captions"] = "chip"      # the reference look: a caption chip in the corner
+        if not (meta.get("sfx_given")):
+            meta["sfx"] = "auto"                      # motion videos get the animation's own sounds by default
     if not segments and not clip:
         err(start + 1, "no narration found")
 
@@ -431,7 +453,7 @@ def parse(text: str) -> dict:
         sh["est_dur"] = round(sum(s["est_dur"] + s["pause_before"] for s in segs), 1)
         limit = (P["hold_talk"] if sh["type"] == "talk" else P["hold_photo"] if sh["type"] in ("ai", "stock", "act")
                  else P["hold_graphic"])
-        if sh["est_dur"] > limit and not is_motion:      # motion scenes have their own pacing rules
+        if sh["est_dur"] > limit and not is_motion and rm != "motion":      # motion scenes have their own pacing rules
             warn(sh["line"], f"this {sh['type']} shot stays on screen ~{sh['est_dur']:.0f} s; "
                              f"add another shot inside that narration so the picture changes")
         if sh["type"] in CHARACTER_SHOTS and not char:
@@ -459,8 +481,8 @@ def parse(text: str) -> dict:
     if meta["sfx"] == "off":
         for seg in segments:
             seg["sfx"] = []
-    elif meta["sfx"] == "auto" and not clip:
-        sfx_cues, sfx_missing = sfx.auto_cues(segments, shots, chapters, sfx_all)
+    elif meta["sfx"] in ("auto", "rich") and not clip and rm != "motion":   # motion: placed by the animation
+        sfx_cues, sfx_missing = sfx.auto_cues(segments, shots, chapters, sfx_all, meta["sfx"])
     for seg in segments:
         for cue in seg["sfx"]:
             if not best_match(cue, sfx_all):
@@ -545,6 +567,7 @@ def parse(text: str) -> dict:
         "character_share": round(100 * char_secs / max(1.0, total)) if char else 0,
         "presenter_seconds": round(talk_secs),
         "type": vtype, "type_label": P["label"], "clip": clip, "style": vstyle,
+        "rendering_method": rm, "rendering_method_label": C.RENDERING_METHODS[rm],
         "sfx": {"mode": meta["sfx"], "script": sum(len(s["sfx"]) for s in segments), "auto": len(sfx_cues),
                 "cues": sfx_cues, "missing": sfx_missing},
         "music": {"off": meta["music_off"], "items": music_items, "tracks_available": len(tracks)},
@@ -563,6 +586,11 @@ def parse(text: str) -> dict:
                      est_final_seconds=round(20 + total * 1.6 + (gens + pics) * C.SECONDS_PER_IMAGE))
         errors.sort(key=lambda e: e["line"])
         warnings.sort(key=lambda w: w["line"])
+    if rm == "motion":
+        # no AI images; HyperFrames renders ~2.5 s per second of video on the M5 (2026-11-11: 62.8 s video,
+        # draft 157 s, final 155 s); a new scene every ~2.6 s (beats.py)
+        stats.update(est_draft_seconds=round(20 + total * 2.3), est_final_seconds=round(25 + total * 2.3),
+                     motion_scenes=max(1, round(total / 2.6)))
     for c in chapters:
         c["est_start"] = segments[c["segment"]]["est_start"] if c["segment"] < len(segments) else total
     errors.sort(key=lambda e: e["line"])

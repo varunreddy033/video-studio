@@ -1,0 +1,32 @@
+{
+  "id": "qwen35_9b_lenient",
+  "label": "Qwen3.5 9B, lenient (no visual review)",
+  "description": "Same as qwen35_9b_local, but the model's look at each rendered scene is off: a scene that passes every technical check (HyperFrames, layout, contrast, pixels, static) is kept as drawn.",
+  "licence": "Qwen3.5 9B: Apache-2.0. HyperFrames 0.9.26 (npm). GSAP 3.15.1: GreenSock standard no-charge licence (commercial use allowed). Fonts: Barlow, SIL OFL 1.1.",
+  "model_provider": "ollama",
+  "ollama_url": "http://127.0.0.1:11434",
+  "model": "qwen3.5:9b",
+  "context_length": 12288,
+  "generation_temperature": 0.3,
+  "seed": 7,
+  "keep_alive": "10m",
+  "request_timeout_sec": 1200,
+  "fps": 30,
+  "quality_checks": true,
+  "visual_repair": false,
+  "max_repair_rounds": 2,
+  "render_quality": "standard",
+  "render_workers": 2,
+  "on_failure": "fallback",
+  "design": {
+    "background_top": "#0E111C",
+    "background_bottom": "#221630",
+    "text": "#F5F5F7",
+    "muted": "#AAACB8",
+    "accent": "#FFB020",
+    "accent_2": "#4FC3F7",
+    "accent_3": "#FF6B6B",
+    "heading_font": "Barlow Condensed",
+    "body_font": "Barlow"
+  }
+}

@@ -398,8 +398,11 @@ function report(r, onJump, getText) {
     h("div", { class: "stat" }, h("b", {}, s.type_label || "Full video"), h("span", {}, s.type === "short" ? "vertical 1080×1920, up to 2:00" : "16:9 1920×1080")),
     h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_seconds)), h("span", {}, "length (estimated)")),
     h("div", { class: "stat" }, h("b", {}, s.shots ?? 0), h("span", {}, `shots · one every ${s.avg_shot_seconds ?? 0} s`)),
-    h("div", { class: "stat" }, h("b", {}, s.ai_images ?? 0), h("span", {}, `AI images (~${health.seconds_per_image || 25} s each)`)),
+    s.rendering_method === "motion"
+      ? h("div", { class: "stat" }, h("b", {}, "~" + (s.motion_scenes ?? 0)), h("span", {}, "animated scenes (a new picture every ~2.6 s, no AI images)"))
+      : h("div", { class: "stat" }, h("b", {}, s.ai_images ?? 0), h("span", {}, `AI images (~${health.seconds_per_image || 25} s each)`)),
     h("div", { class: "stat" }, h("b", {}, s.graphics ?? 0), h("span", {}, "cards, numbers, quotes, charts (instant)")),
+    s.rendering_method ? h("div", { class: "stat" }, h("b", {}, s.rendering_method_label), h("span", {}, "pictures")) : null,
     r.art_style ? h("div", { class: "stat" }, h("b", {}, r.art_style.label), h("span", {}, `Art style · ${r.art_style.images.new} of ${r.art_style.images.total} AI images still to make`)) : null,
     h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_draft_seconds)), h("span", {}, "draft render")),
     h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_final_seconds)), h("span", {}, "final render"))));
@@ -451,6 +454,25 @@ function headerValue(text, key) {
   const v = m[1].match(new RegExp(`^${key}\\s*:\\s*(.*)$`, "m")); return v ? v[1].trim() : null;
 }
 function setArtStyle(text, id) { return setHeaderKey(text, "art_style", id); }
+const METHOD_LABEL = { ai_image: "AI images", motion: "Motion graphics" };
+const DRAFT_HINT = { ai_image: "Draft: AI images are shown as labelled placeholders, so it takes about a minute.",
+  motion: "Draft: the real animation at 960x540 (about 2.5 minutes per minute of video on the Mac)." };
+function methodPicker(getText, setText, recheck) {
+  // how the pictures are made: AI images (default, no header line) or motion graphics (kinetic type + stick figures)
+  const cur = (headerValue(getText(), "rendering_method") || "ai_image").toLowerCase();
+  const note = h("span", { class: "hint" });
+  const show = () => { note.textContent = sel.value === "motion"
+    ? "Bright-pop motion graphics: kinetic words, stick figures, transitions and sound on every beat (HyperFrames, on this Mac)."
+    : "AI pictures from the image model, with camera moves (the default).";
+    const dh = $("#draftHint"); if (dh) dh.textContent = DRAFT_HINT[sel.value] || DRAFT_HINT.ai_image; };
+  const sel = h("select", { id: "methodSel", class: "btn small", "aria-label": "Rendering method", onchange: () => {
+      setText(setHeaderKey(getText(), "rendering_method", sel.value === "ai_image" ? null : sel.value));
+      show(); if (getText().trim()) recheck(); } },
+    Object.entries(METHOD_LABEL).map(([v, l]) => h("option", { value: v, selected: v === cur }, l)));
+  sel._show = show; setTimeout(show, 0);   // after the page is built (the draft hint is added later)
+  show();
+  return h("label", { class: "row", style: "gap:8px;margin-bottom:10px;align-items:center" }, h("b", {}, "Pictures"), sel, note);
+}
 
 // ------------------------------------- look & sound: one card with a tab per choice (each writes a header line)
 let lookTab = "captions";
@@ -540,8 +562,9 @@ function sfxPane(r, getText, setText, recheck) {
       h("div", { class: "voices" },
         opt("script", "Script only", `Only the [sfx: ...] tags written in the script (${s.mode === "off" ? "ignored now" : s.script + " in this one"}).`),
         opt("auto", "Auto", "Video Studio adds effects: whoosh on title cards and chapters, ding on numbers, typing on quotes, and words like “crashed” or “suddenly”."),
+        opt("rich", "Rich", "An effect on almost every picture change (15-20 a minute), like animated explainers. Best once the library has several real sounds per kind."),
         opt("off", "Off", "No sound effects at all, even where the script has tags."))];
-    if (s.mode === "auto") {
+    if (s.mode === "auto" || s.mode === "rich") {
       kids.push(h("div", { class: "mood" }, h("b", {}, `${s.auto} automatic effect${s.auto === 1 ? "" : "s"}`), h("span", { class: "hint" }, s.script ? `plus ${s.script} from the script's own tags` : "")));
       if (s.missing.length) kids.push(h("p", { class: "hint" }, "No sound yet for: " + s.missing.join(", ") + " (add a file to assets/library/sfx/<kind>/)."));
       kids.push(h("ul", { class: "cues" }, s.cues.map(c => h("li", {}, h("span", {}, ts(c.at)), h("b", {}, c.kind), h("span", {}, c.why)))));
@@ -553,14 +576,15 @@ function sfxPane(r, getText, setText, recheck) {
   })();
   return box;
 }
-const sfxSummary = (r) => { const s = (r.stats || {}).sfx; return !s ? "" : s.mode === "auto" ? `Auto · ${s.auto} effects` : s.mode === "off" ? "Off" : `Script only · ${s.script}`; };
+const sfxSummary = (r) => { const s = (r.stats || {}).sfx; if (s && (r.stats || {}).rendering_method === "motion" && (s.mode === "auto" || s.mode === "rich"))
+  return `${s.mode === "rich" ? "Rich" : "Auto"} · on every beat`; return !s ? "" : s.mode === "auto" || s.mode === "rich" ? `${s.mode === "rich" ? "Rich" : "Auto"} · ${s.auto} effects` : s.mode === "off" ? "Off" : `Script only · ${s.script}`; };
 const musicSummary = (r) => { const m = (r.stats || {}).music; return !m ? "" : m.off ? "No music" : m.items.length ? m.items.join(", ") : "Random track"; };
 const PANES = {
   music: { label: "Music", show: (r) => !isClip(r), summary: musicSummary, build: musicPane },
   sfx: { label: "Sound effects", show: (r) => !isClip(r), summary: sfxSummary, build: sfxPane },
   voice: { label: "Voice", show: (r) => !isClip(r), summary: (r) => (r.voice || {}).label, build: voicePane },
   captions: { label: "Captions", summary: (r) => (r.captions || {}).label, build: captionsPane },
-  style: { label: "Art style", show: (r) => r.art_style && !isClip(r), summary: (r) => (r.art_style || {}).label,
+  style: { label: "Art style", show: (r) => r.art_style && !isClip(r) && (r.stats || {}).rendering_method !== "motion", summary: (r) => (r.art_style || {}).label,
            build: (r, g, s, c) => styleCard(r, g, s, c, true) },
 };
 const PANE_ORDER = ["voice", "music", "captions", "sfx", "style"];
@@ -716,6 +740,8 @@ function showNew(kind = "full") {
       newText = ""; select(r.id); } catch (e) { toast(e.message); createBtn.disabled = false; } } }, "Save & make draft");
   const doCheck = async () => {
     if (!newText.trim()) { toast("Paste a script first"); return; }
+    { const sel = $("#methodSel"), v = (headerValue(newText, "rendering_method") || "ai_image").toLowerCase();
+      if (sel && METHOD_LABEL[v] && sel.value !== v) { sel.value = v; if (sel._show) sel._show(); } }
     try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: withType(newText, kind) }) });
       out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => withType(newText, kind))),
         lookCard(r, () => newText, (t) => { newText = t; ta.value = t; }, doCheck));
@@ -733,12 +759,15 @@ function showNew(kind = "full") {
         h("a", { class: "link", href: "/docs/CLAUDE_SCRIPT_PROMPT.md", target: "_blank" }, "Prompt to give Claude"),
         h("div", { class: "spacer" }),
         h("button", { class: "btn small", onclick: () => fileIn.click() }, "Open .md file"), fileIn,
-        h("button", { class: "btn small", onclick: async () => { try { newText = await (await fetch("/docs/sample")).text(); } catch { newText = ""; }
+        h("button", { class: "btn small", title: "Loads the sample for the Pictures choice below (Motion graphics: the Nvidia honey-trap story)", onclick: async () => {
+          const motion = ($("#methodSel") || {}).value === "motion";
+          try { newText = await (await fetch(motion ? "/docs/sample_motion" : "/docs/sample")).text(); } catch { newText = ""; }
           if (!newText || newText.startsWith("<")) { toast("Sample not found"); return; } ta.value = newText; doCheck(); } }, "Load sample")),
+      methodPicker(() => newText, (t) => { newText = t; ta.value = t; createBtn.disabled = true; }, doCheck),
       ta,
       h("div", { class: "row", style: "margin-top:12px" },
         h("button", { class: "btn", onclick: doCheck }, "Check"), createBtn,
-        h("span", { class: "hint" }, "Draft: AI images are shown as labelled placeholders, so it takes about a minute."))),
+        h("span", { class: "hint", id: "draftHint" }, DRAFT_HINT.ai_image))),
     out);
   if (newText.trim()) doCheck();
 }
