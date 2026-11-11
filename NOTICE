@@ -41,3 +41,19 @@ Downloaded by setup.sh / on first use (not included):
 - FFmpeg (installed separately; LGPL/GPL depending on the build), mflux (MIT), PyTorch, transformers, OpenCV,
   Pillow, matplotlib, Flask and the other Python packages in setup.sh, each under its own licence.
 AI-generated pictures may need to be disclosed as "altered or synthetic content" when you upload to YouTube.
+
+ICON PACKS (written by tools/import_icon_packs.py; don't edit this block by hand)
+Used by the motion-graphics renderer. The icons are installed by setup.sh from pinned npm packages
+(not included in this repository); each pack's full licence text is included next to where it is imported.
+- Fluent Emoji Flat: Copyright Microsoft Corporation. Licence: MIT (assets/library/icons/fluent_flat/LICENCE). Source: https://github.com/microsoft/fluentui-emoji
+- Fluent Emoji Color: Copyright Microsoft Corporation. Licence: MIT (assets/library/icons/fluent_color/LICENCE). Source: https://github.com/microsoft/fluentui-emoji
+- Noto Emoji: Copyright Google Inc. Licence: Apache-2.0 (assets/library/icons/noto/LICENCE). Source: https://github.com/googlefonts/noto-emoji
+- Phosphor Icons (fill + duotone): Copyright Phosphor Icons. Licence: MIT (assets/library/icons/phosphor/LICENCE). Source: https://github.com/phosphor-icons/core
+- Tabler Icons: Copyright Paweł Kuna. Licence: MIT (assets/library/icons/tabler/LICENCE). Source: https://github.com/tabler/tabler-icons
+- Flag Icons: Copyright Panayiotis Lipiridis. Licence: MIT (assets/library/icons/flags/LICENCE). Source: https://github.com/lipis/flag-icons
+- Natural Earth country shapes (1:110m): Public domain, made by Natural Earth. Licence: public-domain (assets/library/icons/natural_earth/LICENCE). Source: https://www.naturalearthdata.com
+- Noto Emoji is licensed under the Apache License, Version 2.0; those files may only be used in
+  compliance with that License (copy: assets/library/icons/noto/LICENCE).
+- Emoji keyword data for the icon search: emojilib (MIT), unicode-emoji-json (MIT). Search model:
+  sentence-transformers/all-MiniLM-L6-v2 (Apache-2.0), downloaded by setup.sh.
+END OF ICON PACKS

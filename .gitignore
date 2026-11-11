@@ -41,3 +41,9 @@ assets/caption_previews/
 
 # Node tools of the parked HTML animation branch (f9-html-animation-wip)
 node_modules/
+
+# icon packs (docs/ASSET_PACKS_PLAN.md): the icons, search index and embeddings are rebuilt by setup.sh from the
+# pinned npm packages (tools/import_icon_packs.py, tools/build_icon_index.py). LICENCE files + CREDITS.md ARE in git.
+assets/library/icons/*/icons.json
+assets/library/icons/index.json
+assets/library/icons/embeddings.npy

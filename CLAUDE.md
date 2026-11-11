@@ -366,6 +366,16 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       sample draft 1:14 in 74 s; EarPods final scripts/2026-11-11-earpods-gfx.md, job 20261111-085018-292260: 8:53,
       209 scenes, 171 SFX, 611 s (HyperFrames 502 s). Weak spots seen: narration still says "I'm Sterling / a cat in
       a blazer", no earphone props, filler kinetic words, a near-empty frame around 6:05.
+- [ ] ASSET PACKS for motion graphics (docs/ASSET_PACKS_PLAN.md, build order = its section 7; branch main):
+  - [x] Step 1 importer (2026-11-11): pipeline/icon_library.py (PACKS, licence allow-list, svg(id), credit_lines) +
+        tools/import_icon_packs.py (`--check` = stale test). Packs from pinned @iconify-json npm packages (root
+        package.json): fluent_flat 1,594, fluent_color 1,590, noto 1,680, phosphor fill+duotone 3,024, tabler 6,287,
+        flags 4x3 271, natural_earth 176 country shapes (from motion/src/library/worldmap.json). Skin tones dropped.
+        assets/library/icons/<set>/icons.json is NOT in git (43 MB, rebuilt by setup.sh); LICENCE per pack +
+        CREDITS.md + the "ICON PACKS" block of NOTICE are in git. Refused in tests: CC-BY-SA-4.0, GPL-3.0, OFL-1.1,
+        unknown; twemoji (CC BY 4.0) only imports with ALLOW_CC_BY=1 (credit_lines() gives its description line).
+        Noto is pinned to 1.2.7 ON PURPOSE: newer packages include files added after upstream replaced the Apache
+        licence file with OFL-1.1 (not on the allow-list). Classic sample draft 14 s, presets clean.
   - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

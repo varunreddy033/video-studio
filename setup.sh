@@ -105,6 +105,8 @@ fi
 npm ci --no-fund --no-audit        # exactly the tested HyperFrames 0.9.26 + GSAP 3.15.1 (package-lock.json)
 HF="$P/node_modules/.bin/hyperframes"
 export HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_NO_UPDATE_CHECK=1
+echo "== extra: icon packs for motion graphics (pinned @iconify-json packages, licence allow-list)"
+"$PY" "$P/tools/import_icon_packs.py" || echo "   WARNING: an icon pack was refused or failed; see the lines above"
 "$HF" telemetry disable >/dev/null 2>&1 || true
 "$HF" browser ensure >/dev/null 2>&1 && echo "   ok: HyperFrames $("$HF" --version), Node $(node --version), Chrome for rendering" \
   || echo "   WARNING: HyperFrames couldn't find or download Chrome; run: $HF browser ensure"
