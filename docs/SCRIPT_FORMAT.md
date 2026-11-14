@@ -89,6 +89,9 @@ header replaces a character's own voice.
 | `clean_lower` | friendly lowercase |
 | `none` | nothing burned in (the .srt for YouTube is still made). Default for `rendering_method: motion`: its scenes already show the key words |
 | `chip` | white pill at the top left, spoken word on a yellow marker (motion graphics; pick it in the Captions tab or write `captions: chip`) |
+| `swiss_type` | clean Inter in normal capitals, three words, the spoken word red (matches `typography: swiss`) |
+| `outline_3d` | heavy Archivo Black capitals, thick outline + solid drop block, the spoken word yellow |
+| `editorial` | DM Serif Display in normal capitals, soft shadow, the spoken word coral |
 
 Every video gets `captions_final.srt` whatever the style (also `none`); it is in the upload pack for YouTube's
 subtitles.
@@ -130,7 +133,13 @@ format it had. `show: <id>` pins one (the key is `show:` because `format:` alrea
 `data_lab` (navy + neon, charts, counters, dashboards, no people), `paper_notebook` (ruled paper, sticky notes,
 checklists, hand-drawn wobble), `newsroom` (headline bars, lower thirds, ticker, anchor silhouette), `case_file` (noir
 desk lamp, memos, evidence board), `arcade_retro` (pixel CRT, level cards, health bars), `blueprint` (blue grid,
-line diagrams). `FORMATS_ALLOWED=tech_desk, data_lab` in .env limits auto to a channel's family of formats.
+line diagrams), `type_studio` (kinetic typography is the picture: the Swiss type style on flat paper / electric blue /
+ink / cream / sky, no figures, icons or app windows; its own scene types `type_kicker` (small kicker over one big
+phrase), `type_wheel` (lead words + a slot-machine word column, neighbours faded), `type_swap` (a fixed lead word, the
+next word swaps in on each spoken word while the backdrop colour flips), `type_stack` (light / heavy stacked lines),
+`type_sentence` (typed word by word with a caret, key words turning heavy red), plus kinetic words, title cards and a
+few clean data scenes; no frames or ambient shapes). With `typography: swiss` or `editorial` (its auto pool), labels
+of every scene keep the script's own capitals instead of ALL CAPS. `FORMATS_ALLOWED=tech_desk, data_lab` in .env limits auto to a channel's family of formats.
 The Variety card on the Check page names the chosen format and why, and warns when the video is too similar to one
 of the last 10 (similarity above 0.72).
 
@@ -159,6 +168,33 @@ pick per scene and the repetition numbers; Pin / Ban write the lines below.
 | `palette: pop` | colour set: `pop` (all 8 colours), `warm`, `cool`, `bold` |
 | `fonts: poster` | font pairing: `poster` (Anton + Poppins), `condensed` (Barlow Condensed + Barlow), `comic` (Bangers + Poppins) |
 | `icon_style: sticker` | `sticker` (white rounded badge, dark outline, shadow; default) or `plain` |
+| `typography: auto` | type style of the scene text (default `auto`), see below. `classic` = the look from before type styles |
+
+Typography (`typography:`, motion graphics only; Look & sound -> Typography tab shows a sample of each). A type
+style sets the headline font, a text effect, how the key words of a line stand out (numbers first, then names, then
+long words) and the word animations (one per text scene, rotating, never twice in a row):
+
+| id | Look | Word animations |
+|---|---|---|
+| `swiss` | Inter in the script's own capitals, light words + one heavy red accent word, red full stop, hairline crosshair + mono corner labels (formats without a backdrop), the reference "Swiss" colour set (paper, electric blue, ink, cream, sky) | typewriter with a red caret, slot-machine word roll, weight sweep, mask rise, glyph scramble |
+| `outline_pop` | white letters, thick dark outline, hard offset shadow, key words in the accent colour | pop, punch, letter by letter, drop |
+| `extrude` | letters with a solid 3D side in the accent colour and a dark edge | punch, drop, letter by letter |
+| `gradient` | Bebas Neue filled with a vertical gradient (ink to accent) | mask rise, letter by letter, punch |
+| `neon` | light letters with a soft coloured glow (dark formats) | flicker, glyph scramble, typewriter |
+| `marker` | key words on tilted highlight boxes with a hard shadow | pop, mask rise, letter by letter |
+| `editorial` | DM Serif Display in the script's own capitals, key word italic in the accent colour with an underline swipe | mask rise, letter by letter, typewriter |
+| `classic` | the original poster capitals and yellow marker | pop |
+
+`auto` picks from the format's own list (Pop Poster: outline_pop, extrude, swiss, marker, gradient; Tech Desk: swiss,
+neon, gradient; Data Lab: neon, swiss, gradient; Paper Notebook: marker, outline_pop; Newsroom: swiss, editorial,
+extrude; Case File: editorial, neon, marker; Arcade: extrude, neon; Blueprint: swiss, outline_pop; Type Studio: swiss,
+editorial), the one the last 5
+videos used least; a video already in the history keeps its style. A pinned style may be outside the format's list.
+Styles with their own fonts (swiss, gradient, editorial) replace the format's font pair unless `fonts:` is pinned;
+`swiss` also brings its colour set unless `palette:` is pinned. Big headline text of every scene type (numbers,
+map labels, comparisons...) gets the style's effect; text on white cards keeps its plain look. New font pairs for
+`fonts:`: `swiss` (Inter), `impact` (Bebas Neue + Barlow), `heavy` (Archivo Black + Poppins), `editorial`
+(DM Serif Display + Barlow). All fonts are SIL OFL (assets/fonts/licences).
 
 Scene types (motion graphics). Besides kinetic words, stick figures, numbers, charts, quotes, memos and title
 cards, the narration's words start six more scene types: a **country** ("Singapore", "Chinese") = world map with the
@@ -171,6 +207,63 @@ and every scene type has 3 layouts that take turns. Write the list or the compar
 With `look: auto` each part not pinned is the one the last 5 finished videos used least (data/asset_history.json,
 written after every final; icons used there rank a little lower too). A video already in that file keeps its look,
 so re-rendering a script gives the same video.
+
+### Camera and transitions (`camera:`, `transitions:`)
+
+`camera:` sets how each scene moves, with a 3D feel. Video Studio: Look & sound -> Camera writes the line.
+
+| Value | Motion graphics (`rendering_method: motion`) | AI images (`rendering_method: ai_image`) |
+|---|---|---|
+| (no line) | `auto` | the classic 8 zoom / pan moves (depth parallax in finals), unchanged |
+| `auto` | a move per scene that suits it: push-in on a number, rack focus on a quote, orbit on a held scene, handheld in quick bursts, crane on a chapter card; never the same move twice in a row, none above 30 % | the 8 moves below in turn, shot by shot |
+| `off` | no camera move | a still picture |
+| `flat` | the old slow 2D zoom (before cameras existed) | same as no line |
+| `dolly`, `pull`, `truck`, `orbit`, `tilt`, `handheld`, `focus`, `vertigo` | that move on every scene; a comma list (`camera: orbit, dolly`) = only those, chosen per scene | that move on every shot; a list takes turns |
+
+The moves: `dolly` push in, `pull` dolly out, `truck` slide sideways, `orbit` slow turn around the subject, `tilt` crane
+up/down, `handheld` small seeded sway, `focus` rack focus (soft -> sharp), `vertigo` dolly zoom (the subject grows
+while the background falls away). In motion graphics every scene is three layers (background, frame, content) that
+move at different speeds; formats without a background get soft depth dots so the parallax shows. Each format leans
+on its own moves (Case File handheld + focus, Tech Desk orbit + truck...). AI images: 3D moves use each image's depth
+map (Depth Anything) in finals; drafts show the nearest flat move.
+
+`transitions:` (motion graphics only; AI-image videos cut) = `auto` (default: the format's own mix, chosen by how two
+scenes connect, none above 35 %), `off` (hard cuts only), a set, or a comma list of names (sets and names mix:
+`transitions: 3d, ink`). Sets: `3d` (cube, flip, page_curl, spin, zoom_through), `film` (light_leak, film_burn,
+whip_blur, zoom_blur, fade), `clean` (cut, fade, push, slide, luma_wipe), `glitch` (rgb_split, glitch, zoom_blur,
+flash), `popular` (whip_blur, zoom_blur, zoom_through, spin, light_leak, cube, luma_wipe, ink, shape).
+New transitions (both scenes move): `whip_blur` (whip pan with motion blur), `zoom_blur`, `zoom_through` (fly into the
+old scene, out of the new one), `spin`, `light_leak`, `film_burn`, `rgb_split`, `cube` (3D cube turn), `flip` (3D
+card flip), `page_curl` (the old page peels away), `ink` (ink blot reveal), `luma_wipe` (soft diagonal wipe), `shape`
+(diamond reveal). Older ones: cut, fade, push, slide, push_up, blinds, split, whip, zoom, zoom_out, flash, glitch,
+wipe, bars, draw, flashlight, page, pixel, shake (push / slide / push_up / whip now move the old scene out too).
+Chapter cards keep the format's signature transition. Unknown names are a Check error on the header line.
+
+### Premium blocks (motion graphics)
+
+19 premium animations rebuilt from reference recordings (pipeline/motion_gfx/premium, wired in by
+pipeline/motion_gfx/premium_scenes.py) are scene types like the others; the planner picks them by the line's words
+and only when the line lasts long enough for the animation: punch lines -> track_type, word_slide, blur_zoom_type,
+gradient_words, morph_word, card_pops; a number -> odometer; a percentage -> donut_card; a spoken list ->
+list_circle, word_wheel, color_carousel; "searched / googled" -> search_type; "posted / tweeted / went viral" ->
+post_card; "turned off / switched on" -> toggle; card / credit / payment -> card_flip; money words -> card_wheel;
+cart / order / buy -> pill_split. [quote: ...] shots alternate between the classic quote card and glass_quote,
+[chart: line ...] shots between the classic chart and chart_card (its axis shows the data's real min and max). Every
+block draws its own full-frame background; no names, brands or numbers from the references are shown (the line's
+own words and numbers fill them). `scene_order:` can force them for a test reel.
+
+### Smoothness (`critique:`, motion graphics)
+
+Every motion render watches its own frames (the smooth-motion-studio method). A frame is "still" when nothing on
+screen moves; each scene gets a score out of 10 from its still frames, the longest still stretch, how soon something
+moves after the cut, motion at one constant speed, stutters (a frozen frame between moving ones) and one-frame pops.
+`critique: auto` (default) fixes every scene under 8/10 (a spring settle on the cut, a slow float for the whole scene)
+and re-renders only those scenes, up to 2 extra passes; `report` only scores; `off` skips it. The job page's
+"Smoothness check" card and render.log show the scores before and after; motion/critique/critique.png is the chart.
+Animation eases are closed-form springs (pipeline/motion_gfx/spring.py: snappy, soft, bouncy, firm) instead of
+back/bounce curves, and every scene's frame + content settle on a spring right at the cut. The music bed starts up to
+one beat late so its beat grid meets as many cuts as possible (only on tracks with a clear beat; render.log
+"beat lock").
 
 ### Art style (`art_style:`)
 

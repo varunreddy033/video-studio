@@ -558,7 +558,8 @@ def check_report(parsed: dict, history: dict = None) -> dict:
                                                       format_banned=show["banned"]), seen, seed)
     rep = p["report"]
     from . import planner as PL, variety
-    trans = PL.transitions(beats, names, seed, show["transitions"], show["signature"])
+    trans = PL.transitions(beats, names, seed, show["transitions"], show["signature"], meta.get("transitions"))
+    cams = PL.cameras(beats, names, seed, show.get("cameras"), meta.get("camera"))
     pin = (meta.get("show") or "").strip().lower()
     why = "pinned with show:" if pin and pin != "auto" else (
         "kept from this video's earlier render" if ((Hs.entry(title) or {}).get("look") or {}).get("format") else
@@ -570,7 +571,7 @@ def check_report(parsed: dict, history: dict = None) -> dict:
         fit, goals = {}, {}
     rep["format"] = {"id": look.get("format"), "label": show["label"], "why": why, "allowed": Fm.allowed(),
                      "fit": dict(sorted(fit.items(), key=lambda kv: -kv[1])), "goals": goals}
-    rep["variety"] = variety.report(names, variants, trans, beats, seen.get("videos"), look)
+    rep["variety"] = variety.report(names, variants, trans, beats, seen.get("videos"), look, cams)
     cl = rep["variety"].get("closest")
     if cl and cl[0] > Fm.SIMILAR_WARN:
         rep["variety"]["warning"] = (f"This video is {cl[0]:.2f} similar to \u201c{cl[1]}\u201d (warning above "

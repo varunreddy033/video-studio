@@ -229,6 +229,9 @@ thumbnail: <2-4 word thumbnail text, ALL CAPS, ends with ? or !>
 ---
 (rendering_method: motion is the default, the line just makes it explicit. No character: line, no captions: line:
 the scenes show the key words, so motion videos have no burned-in captions; the .srt subtitles are made anyway.)
+(No camera: or transitions: line either: both default to auto, which gives every scene a 3D camera move and picks the
+transitions from the video's style. Add one only if I ask, e.g. camera: handheld, focus or transitions: film.
+Every render also checks its own frames and re-renders scenes that sit still; no line is needed for that.)
 
 ## <Chapter 1 heading>
 [card: <BIG TEXT> | <small line>]
@@ -254,7 +257,9 @@ Rules:
    a memo, a phone call), where (China, a border, an office), and verbs like reported, denied, investigated,
    smuggled, rose, fell, warned. A line that cites a report ("The Financial Times reported ...") becomes a memo
    with a REPORTED stamp; a denial gets a DENIED stamp.
-4. Use commas and full stops generously: every clause is one picture (1.2-3 seconds). Short sentences.
+4. Use commas and full stops generously: every clause is one picture (1.2-3 seconds). Short sentences. A question
+   at the end of a line makes the next scene a reveal (camera push-in, zoom transition); a new [ai:]/[card:] tag
+   starts a new shot (a bigger transition: whip, cube, zoom blur), so put tags where the story turns.
 5. Real people: the figures are anonymous stick figures, never drawn as the real person. Never invent quotes,
    facts, dates or actions. Attribute every claim ("X reported", "according to Y"), give the other side
    (denials, official responses), and say clearly when something is an allegation and not proven.

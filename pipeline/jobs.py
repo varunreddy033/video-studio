@@ -7,6 +7,7 @@ jobs.py  -  one folder per video in output/jobs/<id>/ and a background queue tha
 """
 
 import json
+import shutil
 import queue
 import re
 import threading
@@ -102,6 +103,16 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
         from .motion_gfx import formats as Fm
         sid = (parsed["meta"].get("show") or "auto").strip().lower()
         out["show"] = {"id": sid, "label": "Auto" if sid == "auto" else Fm.get(sid)["label"]}
+        from .motion_gfx import typography as TY
+        tid = (parsed["meta"].get("typography") or "auto").strip().lower()
+        out["typography"] = {"id": tid, "label": "Auto" if tid == "auto" else TY.STYLES.get(tid, {}).get("label", tid)}
+    rm = parsed["meta"].get("rendering_method")
+    if rm in ("motion", "ai_image") and (parsed["meta"].get("style") or "").strip().lower() != "motion" \
+            and not (parsed.get("stats") or {}).get("clip"):           # the Camera tab
+        cam = (parsed["meta"].get("camera") or "").strip().lower()
+        tr = (parsed["meta"].get("transitions") or "").strip().lower()
+        out["camera"] = {"camera": cam or ("auto" if rm == "motion" else "classic"), "transitions": tr or "auto",
+                         "method": rm}
     vid = parsed["meta"].get("voice")
     vp = next((v for v in presets.list("voices") if v.get("voice") == vid), None)
     out["voice"] = {"voice": vid, "preset": vp and vp["id"], "label": vp["label"] if vp else vid,
@@ -162,6 +173,31 @@ def enqueue(job_id: str, mode: str) -> str:
               done=0, total=0, error=None)
     _queue.put((job_id, mode))
     return job_id
+
+
+def trash_dir() -> Path:
+    """Where deleted jobs go: the macOS Trash (Finder's Put Back / drag out restores them), else output/deleted_jobs."""
+    t = Path.home() / ".Trash"
+    return t if t.is_dir() else C.JOBS_DIR.parent / "deleted_jobs"
+
+
+def delete(job_id: str) -> str:
+    """Moves one job folder to the Trash (nothing is erased). Refuses a job that is queued or rendering."""
+    if not valid(job_id):
+        raise ValueError("no such video")
+    st = read_state(job_id)
+    if st.get("status") in ("queued", "rendering"):
+        raise ValueError(f"it is {st['status']}; wait until it finishes")
+    dest_dir = trash_dir()
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / f"video-studio-job-{job_id}"
+    k = 1
+    while dest.exists():
+        dest = dest_dir / f"video-studio-job-{job_id}-{k}"
+        k += 1
+    with _lock:
+        shutil.move(str(jdir(job_id)), str(dest))
+    return str(dest)
 
 
 def list_jobs():

@@ -158,8 +158,21 @@ TYPES = {
              "fits": lambda b, st: 0.85 if X.pile_noun(b["text"]) else 0.0},
 }
 SHOT_BOUND = {"number": "number", "quote": "quote", "chart": "chart", "card": "title"}
+
+
+def shot_bound(b, seed=0):
+    """The scene type a shot tag's own graphic gets: quote shots alternate classic quote card / glass_quote, line-chart
+    shots classic chart / chart_card (premium blocks), seeded per shot."""
+    name = SHOT_BOUND[b["kind"]]
+    alt = {"quote": "glass_quote", "chart": "chart_card"}.get(name)
+    from . import premium_scenes as PS
+    if alt and alt in TYPES and (name != "chart" or b.get("chart") == "line") and PS.long_enough(alt, b) \
+            and _h(seed, "alt", b["shot"]) % 2:
+        return alt
+    return name
 LAYOUTS = {}               # name -> number of layouts (default 6 = 3 own arrangements x frame)
 OWN_LAYOUTS = {}           # name -> own arrangements (default 3); layout >= own = the same arrangement in a frame
+NO_FRAME = set()           # types drawn edge to edge (premium blocks): one layout, never a frame behind them
 TYPE_SHARE = 0.20
 KINETIC_SHARE = 0.15
 LAYOUT_USES = 6
@@ -168,7 +181,7 @@ LAYOUT_USES = 6
 def layouts_of(name: str) -> int:
     """Layouts of a type = its own arrangements x (plain + the 4 frames of compose.FRAMES): 15 for the 13 older
     types (3 arrangements), 10 for the newer ones (2)."""
-    return own_of(name) * 5
+    return own_of(name) * (1 if name in NO_FRAME else 5)
 
 
 def own_of(name: str) -> int:
@@ -180,7 +193,7 @@ def frame_of(name: str, seed: int, variant: int = None) -> str:
     order of the 4 frames is seeded per type)."""
     from . import compose
     own = own_of(name)
-    if variant is not None and variant < own:
+    if name in NO_FRAME or (variant is not None and variant < own):
         return None
     k = 0 if variant is None else variant // own - 1
     return compose.FRAMES[(_h(seed, "frame", name) + k) % len(compose.FRAMES)]
@@ -213,6 +226,12 @@ def _chapter_lean(chapter_no: int, seed: int) -> dict:
     return {n: 0.15 for n in names if _h(seed, "lean", chapter_no, n) % 3 == 0}
 
 
+STRICT = {"timeline", "meter", "versus", "icon_list", "pile", "map_flag", "memo",
+          # premium blocks that show the line's own data (a number, a list, a search...) or only come from shot tags
+          "glass_quote", "chart_card", "odometer", "donut_card", "list_circle", "word_wheel", "color_carousel",
+          "search_type", "post_card", "toggle", "card_flip", "card_wheel", "pill_split"}
+
+
 def forced(beats: list, order: list) -> tuple:
     """scene_order: test reels: the given types in turn on every beat that isn't a chapter card or a shot tag's own
     graphic. A type that can't draw a beat's words still gets it (it falls back to the beat's phrase)."""
@@ -221,9 +240,21 @@ def forced(beats: list, order: list) -> tuple:
         if b.get("chapter_card"):
             names.append("chapter")
         elif b["index"] == 0 and b["kind"] in SHOT_BOUND:
-            names.append(SHOT_BOUND[b["kind"]])
+            names.append(shot_bound(b))
         else:
-            names.append(order[k % len(order)])
+            # the next type in the order that can draw this line; the strict data templates (they need a year, a
+            # percent, two sides, a list...) wait for a line that has it
+            queue = [order[(k + j) % len(order)] for j in range(len(order))]
+            st = {"roles": roles(b), "countries": used}
+            pick = next((t for t in queue if t in STRICT and t in TYPES and TYPES[t]["fits"](b, st) > 0), None) or \
+                next((t for t in queue if t not in STRICT), None)       # a data type that fits this line goes first
+            if pick is None:
+                pick = next((t for t in ("figure", "kinetic") if t in queue), "kinetic")
+            else:
+                j = queue.index(pick)
+                order = order[:]                       # move the picked type to position k (keeps the rest in turn)
+                order.insert(k % len(order), order.pop((k + j) % len(order)))
+            names.append(pick)
             k += 1
         extra = {}
         if names[-1] == "map_flag":
@@ -257,7 +288,7 @@ def plan(beats: list, seed: int = 0, exclude: dict = None, weights: dict = None,
         if b.get("chapter_card"):
             name = "chapter"
         elif b["index"] == 0 and b["kind"] in SHOT_BOUND:
-            name = SHOT_BOUND[b["kind"]]
+            name = shot_bound(b, seed)
         else:
             st = {"roles": roles(b), "countries": state["countries"]}
             cands = []
@@ -339,13 +370,45 @@ def variants(names: list, seed: int = 0, recent: dict = None) -> list:
 
 # -------------------------------------------------------------------------------------------- transitions
 TRANSITIONS = ["cut", "fade", "push", "slide", "push_up", "blinds", "split", "whip", "zoom", "zoom_out", "flash",
-               "glitch", "wipe"]
+               "glitch", "wipe", "whip_blur", "zoom_blur", "zoom_through", "spin", "light_leak", "film_burn",
+               "rgb_split", "cube", "flip", "page_curl", "ink", "luma_wipe", "shape"]
 GROUPS = {"same": ["cut", "fade", "cut"],
-          "next": ["push", "slide", "push_up", "blinds", "split"],
-          "shot": ["whip", "zoom_out", "flash", "glitch", "push", "slide"],
-          "reveal": ["zoom", "zoom_out"],
+          "next": ["push", "slide", "push_up", "blinds", "split", "luma_wipe", "shape"],
+          "shot": ["whip_blur", "zoom_blur", "cube", "spin", "flash", "glitch", "push", "light_leak"],
+          "reveal": ["zoom", "zoom_through", "zoom_out"],
           "chapter": ["wipe"]}
 TRANSITION_SHARE = 0.35
+# transitions: <set> in the header (a named set or a comma list of transition names)
+TRANSITION_SETS = {
+    "3d": ["cube", "flip", "page_curl", "spin", "zoom_through"],
+    "film": ["light_leak", "film_burn", "whip_blur", "zoom_blur", "fade"],
+    "clean": ["cut", "fade", "push", "slide", "luma_wipe"],
+    "glitch": ["rgb_split", "glitch", "zoom_blur", "flash"],
+    "popular": ["whip_blur", "zoom_blur", "zoom_through", "spin", "light_leak", "cube", "luma_wipe", "ink", "shape"],
+}
+
+
+def parse_transitions(value) -> tuple:
+    """transitions: header -> (mode, allowed list or None, bad names). mode = auto | off | pool."""
+    raw = [x.strip().lower() for x in str(value or "").split(",") if x.strip()]
+    if not raw or raw == ["auto"]:
+        return "auto", None, []
+    if raw == ["off"]:
+        return "off", None, []
+    allowed, bad = [], []
+    for x in raw:
+        if x in TRANSITION_SETS:
+            allowed += TRANSITION_SETS[x]
+        elif x in _all_transitions():
+            allowed.append(x)
+        else:
+            bad.append(x)
+    return "pool", list(dict.fromkeys(allowed)) or None, bad
+
+
+def _all_transitions():
+    from . import transitions as Tr
+    return Tr.ALL
 
 
 def relation(beats, names, i) -> str:
@@ -362,9 +425,26 @@ def relation(beats, names, i) -> str:
     return "next"
 
 
-def transitions(beats: list, names: list, seed: int = 0, groups: dict = None, signature: str = "wipe") -> list:
+def transitions(beats: list, names: list, seed: int = 0, groups: dict = None, signature: str = "wipe",
+                choice=None) -> list:
+    """choice = the transitions: header (auto = the format's groups, off = all cuts, a set/list = only those)."""
+    mode, allowed, _bad = parse_transitions(choice)
+    if mode == "off":
+        return ["cut"] * len(beats)
     groups = dict(GROUPS, **(groups or {}))
     groups["chapter"] = [signature]
+    if allowed:
+        base = dict(groups)
+        for k in list(groups):
+            pool = list(dict.fromkeys(base[k] + GROUPS.get(k, [])))
+            keep = [t for t in pool if t in allowed]
+            groups[k] = keep or ([t for t in allowed if t != "cut"] or allowed)
+        placed = {t for k in ("same", "next", "shot", "reveal") for t in groups[k]}
+        rest = [t for t in allowed if t not in placed and t != "cut"]
+        for k in ("next", "shot"):           # names the groups don't know go where scenes change
+            groups[k] = groups[k] + rest
+        if "cut" not in allowed:
+            groups["same"] = [t for t in groups["same"] if t != "cut"] or groups["same"]
     out, used = [], {}
     n = max(1, len(beats))
     for i in range(len(beats)):
@@ -387,5 +467,73 @@ def transitions(beats: list, names: list, seed: int = 0, groups: dict = None, si
     return out
 
 
+# ------------------------------------------------------------------------------------------------ cameras
+CAMERA_BY_JOB = {           # what a scene does -> the moves that suit it (first = strongest fit)
+    "reveal": ["dolly", "vertigo", "pull"],
+    "chapter": ["tilt", "pull", "orbit"],
+    "breather": ["orbit", "truck", "dolly"],
+    "burst": ["handheld", "dolly", "truck"],
+    "read": ["focus", "dolly", "truck"],
+    "data": ["truck", "orbit", "dolly", "tilt"],
+    "warning": ["vertigo", "handheld", "dolly"],
+}
+READ_TYPES = {"quote", "memo", "newspaper", "chat", "browser", "phone", "terminal", "sticky"}
+
+
+def _camera_job(b, name):
+    if b.get("chapter_card") or name == "chapter":
+        return "chapter"
+    if b.get("breather"):
+        return "breather"
+    if name in ("number", "chart", "meter", "countdown", "donut"):
+        return "reveal"
+    if name in READ_TYPES:
+        return "read"
+    if b.get("burst"):
+        return "burst"
+    from . import variety as V
+    if name in V.DATA_TYPES:
+        return "data"
+    if "warning" in roles(b):
+        return "warning"
+    return None
+
+
+def cameras(beats: list, names: list, seed: int = 0, pool: list = None, choice=None) -> list:
+    """A camera move per scene (camera.py). choice = the camera: header: auto = by the scene's job inside the format's
+    pool, off / flat = that everywhere, a name or list = only those. Never the same move twice in a row, no move
+    above camera.SHARE of the scenes."""
+    from . import camera as Cam
+    mode, pinned, _bad = Cam.parse_setting(choice)
+    if mode in ("off", "flat"):
+        return [mode] * len(beats)
+    pool = pinned or pool or Cam.DEFAULT_POOL
+    if len(pool) == 1:
+        return [pool[0]] * len(beats)
+    cap = max(2, math.ceil(Cam.SHARE * max(1, len(beats))))
+    out, used = [], {}
+    for i, (b, nm) in enumerate(zip(beats, names)):
+        job = _camera_job(b, nm)
+        pref = [m for m in CAMERA_BY_JOB.get(job, []) if m in pool]
+        start = _h(seed, "cam", i) % len(pool)
+        rest = pool[start:] + pool[:start]
+        order = pref + [m for m in rest if m not in pref]
+        pick = next((m for m in order if (not out or m != out[-1]) and used.get(m, 0) < cap), None) or \
+            next((m for m in order if not out or m != out[-1]), order[0])
+        out.append(pick)
+        used[pick] = used.get(pick, 0) + 1
+    from . import premium_scenes as PS
+    for i, nm in enumerate(names):
+        if nm in PS.NO_CAMERA:
+            out[i] = "off"
+        elif nm in PS.NAMES and out[i] not in PS.SAFE_CAMERAS:
+            out[i] = "pull" if (i and out[i - 1] == "dolly") else "dolly"
+    return out
+
+
 from . import scenes as _scenes  # noqa: E402  (the 24 newer scene types register themselves)
 _scenes.register()
+from . import premium_scenes as _premium  # noqa: E402  (the 19 premium blocks)
+_premium.register()
+from . import type_scenes as _type_scenes  # noqa: E402  (Type Studio's typographic scenes)
+_type_scenes.register()

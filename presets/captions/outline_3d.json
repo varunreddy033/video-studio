@@ -1,0 +1,57 @@
+{
+  "label": "3D outline",
+  "description": "Heavy Archivo Black capitals with a thick black outline and a solid drop block underneath, the spoken word turns yellow.",
+  "licence": "Archivo Black (SIL Open Font License 1.1, assets/fonts/licences/archivoblack-OFL.txt)",
+  "highlight": "word",
+  "case": "upper",
+  "font": "Archivo Black",
+  "font_file": "ArchivoBlack-Regular.ttf",
+  "bold": false,
+  "italic": false,
+  "text_colour": "#FFFFFF",
+  "highlight_colour": "#FFD21F",
+  "outline_colour": "#000000",
+  "shadow_colour": "#000000",
+  "shadow_transparency": 0,
+  "outline_ratio": 0.11,
+  "outline_min_px": 3,
+  "position": "bottom-center",
+  "group": {
+    "max_gap_sec": 0.45,
+    "break_after": ".?!:;",
+    "linger_sec": 0.35,
+    "min_word_sec": 0.02
+  },
+  "layouts": {
+    "landscape": {
+      "size": 0.07,
+      "margin_v": 0.075,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 2,
+      "max_chars": 18
+    },
+    "vertical": {
+      "size": 0.042,
+      "margin_v": 0.17,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 2,
+      "max_chars": 13
+    },
+    "short": {
+      "size": 0.06,
+      "margin_v": 0.24,
+      "margin_l": 0.05,
+      "margin_r": 0.15,
+      "max_words": 2,
+      "max_chars": 11
+    }
+  },
+  "srt": {
+    "max_chars": 84,
+    "line_chars": 42
+  },
+  "shadow_ratio": 0.1,
+  "pop": true
+}

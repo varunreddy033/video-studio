@@ -348,6 +348,10 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       sample draft 1:14 in 74 s; EarPods final scripts/2026-11-11-earpods-gfx.md, job 20261111-085018-292260: 8:53,
       209 scenes, 171 SFX, 611 s (HyperFrames 502 s). Weak spots seen: narration still says "I'm Sterling / a cat in
       a blazer", no earphone props, filler kinetic words, a near-empty frame around 6:05.
+      Known issues from Raju's original Mac test (2026-11-11, pipeline/motion/ before the port; not re-checked in
+      motion_gfx): ~18 harmless GSAP "target not found" warnings in hyperframes check (blink on some poses), the
+      chip captions overlap for a moment when the text changes (chip is no longer the motion default), motion
+      finals come out ~2.7 Mbps (flat colours; fine for YouTube, but below the 10 Mbps of ai_image finals).
 - [x] ASSET PACKS for motion graphics (docs/ASSET_PACKS_PLAN.md, build order = its section 7; branch main):
   - [x] Step 1 importer (2026-11-11): pipeline/icon_library.py (PACKS, licence allow-list, svg(id), credit_lines) +
         tools/import_icon_packs.py (`--check` = stale test). Packs from pinned @iconify-json npm packages (root
@@ -504,6 +508,107 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
         reserved when a motion job is QUEUED (re-renders too, status "rendering", back to done/draft after);
         layouts = own arrangements x (plain + 4 frames) (15 older / 10 newer types); Style tab in Look & sound
         (Auto + 8 formats with preview strips from assets/format_previews, writes show:), GET /api/formats.
+- [x] CAMERA + TRANSITIONS (2026-11-12, branch raju/camera-motion-transitions, docs/SCRIPT_FORMAT.md "Camera and
+      transitions"): header `camera:` = auto (default) | off | flat (the old 2D drift) | dolly, pull, truck, orbit, tilt,
+      handheld, focus, vertigo (one or a comma list); `transitions:` = auto | off | a set (3d, film, clean, glitch,
+      popular) | a comma list. Bad values = Check error on the header line. Motion graphics: pipeline/motion_gfx/
+      camera.py, every scene = 3 layers (far backdrop + soft depth dots on formats without a backdrop / mid frame / near
+      content) moved by GSAP at different speeds, 3D rotation with perspective for orbit/tilt, blur for focus;
+      planner.cameras picks per scene by job (reveal -> dolly/vertigo, quote/screens -> focus, breather -> orbit,
+      burst -> handheld, chapter -> tilt) from the format's "cameras" pool, never twice in a row, <= 30 %.
+      pipeline/motion_gfx/transitions.py: 13 new transitions that move BOTH scenes (exit on the outgoing host): whip_blur
+      (SVG motion blur), zoom_blur, zoom_through, spin, light_leak, film_burn, rgb_split (SVG channel split), cube, flip,
+      page_curl (incoming drawn under: index z-order), ink (mask), luma_wipe (mask), shape; longer overlaps per type;
+      push/slide/push_up/whip now push the old scene out too. Each format got its own transition groups + camera pool.
+      Variety report/Check card: camera mix + new transitions count. UI: Look & sound -> Camera tab, GET /api/camera.
+      Classic ai_image: no camera: line = unchanged (sample draft pixel-identical to 2026-11-11, PSNR inf, same cache
+      names); camera: set = parallax.camera_clip depth moves in finals (0.6-1.8 s per 3 s clip), nearest flat move in
+      drafts, off = still. scene_order: now waits with strict data templates (timeline, meter, versus...) for a line
+      that has the data (it crashed before). Tests on the Mac: reel of all 40 scene types + 13 new transitions + 8 moves
+      (job 20261112-163851-f56b1b) 2:34 draft in 385 s, -14.2 LUFS, variety 8/8; motion sample draft 1:14 in 184 s,
+      -14.1 LUFS, ~60 % more picture motion (median frame diff 0.46 -> 0.76); classic sample draft 7 s, -14.1 LUFS;
+      presets clean. Final of the motion sample with camera auto (job 20261112-170918-87b685): 1:14 in 182 s, -14.2 LUFS, constant 30 fps (2225 frames), 0 frozen frames and 0 sudden jumps inside scenes, every held frame moves (median change 0.42).
+- [x] Delete videos (2026-11-12, branch raju/delete-jobs): sidebar trash button per video (on hover) + Select… (Failed / Without final / All, Delete N); DELETE /api/jobs/<id>, POST /api/jobs/delete {ids}; jobs.delete MOVES the folder to ~/.Trash (output/deleted_jobs off the Mac), refuses queued / rendering jobs. Tested in the browser (single + select) and the refusal.
+- [x] SMOOTH MOTION (2026-11-12, local branch raju/smooth-motion on top of raju/delete-jobs; the smooth-motion-studio
+      skill in ~/.claude/skills, learned from two reference videos): pipeline/motion_gfx/spring.py = closed-form springs
+      registered as GSAP eases spring.snappy (zeta 0.42, omega 17, settles 0.56 s) / soft / bouncy / firm
+      (assets/js/springs.js in every motion project); all back.out/bounce eases and the formats' EASE_POP are springs
+      now (arcade keeps steps). Every scene's frame + content (#<host>-life, wraps the camera rig) settle on a spring at
+      the cut (not with camera: off / flat). pipeline/motion_gfx/critic.py = self-critique loop after the HyperFrames
+      render: per-frame motion, a frame is dead when nothing moves, a score per scene (dead share, longest dead
+      stretch, onset, constant speed, stutters, one-frame pops); scenes under 8 get fixes (onset = stronger spring
+      settle on the cut, dead = slow float) and only their spans are re-rendered (hyperframes render --start/--end) and
+      spliced in (frame-exact, checked by PSNR), up to 2 extra passes; motion/critique/report.json + critique.png,
+      render.log lines, job page "Smoothness check" card. Header critique: auto (default) | report | off.
+      pipeline/beatgrid.py: beat lock for the music bed: tempo from the first 60 s (onsets, score minus chance level),
+      the track starts up to one beat late so its grid meets the most cuts (only tracks clearly on a grid; classic
+      videos untouched, mixer command byte-identical). Tests (worktree, output/tests): motion sample draft 1:14 in
+      117-191 s, critique 31 scenes mean 9.74 -> 9.82 / 9.84 -> 9.89, lowest 7.2 -> 8.5 / 7.8 -> 9.0, -14.1 LUFS;
+      final with music: acid party: mean 9.85 -> 9.89, lowest 7.8 -> 8.9, beat lock 150 BPM, +0.283 s, cuts on the
+      beat 17 % -> 33 %, -14.1 LUFS, true peak -0.5 dBTP, 30 fps / 2225 frames; skill critic on the delivered final:
+      mean 9.9, lowest 9.1. Classic sample draft: picture PSNR inf vs 2026-11-11, audio bit-identical with the old
+      and new assemble.py. Not pushed (Raju's rule: push / PR only when he asks).
+- [x] PREMIUM BLOCKS in the pipeline (2026-11-13, same local branch raju/smooth-motion): the 19 blocks the
+      premium-recreate session rebuilt from Raju's reference recordings (output/recreations, its RESULTS.md: 88 % average
+      match) copied to pipeline/motion_gfx/premium/ and wired in by premium_scenes.py: fit tests + roles per block
+      (punch lines -> track_type / word_slide / blur_zoom_type / gradient_words / morph_word / card_pops, numbers ->
+      odometer, percentages -> donut_card, lists -> list_circle / word_wheel / color_carousel, searched -> search_type,
+      posted -> post_card, turned off -> toggle, card -> card_flip, money -> card_wheel, cart -> pill_split), quote shots
+      alternate quote / glass_quote and line charts chart / chart_card, a block is only picked when the line lasts 55 %
+      of its cycle and (non-looping) not more than 1.6x + 0.5 s; every reference default text/name/brand/number is
+      overridden; block backgrounds 8 % oversized (camera + settle never show an edge); card_flip / card_wheel no camera;
+      chart_card axis = the data's min/max; morph_word keeps its dark background (its blend trick needs it).
+      Fonts added (OFL, assets/fonts/licences): Poppins Regular/Medium, Jost, Nunito, Modak, Bagel Fat One, Inter
+      (copied from raju/typography). Test reel output/tests/premium_reel.md (all 19 via scene_order): final 1:25 in 371 s,
+      33 scenes, -14.1 LUFS, true peak -1.3 dBTP; critique mean 8.97 -> 9.14, 7 scenes under 8 by their own design
+      (donut_card holds then fades out, short pauses in gradient_words / list_circle / post_card, card_pops' hard
+      pop-ins). The normal motion sample now picks 7 premium text blocks by itself (variety 7/8).
+      Fixed on the way: scene_order prefers a data block that fits the line.
+- [x] TYPOGRAPHY (2026-11-12, branch raju/typography, docs/SCRIPT_FORMAT.md "Typography"): header `typography:` = auto
+      (default) | swiss | outline_pop | extrude | gradient | neon | marker | editorial | classic (= the look before),
+      motion graphics only; Check error on other values. pipeline/motion_gfx/typography.py: per style a font pair, case,
+      text effect (clean / outline + hard shadow / 3D extrude / vertical gradient / neon glow / tilted marker boxes /
+      italic + underline swipe), key-word emphasis and a pool of word entrances, one per text scene, rotating: pop, punch,
+      letters, drop, mask, type (typewriter + caret), wheel (slot-machine roll through the video's own words), weight
+      (variable-font sweep), scramble (glyphs settle), flicker. swiss = Raju's reference video (Inter, light words + one
+      heavy red word, red full stop, hairline crosshair + mono corner labels, swiss colour set). Kinetic / title /
+      figure / memo text use it directly; big headline text of every other scene type in the palette ink is tagged ty-h
+      and gets the effect. auto = the format's pool (typography.POOLS), least used in the last 5 videos (look part
+      "typography" in data/asset_history.json); styles with their own fonts/colours override fonts/palette unless
+      pinned. Fonts added (OFL, licences in assets/fonts/licences): Inter (variable), Bebas Neue, Archivo Black, DM Serif
+      Display + Italic; new font pairs swiss, impact, heavy, editorial. Caption presets swiss_type, outline_3d,
+      editorial. UI: Look & sound -> Typography tab (live samples with the render's own CSS; GET /api/typography,
+      /api/fonts/<file>). Tests on the Mac: 7 style test drafts (~26 s each, 63-75 s), frames checked; fixed a double
+      painted gradient title and kinetic lines ignoring the effect colour. Motion sample draft 1:14 in 183 s (auto ->
+      Case File + marker), -14.1 LUFS; classic sample draft 9 s, -14.1 LUFS, pixel-identical to 2026-11-11 (PSNR inf);
+      presets clean. Overlaps raju/camera-motion-transitions in render.py, formats.py, script_parser.py,
+      render_server.py, ui/index.html (merge by hand). Not on a final yet.
+      Type Studio (same day, same branch): `show: type_studio` = kinetic typography as the picture (the reference's
+      look all the way through): swiss/editorial type, swiss colours, no frames / ambient shapes, no figures / icons /
+      app windows; 5 new host scene types in pipeline/motion_gfx/type_scenes.py (type_kicker, type_wheel, type_swap
+      with backdrop colour flips, type_stack, type_sentence) + kinetic, titles and clean data scenes. As_is type styles
+      restore the script's own capitals in every scene's labels (typography.restore_case). Preview strip
+      assets/format_previews/type_studio.jpg. Test: Windows vs MacBook (title copy, job 20261112-184016-da3f84) 7:41
+      draft in 1172 s, -14.0 LUFS, 14 scene types in 187, top type 19.8 %, kinetic 10.7 %, 0 same twice, 0 A-B-A-B;
+      fixed a double caret (blink tween rendered early). Regression after it: classic sample draft 9 s, -14.1 LUFS,
+      PSNR inf; motion sample draft 192 s, -14.1 LUFS; presets clean.
+- [x] INTEGRATION (2026-11-13, branch raju/integrate-typography-smooth): raju/smooth-motion (camera + transitions,
+      delete videos, smooth motion, premium blocks) and raju/typography (typography styles, Type Studio) merged with
+      both histories kept; 7 conflicted files resolved by keeping both sides (critique re-renders reuse the scene AFTER
+      the typography effect). Type Studio got the camera era's settings: spring.soft pop ease, calm camera pool
+      (dolly, truck, pull, focus) and no camera depth dots (ambient: False). Tests: presets clean; 15 scripts parse
+      exactly as on their own branch, 0 errors; classic sample draft 0:30 in 18 s, -14.1 LUFS, same timeline/captions
+      as main; motion sample draft 1:14 in 97 s (Case File + marker, critique 9.8 -> 9.85); Type Studio draft 1:14 in
+      248 s (critique 8.57 -> 8.75: its still type holds count as dead frames); premium reel draft 1:25 in 336 s
+      (critique 8.97 -> 9.13, same as its branch). Backups: tags backup/raju-*-2026-11-13 +
+      output/backups/feature-branches-2026-11-13.bundle.
+- [x] ONE-CLICK LAUNCHER (2026-11-13, branch raju/studio-launcher): tools/launch_video_studio.sh + tools/install_launcher.sh
+      -> ~/Desktop/Video Studio.command (absolute path of this copy). Checks: the service's WorkingDirectory = this folder,
+      clean tree + no half merge, GitHub reachable, local main not ahead of origin/main, no render running (asks); then
+      switch to main, git pull --ff-only origin main, npm ci if a package-lock changed (warns on setup.sh), kickstart
+      com.videostudio.server, waits for /login 200/302 from the NEW pid (90 s), opens the browser. Tailscale read only.
+      The script runs as one function so the pull can replace it while it runs; the launcher runs origin/main's copy
+      when the folder's branch doesn't have it.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
@@ -548,6 +653,9 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - GitHub login (gh CLI, your own account): `gh auth status`.
 - Start Video Studio, then open http://localhost:8765 : `~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py`
 - Restart Video Studio (after code changes): `launchctl kickstart -k gui/$(id -u)/com.videostudio.server`
+- One click (update to GitHub main + restart + open): Desktop `Video Studio.command`, made once per Mac with
+  `bash tools/install_launcher.sh` (runs tools/launch_video_studio.sh; stops on unsaved work, local-only commits on main
+  or a running render unless you say y; never resets/stashes; never restarts Tailscale).
 - Stop it until next login: `launchctl bootout gui/$(id -u)/com.videostudio.server` (killing the process just restarts it)
 - Check a script from Terminal: `~/youtube-pipeline/bin/python -c "from pipeline import script_parser as P; import json,sys; r=P.parse(open(sys.argv[1]).read()); print(json.dumps(r['errors']+r['warnings'],indent=1))" script.md`
 - Logs: output/server.log (server), output/jobs/<id>/render.log (one video)

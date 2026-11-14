@@ -269,7 +269,10 @@ def needs(i, beat, name):
     if name == "icon_list":
         return [_need(i, k, beat, item, True) for k, item in enumerate(list_items(text))]
     if name == "versus":
-        left, right, _ = versus_sides(text)
+        sides = versus_sides(text)
+        if not sides:                    # scene_order: forced a versus on a line without two sides
+            return []
+        left, right, _ = sides
         return [_need(i, 0, beat, left, True), _need(i, 1, beat, right, True)]
     if name == "pile":
         return [_need(i, 0, beat, pile_noun(text) or text, True)]
@@ -585,7 +588,7 @@ def meter(P, beat, ctx):
                      f'height:14px;background:#111111;border-radius:7px;transform-origin:100% 50%"></div>'
                      f'<div style="position:absolute;left:{cx - 22}px;top:{cy - 22}px;width:44px;height:44px;border-radius:50%;'
                      f'background:#111111"></div>')
-        js.append(f'tl.fromTo("#{P}ndl", {{rotation: 0}}, {{rotation: {val * 1.8:.1f}, duration: 1.0, ease: "back.out(1.6)"}}, 0.3);')
+        js.append(f'tl.fromTo("#{P}ndl", {{rotation: 0}}, {{rotation: {val * 1.8:.1f}, duration: 1.0, ease: "spring.snappy"}}, 0.3);')
         nx, ny, nw = x0, cy + int(H * 0.03), x1 - x0
     else:                                                     # progress bar
         bw, bh = int((x1 - x0) * 0.8), int(H * 0.09)

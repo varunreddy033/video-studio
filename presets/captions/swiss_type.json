@@ -1,0 +1,58 @@
+{
+  "label": "Swiss type",
+  "description": "Clean Inter in normal capitals, three words at a time, the spoken word in red with a thin dark edge (the Swiss kinetic look).",
+  "licence": "Inter (SIL Open Font License 1.1, assets/fonts/licences/inter-OFL.txt)",
+  "highlight": "word",
+  "case": "as_is",
+  "font": "Inter",
+  "font_file": "InterVariable.ttf",
+  "bold": true,
+  "italic": false,
+  "text_colour": "#FFFFFF",
+  "highlight_colour": "#FF3B5C",
+  "outline_colour": "#000000",
+  "shadow_colour": "#000000",
+  "shadow_transparency": 110,
+  "outline_ratio": 0.045,
+  "outline_min_px": 2,
+  "position": "bottom-center",
+  "group": {
+    "max_gap_sec": 0.45,
+    "break_after": ".?!:;",
+    "linger_sec": 0.35,
+    "min_word_sec": 0.02
+  },
+  "layouts": {
+    "landscape": {
+      "size": 0.062,
+      "margin_v": 0.075,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 3,
+      "max_chars": 24
+    },
+    "vertical": {
+      "size": 0.04,
+      "margin_v": 0.17,
+      "margin_l": 0.06,
+      "margin_r": 0.06,
+      "max_words": 3,
+      "max_chars": 18
+    },
+    "short": {
+      "size": 0.058,
+      "margin_v": 0.24,
+      "margin_l": 0.05,
+      "margin_r": 0.15,
+      "max_words": 2,
+      "max_chars": 14
+    }
+  },
+  "srt": {
+    "max_chars": 84,
+    "line_chars": 42
+  },
+  "shadow_ratio": 0.03,
+  "spacing_ratio": -0.01,
+  "pop": true
+}

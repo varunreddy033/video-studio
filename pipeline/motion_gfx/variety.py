@@ -9,7 +9,8 @@ The goal numbers (section 2/9) are in GOALS; the report says which ones a video 
 
 DATA_TYPES = {"number", "chart", "meter", "timeline", "versus", "pile", "icon_list", "map_flag", "ranking", "donut",
               "icon_grid", "table", "funnel", "scale", "before_after", "ticker", "countdown", "calendar", "pros_cons",
-              "venn", "process", "cause_effect", "checklist", "split"}
+              "venn", "process", "cause_effect", "checklist", "split", "odometer", "donut_card", "chart_card", "list_circle",
+              "word_wheel", "color_carousel"}
 GOALS = {"max_type_share": 20, "max_type_layout": 6, "min_types": 15, "min_transitions": 6, "max_kinetic_share": 15,
          "max_transition_share": 35}
 
@@ -18,6 +19,11 @@ def _abab(names) -> int:
     """How many places show an A-B-A-B run (4 scenes alternating two types)."""
     return sum(1 for i in range(len(names) - 3)
                if names[i] == names[i + 2] and names[i + 1] == names[i + 3] and names[i] != names[i + 1])
+
+
+def _new_transitions():
+    from . import transitions as Tr
+    return set(Tr.NEW)
 
 
 def mix(names) -> dict:
@@ -47,7 +53,7 @@ def similarity(a: dict, b: dict) -> float:
     return round(0.4 * look + 0.4 * scenes + 0.2 * trans, 3)
 
 
-def report(names, variants, transitions, beats, seen=None, look=None) -> dict:
+def report(names, variants, transitions, beats, seen=None, look=None, cameras=None) -> dict:
     n = max(1, len(names))
     scenes = mix(names)
     layouts = mix([f"{a}:{b}" for a, b in zip(names, variants)])
@@ -73,6 +79,8 @@ def report(names, variants, transitions, beats, seen=None, look=None) -> dict:
         "top_transition_share": round(100 * max(trans.values()) / max(1, len(transitions)), 1) if trans else 0.0,
         "same_type_twice": twice, "abab": _abab(names),
         "longest_without_data": round(longest, 1),
+        "camera_mix": mix(cameras or []), "camera_types": len(set(cameras or [])),
+        "new_transitions": sum(1 for t in transitions if t in _new_transitions()),
     }
     rep["goals"] = {
         "max_type_share": rep["top_type"]["share"] <= GOALS["max_type_share"],
@@ -105,4 +113,6 @@ def log_line(rep: dict) -> str:
             f"kinetic {rep['kinetic_share']}%, {rep['transition_types']} transition types (top "
             f"{rep['top_transition_share']}%), same type twice in a row {rep['same_type_twice']}, A-B-A-B "
             f"{rep['abab']}, longest without data {rep['longest_without_data']} s, goals {rep['goals_met']}/"
-            f"{rep['goals_total']}\n    scenes: {mixs}\n    transitions: {tr}")
+            f"{rep['goals_total']}\n    scenes: {mixs}\n    transitions: {tr}"
+            + (f"\n    cameras: " + ", ".join(f"{k} {v}" for k, v in rep.get("camera_mix", {}).items())
+               if rep.get("camera_mix") else ""))

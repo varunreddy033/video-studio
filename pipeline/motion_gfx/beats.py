@@ -41,7 +41,7 @@ def split(parsed, tl, spans):
             groups = [[]]
         for i, g in enumerate(groups):
             b0 = st if i == 0 else max(st, g[0][1] - 0.06)
-            beats.append({"shot": k, "kind": sh["type"], "index": i, "start": round(b0, 3), "words": [w[:3] for w in g],
+            beats.append({"shot": k, "kind": sh["type"], "chart": sh.get("chart"), "index": i, "start": round(b0, 3), "words": [w[:3] for w in g],
                           "text": " ".join(w[0] for w in g),
                           "chapter": chapter_at.get(segs[0]) if i == 0 and segs and segs[0] > 0 else None})
         for i in range(len(beats) - len(groups), len(beats) - 1):

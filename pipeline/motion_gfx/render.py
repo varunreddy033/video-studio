@@ -33,6 +33,7 @@ from . import planner as PL
 from . import formats as Fm
 from . import design as D
 from . import templates as T
+from . import typography as TY
 
 # a cue's kind -> what to use when the library has no such folder
 FALLBACK = {"stamp": "impact", "tick": "click", "coin": "cash", "bubble": "pop", "swipe": "whoosh", "paper": "swipe",
@@ -112,13 +113,14 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     seed = int(hashlib.sha1(title.encode()).hexdigest()[:6], 16)
     beats = PL.rhythm(B.split(parsed, tl, spans), seed)          # bursts + breathers (docs/VARIETY_PLAN.md 5.4)
     T.set_look(look["fonts"])
+    TY.set_style(look.get("typography", "classic"))
     show = Fm.get(look.get("format"))                            # the video's format (docs/VARIETY_PLAN.md 3)
     Fm.apply_motion(show)
     fseed = Fm.seed_of(title, look.get("format"))                # same script in another format = other choices
     order = D.palette_order(len(beats), fseed, D.PALETTE_SETS[look["palette"]])
     seen = history.recent(title)
     log(f"  format: {show['label']}; look: icons {look['icons']}, palette {look['palette']}, fonts {look['fonts']}, {look['icon_style']} icons "
-        f"(last videos: {len(seen['looks'])})")
+        f"(last videos: {len(seen['looks'])}); typography {TY.STYLE['label']} ({TY.STYLE['id']})")
     shutil.rmtree(project / "compositions", ignore_errors=True)
     compose.prepare(project, voice_wav)
     cues = []
@@ -136,28 +138,55 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     log(f"  icons ({plan['family']}): {icon_rep['icons']} different in {icon_rep['beats_with_icon']} of {len(beats)} scenes, "
         f"most used {icon_rep['most_used']['count']}x, question-style {icon_rep['question_style']}, "
         f"{icon_rep['from_pool']} from the topic pool of {icon_rep['pool_size']}, {len(icon_rep['without'])} scenes found none")
-    trans = PL.transitions(beats, used_tpl, fseed, show["transitions"], show["signature"])
+    trans = PL.transitions(beats, used_tpl, fseed, show["transitions"], show["signature"], meta.get("transitions"))
     ents = PL.entrances(used_tpl, fseed, show["entrances"])
+    cams = PL.cameras(beats, used_tpl, fseed, show.get("cameras"), meta.get("camera"))
+    from . import transitions as Tr
+    for i, b in enumerate(beats):          # overlap per transition (3D / film ones are longer), never > 45 % of a scene
+        k = trans[i]
+        b["ov"] = 0.0 if k == "cut" or i == 0 else round(min(Tr.overlap(k, D.TRANSITION), 0.45 * b["dur"],
+                                                             0.45 * beats[i - 1]["dur"]), 3)
+    built = {}
+    vocab = []                                                   # content words of the video (the word wheel)
+    for b in beats:
+        for w in re.findall(r"[A-Za-z][A-Za-z'-]{3,}", b["text"]):
+            if w.lower() not in T.STOP and w.lower() not in T.WEAK and w.lower() not in {x.lower() for x in vocab}:
+                vocab.append(w)
+    n_text, chapter_now = 0, ""
+    case_of = TY.case_map([b["text"] for b in beats] + [json.dumps(sh, ensure_ascii=False) for sh in parsed["shots"]])
     for i, b in enumerate(beats):
         b["transition"] = trans[i]
         b["entrance"] = ents[i]
-        b["frame"] = PL.frame_of(used_tpl[i], fseed, variants[i])
-        b["ov"] = 0.0 if b["transition"] == "cut" else D.TRANSITION
+        b["camera"] = cams[i]
+        b["seed"] = fseed
+        b["exit"] = trans[i + 1] if i + 1 < len(beats) else None
+        b["exit_ov"] = beats[i + 1]["ov"] if i + 1 < len(beats) else 0.0
+        b["frame"] = PL.frame_of(used_tpl[i], fseed, variants[i]) if show.get("frames", True) else None
         name = used_tpl[i]
         pal = D.PALETTES[order[i]]
         ctx = {"W": W, "H": H, "fmt": fmt, "pal": pal, "dur": b["dur"], "shot": parsed["shots"][b["shot"]],
                "rnd": random.Random(seed + i), "icons": icons.get(i, {}),
                "look": look, "variant": variants[i] % PL.own_of(name), "years": video_years,
-               "kicker": show["kicker"], **info[i]}
+               "kicker": show["kicker"], "plain": show.get("ambient", True) is False, **info[i]}
+        if name in ("kinetic", "title", "figure", "chapter", "memo") or b.get("chapter_card"):
+            ctx["ty_entrance"] = TY.entrance_for(n_text, fseed)
+            n_text += 1
+        if vocab:
+            r0 = (fseed + 7 * i) % len(vocab)
+            ctx["ty_alts"] = [vocab[(r0 + 5 * k) % len(vocab)] for k in range(4)]
+        ctx["ty_case"] = case_of
+        chapter_now = b.get("chapter") or chapter_now
         P_ = compose.host(i) + "-"
         parts = Fm.restyle(T.build(name, P_, b, ctx), show)
+        parts = TY.apply(parts, P_, pal, ctx, T.HEAD, i, len(beats), chapter_now or title, show)
+        built[i] = (parts, pal)
         (project / "compositions" / f"scene_{i + 1:03d}.html").write_text(
             compose.scene_file(i, b, parts, pal, b["ov"], W, H, show), encoding="utf-8")
         for t, kind in parts["cues"]:
             cues.append((b["start"] + t, show["sfx"].get(kind, kind)))
         if b["transition"] != "cut":
-            cues.append((b["start"] - b["ov"] * 0.6, {"push": "swipe", "slide": "swipe", "push_up": "swoosh-up", "glitch": "glitch",
-                                                  "flash": "impact", "fade": "swipe", "page": "paper"}.get(b["transition"], "whoosh")))
+            cues.append((b["start"] - b["ov"] * 0.6, dict({"push": "swipe", "slide": "swipe", "push_up": "swoosh-up", "glitch": "glitch",
+                                                  "flash": "impact", "fade": "swipe", "page": "paper"}, **Tr.SFX).get(b["transition"], "whoosh")))
         b["template"] = name
         b["variant"] = variants[i]
         progress("visuals", i + 1, len(beats))
@@ -169,14 +198,14 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             compose.captions_file([w[:3] for w in words], total, W, H, fmt), encoding="utf-8")
     (project / "index.html").write_text(compose.index_file(beats, total, W, H, C.FPS, title, chip), encoding="utf-8")
     (project / "beats.json").write_text(json.dumps(
-        [dict({k: b[k] for k in ("shot", "kind", "index", "start", "end", "template", "transition", "text")},
+        [dict({k: b[k] for k in ("shot", "kind", "index", "start", "end", "template", "transition", "camera", "text")},
               variant=b["variant"], icons=[x["id"] for _s, x in sorted(icons.get(i, {}).items())]) for i, b in enumerate(beats)],
         indent=1), encoding="utf-8")
     counts = {n: used_tpl.count(n) for n in sorted(set(used_tpl))}
     log(f"  {len(beats)} scenes (one every {total / max(1, len(beats)):.1f} s): " +
         ", ".join(f"{n} {c}" for n, c in counts.items()))
     vrep = V.report(used_tpl, [b["variant"] for b in beats], [b["transition"] for b in beats], beats,
-                    seen.get("videos"), look)
+                    seen.get("videos"), look, cams)
     log("  " + V.log_line(vrep))
 
     # 3 check + look (hyperframes skill)
@@ -216,6 +245,12 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     if abs(got - total) > 0.5:
         raise PipelineError(f"HyperFrames rendered {got:.1f} s but the video is {total:.1f} s long")
     log(f"  HyperFrames render: {got:.1f} s of video at {time.time() - t_start:.0f}s")
+    crit = None
+    crit_mode = (meta.get("critique") or "auto").strip().lower()
+    if crit_mode != "off":                           # smooth-motion-studio step 5: watch every frame, fix, re-render
+        progress("critique", 0, 1)
+        raw, crit = _critique(raw, beats, built, project, W, H, show, mode, crit_mode, job_dir, log)
+        log(f"  critique done at {time.time() - t_start:.0f}s")
     video = work / "video.mp4"
     if (OW, OH) != (W, H):
         run(["ffmpeg", "-y", "-i", raw, "-an", "-vf", f"scale={OW}:{OH}:flags=lanczos", "-c:v", "libx264", "-preset",
@@ -239,9 +274,13 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     for a in timed:                         # no effect peaks above the voice: keeps -14 LUFS reachable (true peak)
         a["limit"] = max(0.0625, min(1.0, vpk * 0.7))
     parsed = dict(parsed, segments=segs, sfx_timed=timed,           # the animation's cues replace sfx: auto rules
+                  beat_cuts=[b["start"] for b in beats[1:]],            # beat lock: the music starts on the cuts' grid
                   sfx_stale=set(seen["sfx"]), meta=dict(meta, music_stale=set(seen["music"])))
     rng = random.Random(title)
     norm, bgm, sfx_used, loud_in, music = assemble._mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng)
+    for bl in parsed.get("beat_lock") or []:
+        log(f"  beat lock: {bl['track']} {bl['bpm']:.1f} BPM (grid fit {bl['grid_fit']:.0%}), starts {bl['offset']:.3f} s in: "
+            f"cuts on the beat {bl['before']:.0%} -> {bl['after']:.0%}")
     norm = _top_up(norm, job_dir)
     progress("encoding")
     out = job_dir / f"{mode}.mp4"
@@ -276,7 +315,7 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
             "type": meta.get("type", "full"), "encoder": encoder.name(), "loudness_before": loud_in,
             "loudness_target": C.TARGET_LUFS, "rendering_method": "motion",
             "motion": {"scenes": len(beats), "templates": counts, "look": look, "icons": {k: icon_rep[k] for k in ("family", "icons", "most_used", "question_style", "beats_with_icon")}, "sfx_per_min": round(n_sfx / max(1, total) * 60, 1),
-                       "variety": vrep}}
+                       "variety": vrep, "critique": crit}}
 
 
 def _loudness(path: Path, job_dir: Path, what: str):
@@ -311,6 +350,84 @@ def _top_up(norm: Path, job_dir: Path) -> Path:
                   f"{tp if tp is not None else float('nan'):+.1f} dBTP, now {lufs2:.1f} LUFS / "
                   f"{tp2 if tp2 is not None else float('nan'):+.1f} dBTP)")
     return out
+
+
+def _critique(raw, beats, built, project, W, H, show, mode, crit_mode, job_dir, log):
+    """Score every scene (critic.py); scenes under 8 get a fix and only their spans are re-rendered and spliced in,
+    up to critic.MAX_PASSES times (fixes escalate: the second pass gives a failing scene both fixes). Writes
+    motion/critique/report.json + critique.png. critique: report = score only."""
+    from . import critic as Cr
+    out_dir = project / "critique"
+    shutil.rmtree(out_dir, ignore_errors=True)
+    out_dir.mkdir(parents=True)
+    t0 = time.time()
+    fps, m = Cr.motion(raw)
+    scenes = Cr.score(m, fps, beats)
+    first = Cr.summary(scenes)
+    log(f"  critique pass 1: {first['scenes']} scenes, mean {first['mean']}/10, lowest {first['min']}, "
+        f"{first['under']} under {Cr.PASS_SCORE:g}, {first['dead_frames']} dead frames, {first['hitches']} hitches, "
+        f"{first['jumps']} one-frame pops ({time.time() - t0:.0f} s)")
+    passes, fixed = 1, set()
+    total = len(m) / fps
+    while crit_mode == "auto" and passes <= Cr.MAX_PASSES:
+        bad = [s for s in scenes if s["score"] < Cr.PASS_SCORE and (s["fix"] or passes > 1)]
+        if not bad:
+            break
+        for s in bad:
+            b = beats[s["scene"]]
+            want = set(s["fix"]) | ({"onset", "dead"} if passes > 1 else set())
+            b["fix"] = sorted(set(b.get("fix") or []) | want)
+            parts, pal = built[s["scene"]]
+            (project / "compositions" / f"scene_{s['scene'] + 1:03d}.html").write_text(
+                compose.scene_file(s["scene"], b, parts, pal, b["ov"], W, H, show), encoding="utf-8")
+            fixed.add(s["scene"])
+            log(f"    scene {s['scene'] + 1} ({b.get('template')}, {s['start']:.2f}-{s['end']:.2f} s) {s['score']}/10: "
+                f"{'; '.join(s['notes']) or 'low score'} -> fix {', '.join(b['fix'])}")
+        rngs = Cr.spans(bad, beats, fps, total)
+        parts_out = []
+        for k, (a, e, f0, f1) in enumerate(rngs):
+            part = out_dir / f"pass{passes + 1}_{k:02d}.mp4"
+            code, out, err = hf.run(["render", "-o", part, "--quality", QUALITY[mode], "--fps", C.FPS, "--workers",
+                                     C.env("MOTION_WORKERS", "2"), "--start", f"{a:.4f}", "--end", f"{e:.4f}",
+                                     "--quiet", "--strict"], project, log, f"critique re-render {k + 1}/{len(rngs)}",
+                                    timeout=3 * 3600)
+            if code != 0 or not part.exists():
+                log(f"    re-render of {a:.2f}-{e:.2f} s failed; keeping the first render there")
+                continue
+            parts_out.append((f0, f1, part))
+        if not parts_out:
+            break
+        spliced = out_dir / f"picture_pass{passes + 1}.mp4"
+        Cr.splice(raw, parts_out, fps, spliced, job_dir)
+        if abs(media_duration(spliced) - media_duration(raw)) > 1.5 / fps:
+            log("    splice changed the length; keeping the first render")
+            break
+        raw = spliced
+        passes += 1
+        before = {s["scene"]: s["score"] for s in bad}
+        fps, m = Cr.motion(raw)
+        scenes = Cr.score(m, fps, beats)
+        now = Cr.summary(scenes)
+        gain = [next(x["score"] for x in scenes if x["scene"] == k) - v for k, v in before.items()]
+        log(f"  critique pass {passes}: re-rendered {len(parts_out)} span(s) ({sum(f1 - f0 for f0, f1, _p in parts_out)} "
+            f"frames), mean {now['mean']}/10, lowest {now['min']}, {now['under']} under {Cr.PASS_SCORE:g}, "
+            f"{now['dead_frames']} dead frames")
+        if gain and sum(gain) / len(gain) < 0.3:     # the fixes can't help these scenes (pauses built into the design)
+            log(f"    fixes raised the re-rendered scenes by {sum(gain) / len(gain):+.2f} on average: no further passes")
+            break
+    last = Cr.summary(scenes)
+    try:
+        Cr.chart(m, fps, scenes, out_dir / "critique.png")
+    except Exception as e:  # noqa: BLE001  (the chart is a picture for people; never lose a render over it)
+        log(f"    critique chart failed: {e}")
+    rep = {"mode": crit_mode, "passes": passes, "first": first, "last": last, "fixed_scenes": sorted(fixed),
+           "pass_score": Cr.PASS_SCORE,
+           "under": [{k: s[k] for k in ("scene", "start", "end", "score", "notes")} for s in scenes
+                     if s["score"] < Cr.PASS_SCORE],
+           "scenes": [{k: s[k] for k in ("scene", "start", "end", "score", "dead_frames", "onset_s", "hitches", "jumps")}
+                      for s in scenes]}
+    (out_dir / "report.json").write_text(json.dumps(rep, indent=1), encoding="utf-8")
+    return raw, {k: rep[k] for k in ("mode", "passes", "first", "last", "fixed_scenes", "under", "pass_score")}
 
 
 def thumbnails(parsed: dict, job_dir: Path, final_video: Path):

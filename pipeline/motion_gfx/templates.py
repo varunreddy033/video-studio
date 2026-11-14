@@ -19,6 +19,7 @@ import re
 
 from . import design as D
 from . import figures as F
+from . import typography as TY
 
 STOP = set("a an the and or but of to in on at for with by from as is are was were be been it its this that these "
            "those he she they them his her their you your we our i me my so if then than not no do does did has have "
@@ -82,7 +83,7 @@ WEAK = set("said says say saying told tell called call claim claims claimed now 
            "known reportedly allegedly".split())
 
 
-def key_phrase(text, n=3):
+def key_phrase(text, n=3, upper=True):
     """A short headline from a beat's words: the best run of neighbouring important words (names count double),
     e.g. "a woman named Alice Huang" -> ALICE HUANG, "a romantic relationship" -> ROMANTIC RELATIONSHIP."""
     ws = [w.strip(".,;:!?\"'()") for w in text.split()]
@@ -110,7 +111,8 @@ def key_phrase(text, n=3):
             if cand[:2] > best[:2]:
                 best = cand
         run = []
-    return " ".join(best[2]).upper()
+    out = " ".join(best[2])
+    return out.upper() if upper else out
 
 
 # the video's font pairing (design.FONT_PAIRS), set once per render by set_look(); renders run one at a time
@@ -149,6 +151,8 @@ def ambient(P, ctx, n=4):
     """Ambient layer: soft shapes drifting slowly (motion-design: background life, never competing)."""
     W, H, pal, rnd, dur = ctx["W"], ctx["H"], ctx["pal"], ctx["rnd"], ctx["dur"]
     html, js = [], []
+    if ctx.get("plain"):                                     # formats without ambient shapes (Type Studio)
+        n = 0
     for k in range(n):
         r = int(min(W, H) * (0.08 + rnd.random() * 0.14))
         x, y = int(rnd.random() * W), int(rnd.random() * H)
@@ -187,21 +191,43 @@ def kinetic(P, beat, ctx):
     ws = _words_rel(beat)
     if not ws:
         return title(P, beat, ctx, text=key_phrase(beat["text"]) or "…", sub="")
-    words = [w[0].upper() for w in ws]
+    ty = not TY.classic()
+    kind = ctx.get("ty_entrance", "pop") if ty else "pop"
+    words = [TY.case(w[0]) if ty else w[0].upper() for w in ws]
     max_chars = 13 if ctx["fmt"] == "landscape" else 9
     lines = lines_of(words, max_chars)
     longest = max(sum(len(words[j]) + 1 for j in ln) for ln in lines)
     size = fit("x" * longest, (x1 - x0) * 0.92, int(H * (0.2 if ctx["fmt"] == "landscape" else 0.1)), int(H * 0.05))
     size = min(size, int((y1 - y0) / (len(lines) * 1.08)))
     keys = set(key_words([w[0] for w in ws]))
+    wheel_at = None
+    if ty:
+        size = int(size * TY.size_k())
+        if kind == "wheel":
+            wheel_at = min(keys) if keys else None
+    wheel_alts = []
+    if wheel_at is not None:
+        wheel_alts = [TY.case(a) for a in ctx.get("ty_alts", []) if a.lower() != words[wheel_at].lower()][:4] or \
+            [w for w in words if w != words[wheel_at]][:3]
+        if not wheel_alts:
+            wheel_at = None
     html_lines = []
     for ln in lines:
         spans = []
         for j in ln:
             cls = "kw key" if j in keys else "kw"
+            if ty:
+                cls += " ty-key" if j in keys else " ty-lt"
+                wk = "mask" if kind == "wheel" else kind
+                if j == wheel_at:
+                    inner = TY.wheel_html(words[j], wheel_alts, esc)
+                else:
+                    inner = TY.word_html(words[j], wk, esc)
+            else:
+                inner = esc(words[j])
             spans.append(f'<span class="{cls}" id="{P}w{j}"><span class="mk" id="{P}m{j}"></span>'
-                         f'<span class="tx">{esc(words[j])}</span></span>')
-        html_lines.append(f'<div class="ln">{" ".join(spans)}</div>')
+                         f'<span class="tx">{inner}</span></span>')
+        html_lines.append(f'<div class="ln{" ty-h" if ty else ""}">{" ".join(spans)}</div>')
     rot = ctx["rnd"].choice([-3, -2, 2, 3])
     v = ctx.get("variant", 0)
     align = "flex-start" if v == 1 else "center"
@@ -221,6 +247,8 @@ def kinetic(P, beat, ctx):
            f"#{P}kin .mk {{ position:absolute; left:-0.08em; right:-0.08em; top:0.04em; bottom:-0.02em; "
            f"background:{pal['hi']}; border-radius:0.08em; }}"
            f"#{P}kin .kw:not(.key) .mk {{ display:none; }}"
+           + (f"#{P}kin .mk {{ display:none; }} #{P}kin .key .tx {{ color:inherit; }}"
+              if ty and TY.STYLE["emphasis"] != "marker" else "")
            + (f"#{P}kin .ln {{ text-align:left; }}" if v == 1 else "")
            + (f"#{P}kin .kw:not(.key) {{ font-size:0.72em; }} #{P}kin .key {{ font-size:1.12em; }}" if v == 2 else ""))
     js, cues = [], []
@@ -230,11 +258,25 @@ def kinetic(P, beat, ctx):
         js.append(f'tl.fromTo("#{P}blk", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.35, '
                   f'ease: "{D.EASE_IN}"}}, 0);')
     last = 0.0
+    starts = []
     for j, (w, t0, t1) in enumerate(ws):
         t = max(last + D.STAGGER, t0 - 0.04) if j else max(0.0, t0 - 0.04)
         last = t
-        js.append(f'tl.fromTo("#{P}w{j}", {{opacity: 0, y: {int(size * 0.35)}, scale: 0.55, rotation: {rot}}}, '
-                  f'{{opacity: 1, y: 0, scale: 1, rotation: 0, duration: {D.WORD_IN}, ease: "{D.EASE_POP}"}}, {t:.3f});')
+        starts.append(t)
+        if ty:
+            wk = "mask" if kind == "wheel" else kind
+            js += TY.word_js("wheel" if j == wheel_at else wk, f"#{P}w{j}", t, size, rot, max(0.15, t1 - t0), j in keys)
+            if j == wheel_at:
+                js += TY.wheel_js(f"#{P}w{j}", t, len(wheel_alts))
+            if j in keys:
+                js += TY.emphasis_js(f"#{P}w{j} .tx" if TY.STYLE["emphasis"] == "italic" else f"#{P}w{j}", t)
+                if not cues:
+                    cues.append((t + 0.05, ctx["rnd"].choice(["pop", "click", "keyboard-enter"])))
+            if TY.STYLE["emphasis"] != "marker":
+                continue
+        else:
+            js.append(f'tl.fromTo("#{P}w{j}", {{opacity: 0, y: {int(size * 0.35)}, scale: 0.55, rotation: {rot}}}, '
+                      f'{{opacity: 1, y: 0, scale: 1, rotation: 0, duration: {D.WORD_IN}, ease: "{D.EASE_POP}"}}, {t:.3f});')
         if j in keys:
             js.append(f'tl.fromTo("#{P}m{j}", {{scaleX: 0, transformOrigin: "0% 50%"}}, {{scaleX: 1, duration: 0.28, '
                       f'ease: "{D.EASE_IN}"}}, {t + 0.06:.3f});')
@@ -242,6 +284,11 @@ def kinetic(P, beat, ctx):
                       f'ease: "power2.out"}}, {t + 0.3:.3f});')
             if not cues:
                 cues.append((t + 0.05, ctx["rnd"].choice(["pop", "click", "keyboard-enter"])))
+    if ty and kind == "type":                                 # caret: on the newest word, blinking on the last
+        for j in range(len(ws) - 1):
+            js.append(TY.caret_off_js(f"#{P}w{j}", starts[j + 1]))
+        js.append(TY.caret_blink_js(f"#{P}w{len(ws) - 1}", starts[-1] + 0.3, max(starts[-1] + 0.8, ctx["dur"])))
+        cues.append((starts[0], "typing"))
     js.append(f'tl.fromTo("#{P}kin", {{scale: 1}}, {{scale: 1.04, duration: {max(0.5, ctx["dur"]):.2f}, ease: "none"}}, 0);')
     if icon_part:
         js.append(f'tl.fromTo("#{P}kic", {{scale: 0, rotation: 20, transformOrigin: "50% 50%"}}, {{scale: 1, rotation: 0, '
@@ -360,21 +407,44 @@ def figure(P, beat, ctx, extra=""):
         js.append(f'tl.fromTo("#{P}prop0", {{y: 0}}, {{y: -12, duration: 0.8, ease: "sine.inOut", yoyo: true, '
                   f'repeat: {max(0, int(dur / 0.8) - 1)}}}, {t + 0.42:.2f});')
         cues.append((t + 0.02, icon.get("sound", "pop")))
-    head = key_phrase(beat["text"], 3)
+    ty = not TY.classic()
+    head = key_phrase(beat["text"], 3, upper=not ty or TY.STYLE["case"] == "upper")
     if head:
         hs = fit(head, (x1 - x0) * (0.46 if land else 0.9), int(H * 0.11), int(H * 0.05))
+        if ty:
+            hs = int(hs * TY.size_k())
         hx = (cx - int((x1 - x0) * 0.25)) if land and not two else x0
         if v == 2:
             hx = max(x0, cx - int((x1 - x0) * 0.25))
         hw = int((x1 - x0) * 0.5) if land and not two else (x1 - x0)
         hy = y0 - int(H * 0.02) if land else y1 - int(H * 0.02)
         hwords = head.split()
-        spans = "".join(f'<span id="{P}h{j}" class="hw">{esc(w)}</span> ' for j, w in enumerate(hwords))
-        parts.append(f'<div id="{P}head" style="position:absolute;left:{hx}px;width:{hw}px;top:{hy}px;text-align:center;'
+        hkind = ctx.get("ty_entrance", "pop") if ty else None
+        if hkind == "wheel":
+            hkind = "mask"
+        hkeys = set(key_words(hwords, 1)) if ty and len(hwords) > 1 else set()
+        if ty:
+            spans = "".join(f'<span id="{P}h{j}" class="hw {"ty-key" if j in hkeys else ("ty-lt" if hkeys else "")}">'
+                            f'{TY.word_html(w, hkind, esc)}</span> ' for j, w in enumerate(hwords))
+        else:
+            spans = "".join(f'<span id="{P}h{j}" class="hw">{esc(w)}</span> ' for j, w in enumerate(hwords))
+        parts.append(f'<div id="{P}head" class="{"ty-h" if ty else ""}" style="position:absolute;left:{hx}px;width:{hw}px;top:{hy}px;text-align:center;'
                      f'font-family:\'{HEAD}\';font-size:{hs}px;line-height:1;color:{pal["ink"]}">{spans}</div>')
         for j in range(len(hwords)):
-            js.append(f'tl.fromTo("#{P}h{j}", {{opacity: 0, y: {int(hs * 0.5)}}}, {{opacity: 1, y: 0, duration: 0.3, '
-                      f'ease: "{D.EASE_IN}"}}, {0.12 + j * D.STAGGER:.3f});')
+            if ty:
+                hg = 0.1 if hkind in ("letters", "scramble") else (0.06 + 0.035 * len(hwords[j - 1] if j else "")
+                                                                   if hkind == "type" else D.STAGGER)
+                ht = 0.12 + sum(0.06 + 0.035 * len(hwords[k]) for k in range(j)) if hkind == "type" else 0.12 + j * hg
+                js += TY.word_js(hkind, f"#{P}h{j}", ht, hs, 0, 0.3, j in hkeys)
+                if j in hkeys:
+                    js += TY.emphasis_js(f"#{P}h{j}", ht)
+                if hkind == "type":
+                    nt = 0.12 + sum(0.06 + 0.035 * len(hwords[k]) for k in range(j + 1))
+                    js.append(TY.caret_off_js(f"#{P}h{j}", nt) if j < len(hwords) - 1
+                              else TY.caret_blink_js(f"#{P}h{j}", nt, max(nt + 0.5, dur)))
+            else:
+                js.append(f'tl.fromTo("#{P}h{j}", {{opacity: 0, y: {int(hs * 0.5)}}}, {{opacity: 1, y: 0, duration: 0.3, '
+                          f'ease: "{D.EASE_IN}"}}, {0.12 + j * D.STAGGER:.3f});')
     css = f".fig, .prop {{ position:absolute; overflow:visible; }} .hw {{ display:inline-block; }}"
     a_html, a_css, a_js = ambient(P, ctx, 3)
     return {"html": a_html + "".join(parts), "css": a_css + css, "js": a_js + "\n" + "\n".join(js), "cues": cues}
@@ -435,16 +505,29 @@ def title(P, beat, ctx, text=None, sub=None, kicker=""):
     W, H, pal = ctx["W"], ctx["H"], ctx["pal"]
     x0, x1, y0, y1 = _box(ctx)
     sh = ctx["shot"]
-    text = (text if text is not None else sh.get("text", "")).upper()
+    ty = not TY.classic()
+    text = text if text is not None else sh.get("text", "")
+    text = TY.case(text) if ty else text.upper()
     sub = sub if sub is not None else sh.get("sub", "")
     words = text.split() or ["…"]
     lines = lines_of(words, 12 if ctx["fmt"] == "landscape" else 8)
     longest = max(sum(len(words[j]) + 1 for j in ln) for ln in lines)
     size = min(fit("x" * longest, (x1 - x0) * 0.92, int(H * 0.22), int(H * 0.06)), int((y1 - y0) * 0.62 / len(lines)))
+    kind = ctx.get("ty_entrance", "pop") if ty else None
+    if kind == "wheel":
+        kind = "mask"
+    tkeys = set(key_words(words, 1)) if ty and len(words) > 1 else set()
+    if ty:
+        size = int(size * TY.size_k())
     stripe_h = int(size * len(lines) * 1.15)
     cy = y0 + int((y1 - y0) * 0.45)
-    lines_html = "".join("<div>" + " ".join(f'<span id="{P}t{j}" class="tw">{esc(words[j])}</span>' for j in ln)
-                         + "</div>" for ln in lines)
+    if ty:
+        lines_html = "".join("<div>" + " ".join(
+            f'<span id="{P}t{j}" class="tw {"ty-key" if j in tkeys else ("ty-lt" if tkeys else "")}">'
+            f'{TY.word_html(words[j], kind, esc)}</span>' for j in ln) + "</div>" for ln in lines)
+    else:
+        lines_html = "".join("<div>" + " ".join(f'<span id="{P}t{j}" class="tw">{esc(words[j])}</span>' for j in ln)
+                             + "</div>" for ln in lines)
     v = ctx.get("variant", 0)
     if v == 1:                                   # variant 1: a framed card instead of the full-width stripe
         stripe = (f'<div id="{P}stripe" style="position:absolute;left:{x0 + int((x1 - x0) * 0.04)}px;'
@@ -456,12 +539,12 @@ def title(P, beat, ctx, text=None, sub=None, kicker=""):
                   f'top:{cy - stripe_h // 2}px;height:{stripe_h}px;background:{pal["pop"]};border-radius:10px"></div>')
     else:
         stripe = (f'<div id="{P}stripe" data-layout-allow-overflow style="position:absolute;left:-5%;width:110%;'
-                  f'top:{cy - stripe_h // 2}px;height:{stripe_h}px;background:{pal["soft"]}"></div>')
+                  f'top:{cy - stripe_h // 2}px;height:{stripe_h}px;background:{"transparent" if ctx.get("plain") else pal["soft"]}"></div>')
     html = (stripe
             + (f'<div id="{P}kick" style="position:absolute;left:{x0 + (int(size * 0.5) if v == 2 else 0)}px;width:{x1 - x0}px;'
                f'top:{cy - stripe_h // 2 - int(H * 0.08)}px;text-align:{"left" if v == 2 else "center"};font-family:\'{BODY}\';font-size:{int(H * 0.035)}px;letter-spacing:0.3em;'
                f'color:{pal["ink"]}">{esc(kicker.upper())}</div>' if kicker else "")
-            + f'<div id="{P}title" style="position:absolute;left:{x0 + (int(size * 0.5) if v == 2 else 0)}px;width:{x1 - x0}px;'
+            + f'<div id="{P}title" class="{"ty-h" if ty else ""}" style="position:absolute;left:{x0 + (int(size * 0.5) if v == 2 else 0)}px;width:{x1 - x0}px;'
               f'top:{cy - stripe_h // 2 + int(size * 0.05)}px;'
               f'text-align:{"left" if v == 2 else "center"};font-family:\'{HEAD}\';font-size:{size}px;line-height:1.08;color:{pal["ink"]}">{lines_html}</div>')
     if sub:
@@ -476,10 +559,22 @@ def title(P, beat, ctx, text=None, sub=None, kicker=""):
     if kicker:
         js.append(f'tl.fromTo("#{P}kick", {{opacity: 0, letterSpacing: "0.8em"}}, {{opacity: 1, letterSpacing: "0.3em", '
                   f'duration: 0.5, ease: "{D.EASE_IN}"}}, 0.05);')
+    gap = 0.07
+    if ty and kind in ("type", "letters", "scramble"):
+        gap = 0.07 + 0.03 * max(len(w) for w in words) if kind == "type" else 0.12
     for j in range(len(words)):
-        js.append(f'tl.fromTo("#{P}t{j}", {{opacity: 0, scale: 2.2, filter: "blur(10px)"}}, {{opacity: 1, scale: 1, '
-                  f'filter: "blur(0px)", duration: 0.34, ease: "power4.out"}}, {0.12 + j * 0.07:.2f});')
-    slam = 0.12 + (len(words) - 1) * 0.07 + 0.2
+        if ty:
+            js += TY.word_js(kind if kind != "pop" else "punch", f"#{P}t{j}", 0.12 + j * gap, size, 0, 0.3, j in tkeys)
+            if j in tkeys:
+                js += TY.emphasis_js(f"#{P}t{j}", 0.12 + j * gap)
+            if kind == "type" and j < len(words) - 1:
+                js.append(TY.caret_off_js(f"#{P}t{j}", 0.12 + (j + 1) * gap))
+        else:
+            js.append(f'tl.fromTo("#{P}t{j}", {{opacity: 0, scale: 2.2, filter: "blur(10px)"}}, {{opacity: 1, scale: 1, '
+                      f'filter: "blur(0px)", duration: 0.34, ease: "power4.out"}}, {0.12 + j * 0.07:.2f});')
+    if ty and kind == "type":
+        js.append(TY.caret_blink_js(f"#{P}t{len(words) - 1}", 0.12 + len(words) * gap, max(1.5, ctx["dur"])))
+    slam = 0.12 + (len(words) - 1) * gap + 0.2
     js.append(f'tl.fromTo("#{P}title", {{y: 0}}, {{y: 10, duration: 0.06, yoyo: true, repeat: 3, ease: "none"}}, {slam:.2f});')
     if sub:
         js.append(f'tl.fromTo("#{P}sub", {{y: 50, opacity: 0}}, {{y: 0, opacity: 1, duration: 0.35, ease: "{D.EASE_IN}"}}, '
@@ -605,7 +700,9 @@ def memo(P, beat, ctx):
         dx = (x0 + x1) // 2 - dw // 2
     stamp = "DENIED" if DENY_WORDS.search(beat["text"]) else rnd.choice(["REPORTED", "ALLEGED"])
     outlet = re.search(r"\b(New York Times|Financial Times|Wall Street Journal|Reuters|Bloomberg|BBC)\b", beat["text"])
-    head = outlet.group(1).upper() if outlet else (key_phrase(beat["text"], 3) or "REPORT")
+    up = TY.classic() or TY.STYLE["case"] == "upper"
+    head = (outlet.group(1).upper() if up else outlet.group(1)) if outlet else (
+        key_phrase(beat["text"], 3, upper=up) or "REPORT")
     hw = (x1 - x0) - dw - int(W * 0.06) if land and v != 2 else (x1 - x0)
     hs = fit(max(head.split(), key=len), hw * 0.95, int(H * 0.12), int(H * 0.05))
     kind_word = "REPORT" if re.search(r"report|times|journal|newspaper", beat["text"], re.I) else "MEMO"
@@ -623,7 +720,7 @@ def memo(P, beat, ctx):
             f'<div id="{P}stamp" style="position:absolute;right:{int(dw * 0.08)}px;bottom:{int(dh * 0.12)}px;'
             f'font-family:\'{HEAD}\';font-size:{int(dh * 0.13)}px;color:#E0222F;border:8px solid #E0222F;border-radius:12px;'
             f'padding:0.02em 0.25em;letter-spacing:0.06em">{stamp}</div></div>'
-            f'<div id="{P}mh" style="position:absolute;left:{mhx}px;'
+            f'<div id="{P}mh" class="{"" if TY.classic() else "ty-h"}" style="position:absolute;left:{mhx}px;'
             f'width:{hw}px;top:{mhy}px;text-align:{"center" if v == 2 else "left"};'
             f'font-family:\'{HEAD}\';font-size:{hs}px;line-height:1.02;color:{pal["ink"]}">'
             + "".join(f'<span id="{P}mw{j}" class="mw">{esc(w)}</span> ' for j, w in enumerate(head.split())) + "</div>")
@@ -720,5 +817,8 @@ def build(name, P, beat, ctx):
         return X.build(name, P, beat, ctx)
     if name in S.BUILDERS:
         return S.build(name, P, beat, ctx)
+    from . import premium_scenes as PS
+    if name in PS.NAMES:
+        return PS.build(name, P, beat, ctx)
     return {"kinetic": kinetic, "figure": figure, "number": number, "title": title, "quote": quote, "chart": chart,
             "memo": memo}[name](P, beat, ctx)

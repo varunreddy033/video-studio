@@ -137,8 +137,18 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
             fout = f"afade=t=out:st={max(0, ln - fade_out):.3f}:d={fade_out}" if last else \
                 f"afade=t=out:st={max(0, ln - XF):.3f}:d={XF}"
             ms = int(a * 1000)
+            off = 0.0
+            if parsed.get("beat_cuts"):         # motion graphics: start the track where its beats meet the cuts
+                from . import beatgrid
+                try:
+                    bl = beatgrid.best_offset(f, [c for c in parsed["beat_cuts"] if a <= c < b], a)
+                    off = bl["offset"]
+                    parsed.setdefault("beat_lock", []).append(dict(bl, track=Path(f).name, start=round(a, 2)))
+                except Exception as e:  # noqa: BLE001  (beat lock is a nicety; never lose the mix over it)
+                    warnings.append(f"beat lock skipped for {Path(f).name}: {e}")
+            trim = f"atrim={off:.4f}:{off + ln:.4f}" if off else f"atrim=0:{ln:.3f}"
             inputs += ["-stream_loop", "-1", "-i", f]
-            fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{ln:.3f},asetpts=PTS-STARTPTS,"
+            fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,{trim},asetpts=PTS-STARTPTS,"
                       f"{fin},{fout},adelay={ms}|{ms}[m{i}]")
             labels.append(f"[m{i}]")
             k += 1
@@ -268,7 +278,8 @@ def render(parsed: dict, job_dir: Path, mode: str, progress) -> dict:
         futs = {pool.submit(visuals.make_shot, parsed["shots"][i], i, spans[i][1], W, H, job_dir, mode,
                             warnings, {"character": char, "words": all_words, "t0": spans[i][0],
                                        "safe": P.get("safe"),
-                                       "art_style": meta["presets"]["art_style"]}): i for i in order}
+                                       "art_style": meta["presets"]["art_style"],
+                                       "camera": meta.get("camera")}): i for i in order}
         for f in as_completed(futs):
             clips[futs[f]] = f.result()
             done += 1

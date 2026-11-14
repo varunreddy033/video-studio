@@ -376,6 +376,20 @@ def formats_list():
                      "preview_url": f"/api/formats/{k}/preview.jpg"} for k, v in Fm.FORMATS.items()])
 
 
+@app.get("/api/camera")
+def camera_options():
+    """The Camera tab: camera moves and transition sets (descriptions for the tiles)."""
+    from pipeline.motion_gfx import camera as Cam, planner as PL, transitions as Tr
+    import re as _re
+    doc = Cam.__doc__ + Tr.__doc__
+    def about(name):
+        m = _re.search(rf"^\s+{name}\s{{2,}}(.+)$", doc, _re.M)
+        return m.group(1).strip() if m else ""
+    return jsonify({"moves": [{"id": m, "description": about(m)} for m in Cam.MOVES],
+                    "transition_sets": [{"id": k, "items": v} for k, v in PL.TRANSITION_SETS.items()],
+                    "transitions": [{"id": t, "description": about(t)} for t in Tr.NEW]})
+
+
 @app.get("/api/formats/<fid>/preview.jpg")
 def format_preview(fid):
     from pipeline.motion_gfx import formats as Fm
@@ -383,6 +397,24 @@ def format_preview(fid):
     if fid not in Fm.FORMATS or not p.exists():
         abort(404)
     resp = send_file(p, mimetype="image/jpeg")
+    resp.headers["Cache-Control"] = "private, max-age=86400"
+    return resp
+
+
+@app.get("/api/typography")
+def typography_list():
+    """Motion-graphics type styles for the Typography tab: a live sample of each (the render's own CSS) + fonts."""
+    from pipeline.motion_gfx import typography as TY
+    return jsonify({"styles": [TY.preview(k) for k in TY.STYLES],
+                    "fonts": [{"family": fam, "url": f"/api/fonts/{f}"} for fam, f in TY.font_files().items()]})
+
+
+@app.get("/api/fonts/<name>")
+def font_file(name):
+    from pipeline.motion_gfx import typography as TY
+    if name not in set(TY.font_files().values()) or not (C.FONTS_DIR / name).exists():
+        abort(404)
+    resp = send_file(C.FONTS_DIR / name, mimetype="font/ttf")
     resp.headers["Cache-Control"] = "private, max-age=86400"
     return resp
 
@@ -573,6 +605,33 @@ def save_script(job_id):
     if not text.strip():
         return jsonify({"error": "the script is empty"}), 400
     return jsonify(jobs.save_script(job_id, text))
+
+
+@app.delete("/api/jobs/<job_id>")
+def delete_job(job_id):
+    """Moves the video's folder to the Trash (Finder can put it back). Not while it is queued or rendering."""
+    try:
+        where = jobs.delete(job_id)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+    print(f"job {job_id} moved to {where}", flush=True)
+    return jsonify({"ok": True, "moved_to": where})
+
+
+@app.post("/api/jobs/delete")
+def delete_jobs():
+    """Several at once: {"ids": [...]} -> {deleted: [...], skipped: [{id, reason}]}."""
+    ids = (request.get_json(force=True, silent=True) or {}).get("ids") or []
+    deleted, skipped = [], []
+    for jid in ids[:500]:
+        try:
+            jobs.delete(str(jid))
+            deleted.append(jid)
+        except ValueError as e:
+            skipped.append({"id": jid, "reason": str(e)})
+    if deleted:
+        print(f"{len(deleted)} job(s) moved to {jobs.trash_dir()}: {', '.join(deleted)}", flush=True)
+    return jsonify({"deleted": deleted, "skipped": skipped})
 
 
 @app.post("/api/jobs/<job_id>/render")

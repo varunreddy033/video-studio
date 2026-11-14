@@ -190,6 +190,12 @@ upload_pack.zip). That folder isn't in git, so back up what you keep. Upload by 
 cd ~/youtube-pipeline && git switch main && git pull --rebase && bash setup.sh
 ```
 then restart Video Studio: `launchctl kickstart -k gui/$(id -u)/com.videostudio.server` (or log out and in).
+
+Or one click: run `bash ~/youtube-pipeline/tools/install_launcher.sh` once (use your project folder), then double-click
+**Video Studio.command** on the Desktop. It checks for unsaved work (stops, never overwrites), fetches GitHub, stops if
+your local main has commits GitHub doesn't, asks before stopping a render, switches to main, `git pull --ff-only`,
+runs `npm ci` when the lock files changed, restarts Video Studio, waits until it answers and opens the browser.
+Tailscale is never restarted (your online address stays). On an error the window stays open with the reason.
 To change something yourself, follow CONTRIBUTING.md (branch, test, pull request, squash-merge the same day).
 
 ## If something goes wrong

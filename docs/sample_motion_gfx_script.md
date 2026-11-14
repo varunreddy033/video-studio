@@ -8,6 +8,8 @@ tags: nvidia, jensen huang, honey trap, spy report, chips, china, export rules, 
 rendering_method: motion
 music: mystery
 sfx: rich
+typography: auto
+# camera: and transitions: are left out on purpose: both default to auto (3D camera move per scene, the style's transitions)
 thumbnail: HONEY TRAP?
 ---
 

@@ -538,8 +538,31 @@ def act_image(shot, char: dict, W: int, H: int, job_dir: Path, cached_only: bool
     return shared_image(prompt, gw, gh, char["seed"], job_dir, refs=refs, cached_only=cached_only)
 
 
-def still_motion(img, dur, idx, W, H, out, job_dir, mode):
-    """Final: 2.5D depth parallax (Depth Anything V2 Small); draft or PARALLAX=off: flat zoom/pan."""
+DRAFT_MOVE = {"dolly": 0, "vertigo": 0, "focus": 0, "truck": 1, "pull": 2, "tilt": 3, "handheld": 4, "orbit": 5}
+
+
+def still_motion(img, dur, idx, W, H, out, job_dir, mode, camera=None):
+    """Final: 2.5D depth parallax (Depth Anything V2 Small); draft or PARALLAX=off: flat zoom/pan.
+    camera (the camera: header; unset / flat = the moves above, unchanged): off = a still frame, auto / a move name /
+    a comma list = the 3D-feel depth moves of parallax.camera_clip (drafts show the nearest flat move)."""
+    cam = (camera or "").strip().lower()
+    if cam and cam != "flat":
+        from .parallax import camera_move
+        move = "off" if cam == "off" else camera_move(cam, idx)
+        if move == "off":
+            run(["ffmpeg", "-y", "-loop", "1", "-i", img, "-vf", f"scale={W}:{H}:force_original_aspect_ratio=increase,"
+                 f"crop={W}:{H},setsar=1,format=yuv420p", "-r", str(C.FPS), "-t", f"{dur:.3f}", *enc_args(mode), out],
+                job_dir, "still clip")
+            return
+        if mode == "final" and C.PARALLAX:
+            from .parallax import camera_clip
+            try:
+                camera_clip(img, dur, idx, W, H, out, job_dir, mode, move)
+                return
+            except Exception as e:   # never lose a render over the depth effect
+                log(job_dir, f"  camera {move} failed for clip {idx + 1} ({e}); using zoom/pan")
+        ken_burns(img, dur, DRAFT_MOVE.get(move, idx), W, H, out, job_dir, mode)
+        return
     if mode == "final" and C.PARALLAX:
         from .parallax import parallax_clip
         try:
@@ -576,7 +599,7 @@ def make_shot(shot, idx, dur, W, H, job_dir, mode, warnings, ctx=None):
             img = placeholder_image(f"CHARACTER SCENE ({shot['framing']})", shot["prompt"], W, H, job_dir)
             ken_burns(img, dur, idx, W, H, out, job_dir, mode)
         else:
-            still_motion(act_image(shot, char, W, H, job_dir), dur, idx, W, H, out, job_dir, mode)
+            still_motion(act_image(shot, char, W, H, job_dir), dur, idx, W, H, out, job_dir, mode, ctx.get("camera"))
         return out
     if kind in ("ai", "stock"):   # [stock: ...] = an AI image with the art style's stock words (doc_photo: a photo)
         style = ctx.get("art_style")
@@ -589,7 +612,7 @@ def make_shot(shot, idx, dur, W, H, job_dir, mode, warnings, ctx=None):
                                     note=f"Art style: {st['label']}")
         else:
             img = ai_image(prompt, W, H, job_dir, style=style, stock=stock)
-        still_motion(img, dur, idx, W, H, out, job_dir, mode)
+        still_motion(img, dur, idx, W, H, out, job_dir, mode, ctx.get("camera"))
         return out
     graphic_clip(shot, dur, W, H, out, job_dir, mode, safe=ctx.get("safe"))
     return out

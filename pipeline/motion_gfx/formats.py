@@ -27,9 +27,10 @@ FORMATS = {
                     "scale": 0.25, "icon_list": 0.2, "pile": 0.2, "map_flag": 0.2},
         "banned": [], "hosts": [],
         "entrances": ["pop", "drop", "skew", "rise"],
-        "ease": {"EASE_IN": "expo.out", "EASE_POP": "back.out(2.2)"},
-        "transitions": {"same": ["cut", "cut", "fade"], "next": ["push", "slide", "push_up", "split"],
-                        "shot": ["whip", "push", "zoom_out", "flash"], "reveal": ["zoom"]},
+        "ease": {"EASE_IN": "expo.out", "EASE_POP": "spring.snappy"},
+        "transitions": {"same": ["cut", "cut", "fade"], "next": ["push", "slide", "push_up", "split", "shape"],
+                        "shot": ["whip_blur", "zoom_blur", "spin", "cube", "flash", "push"], "reveal": ["zoom", "zoom_through"]},
+        "cameras": ["dolly", "truck", "orbit", "handheld", "vertigo", "tilt", "pull"],
         "signature": "wipe", "sfx": {}, "music": ["uplifting", "tech"], "kicker": "Chapter",
     },
     "tech_desk": {
@@ -45,9 +46,10 @@ FORMATS = {
                     "terminal": 0.5, "dashboard": 0.3, "calendar": -0.2, "newspaper": -0.3},
         "banned": ["figure", "reaction", "pile"], "hosts": ["terminal", "dashboard"],
         "entrances": ["rise", "mask", "none", "pop"],
-        "ease": {"EASE_IN": "power3.out", "EASE_POP": "back.out(1.4)"},
-        "transitions": {"same": ["cut", "fade"], "next": ["slide", "push", "blinds"],
-                        "shot": ["zoom", "glitch", "zoom_out", "slide"], "reveal": ["zoom"]},
+        "ease": {"EASE_IN": "power3.out", "EASE_POP": "spring.soft"},
+        "transitions": {"same": ["cut", "fade"], "next": ["slide", "push", "blinds", "luma_wipe"],
+                        "shot": ["zoom_blur", "rgb_split", "glitch", "cube", "slide"], "reveal": ["zoom", "zoom_through"]},
+        "cameras": ["orbit", "truck", "dolly", "focus", "tilt"],
         "signature": "glitch", "sfx": {"pop": "click", "swipe": "whoosh", "paper": "keyboard-enter", "boing": "click"},
         "music": ["tech", "calm"], "kicker": "Section",
     },
@@ -63,9 +65,10 @@ FORMATS = {
                     "dashboard": 0.55, "magnifier": -0.2, "calendar": -0.1},
         "banned": ["figure", "reaction", "browser", "phone", "chat", "newspaper"], "hosts": ["dashboard"],
         "entrances": ["mask", "rise", "none"],
-        "ease": {"EASE_IN": "power3.out", "EASE_POP": "back.out(1.2)"},
-        "transitions": {"same": ["cut", "fade"], "next": ["push_up", "blinds", "split"],
-                        "shot": ["zoom", "zoom_out", "push_up"], "reveal": ["zoom"]},
+        "ease": {"EASE_IN": "power3.out", "EASE_POP": "spring.soft"},
+        "transitions": {"same": ["cut", "fade"], "next": ["push_up", "blinds", "split", "luma_wipe"],
+                        "shot": ["zoom_blur", "flip", "cube", "zoom_out"], "reveal": ["zoom", "zoom_through"]},
+        "cameras": ["orbit", "dolly", "vertigo", "truck", "pull"],
         "signature": "zoom", "sfx": {"pop": "tick", "boing": "tick", "paper": "tick"},
         "music": ["tech", "calm"], "kicker": "Part",
     },
@@ -82,9 +85,10 @@ FORMATS = {
                     "sticky": 0.55, "newspaper": -0.3, "magnifier": -0.1},
         "banned": ["ticker"], "hosts": ["sticky"],
         "entrances": ["drop", "rise", "flip"],
-        "ease": {"EASE_IN": "power2.out", "EASE_POP": "back.out(1.7)"},
+        "ease": {"EASE_IN": "power2.out", "EASE_POP": "spring.snappy"},
         "transitions": {"same": ["cut", "fade"], "next": ["slide", "push", "page"],
-                        "shot": ["page", "zoom_out", "slide"], "reveal": ["zoom_out"]},
+                        "shot": ["page_curl", "ink", "whip_blur", "slide"], "reveal": ["zoom", "ink"]},
+        "cameras": ["handheld", "truck", "tilt", "dolly"],
         "signature": "page", "sfx": {"pop": "paper", "swipe": "paper", "whoosh": "paper", "click": "paper"},
         "music": ["calm", "uplifting"], "kicker": "Lesson",
     },
@@ -99,9 +103,10 @@ FORMATS = {
                     "chat": 0.2, "calendar": 0.25, "timeline": 0.25, "split": 0.2, "magnifier": -0.2},
         "banned": ["figure", "reaction"], "hosts": ["lower_third"],
         "entrances": ["rise", "mask", "none"],
-        "ease": {"EASE_IN": "power4.out", "EASE_POP": "back.out(1.3)"},
+        "ease": {"EASE_IN": "power4.out", "EASE_POP": "spring.soft"},
         "transitions": {"same": ["cut", "cut"], "next": ["bars", "slide", "push"],
-                        "shot": ["flash", "bars", "slide"], "reveal": ["zoom"]},
+                        "shot": ["whip_blur", "flash", "cube", "luma_wipe"], "reveal": ["zoom_blur", "zoom"]},
+        "cameras": ["truck", "dolly", "pull", "focus", "orbit"],
         "signature": "flash", "sfx": {"pop": "click", "boing": "click", "paper": "swipe"},
         "music": ["tense", "tech"], "kicker": "Report",
     },
@@ -116,9 +121,10 @@ FORMATS = {
                     "map_flag": 0.3, "route": 0.3, "calendar": 0.2, "cause_effect": 0.25, "chat": 0.15},
         "banned": ["figure", "reaction", "icon_grid", "donut"], "hosts": ["evidence"],
         "entrances": ["mask", "none", "drop"],
-        "ease": {"EASE_IN": "power2.out", "EASE_POP": "back.out(1.2)"},
+        "ease": {"EASE_IN": "power2.out", "EASE_POP": "spring.soft"},
         "transitions": {"same": ["cut", "fade"], "next": ["fade", "slide", "flashlight"],
-                        "shot": ["flashlight", "fade", "zoom_out"], "reveal": ["zoom"]},
+                        "shot": ["film_burn", "light_leak", "ink", "whip_blur"], "reveal": ["zoom_through", "zoom"]},
+        "cameras": ["handheld", "focus", "dolly", "vertigo", "truck"],
         "signature": "flashlight", "sfx": {"pop": "paper", "boing": "stamp", "ding": "typing"},
         "music": ["mystery", "dark", "tense"], "kicker": "Exhibit",
     },
@@ -135,7 +141,8 @@ FORMATS = {
         "entrances": ["pop", "drop", "none"],
         "ease": {"EASE_IN": "steps(6)", "EASE_POP": "steps(5)"},
         "transitions": {"same": ["cut", "cut"], "next": ["pixel", "push", "shake"],
-                        "shot": ["pixel", "shake", "glitch"], "reveal": ["zoom"]},
+                        "shot": ["rgb_split", "glitch", "spin", "flip"], "reveal": ["zoom", "zoom_blur"]},
+        "cameras": ["dolly", "truck", "pull", "handheld"],
         "signature": "pixel", "sfx": {"swipe": "click", "whoosh": "glitch", "paper": "click"},
         "music": ["epic", "tech"], "kicker": "Level",
     },
@@ -150,9 +157,10 @@ FORMATS = {
                     "before_after": 0.3, "route": 0.25, "table": 0.25, "scale": 0.2, "figure": 0.1, "magnifier": 0.15},
         "banned": ["reaction", "newspaper", "chat", "phone"], "hosts": ["diagram"],
         "entrances": ["mask", "rise", "none"],
-        "ease": {"EASE_IN": "power2.inOut", "EASE_POP": "back.out(1.1)"},
+        "ease": {"EASE_IN": "power2.inOut", "EASE_POP": "spring.soft"},
         "transitions": {"same": ["cut", "fade"], "next": ["draw", "slide", "push_up"],
-                        "shot": ["draw", "zoom_out", "blinds"], "reveal": ["zoom"]},
+                        "shot": ["luma_wipe", "flip", "cube", "shape"], "reveal": ["zoom_through", "zoom"]},
+        "cameras": ["orbit", "tilt", "truck", "pull", "dolly"],
         "signature": "draw", "sfx": {"pop": "click", "boing": "click", "paper": "click"},
         "music": ["calm", "tech"], "kicker": "Section",
     },
@@ -394,3 +402,33 @@ def choose_auto(meta: dict, title: str, seen: dict, beats: list = None) -> str:
         fit = {n: 0.0 for n in FORMATS}
     cands = [n for n in pool if n not in busy] or pool
     return max(sorted(cands), key=lambda n: fit.get(n, 0) + GOAL_BONUS * goals.get(n, 0) - FRESH_PENALTY * used.count(n))
+
+from . import typography as _TY  # noqa: E402,F401  (registers the typography fonts, palettes and font pairs)
+
+# Type Studio (2026-11-12): kinetic typography is the picture (Raju's reference video): words on flat colour, the
+# Swiss type style, the typographic scene types of type_scenes.py as its hosts, a few clean data scenes, no figures,
+# icons or app windows.
+TYPE_HOSTS = ["type_kicker", "type_wheel", "type_swap", "type_stack", "type_sentence"]
+FORMATS["type_studio"] = {
+    "label": "Type Studio",
+    "description": "minimal Swiss kinetic typography, big words on flat colour, typewriter text, rolling word lists, "
+                   "ideas, opinions, explainers, advice, business, marketing, creators, design, productivity and "
+                   "self improvement",
+    "palettes": ["swiss"], "fonts": ["swiss"], "icon_style": ["plain"],
+    "card": "#FFFFFF", "line": "#111111", "line_scale": 0.55, "shadow": "none", "backdrop": None, "rough": False,
+    "frames": False, "ambient": False,
+    "weights": {"type_kicker": 0.75, "type_wheel": 0.7, "type_swap": 0.7, "type_stack": 0.7, "type_sentence": 0.7,
+                "kinetic": 0.35, "ranking": 0.1, "timeline": 0.1, "meter": 0.1, "donut": 0.05, "countdown": 0.05},
+    "banned": ["figure", "reaction", "pile", "icon_list", "icon_grid", "memo", "newspaper", "phone", "browser", "chat",
+               "ticker", "magnifier", "globe", "route", "map_flag", "calendar", "versus", "scale", "split"],
+    "hosts": TYPE_HOSTS,
+    "entrances": ["rise", "mask", "none", "none"],
+    "ease": {"EASE_IN": "expo.out", "EASE_POP": "spring.soft"},       # smooth motion: springs, like every format
+    "cameras": ["dolly", "truck", "pull", "focus"],                    # calm moves for flat type (no orbit/handheld)
+    "transitions": {"same": ["cut", "cut", "fade"], "next": ["slide", "push", "blinds"],
+                    "shot": ["push_up", "slide", "flash"], "reveal": ["zoom"]},
+    "signature": "split", "sfx": {"boing": "click", "paper": "swipe"}, "music": ["tech", "calm", "uplifting"],
+    "kicker": "Part",
+}
+ALL_HOSTS |= set(TYPE_HOSTS)
+_TY.POOLS["type_studio"] = ["swiss", "editorial"]

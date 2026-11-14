@@ -28,7 +28,7 @@ PATH = C.BASE_DIR / "data" / "asset_history.json"
 RECENT = 5
 RECENT_SIMILAR = 10        # videos the similarity check compares with
 STALE = 24 * 3600          # a "rendering" reservation older than this is ignored (the render died)
-CLASSIC = {"icons": "fluent_flat", "palette": "pop", "fonts": "poster", "icon_style": "sticker"}
+CLASSIC = {"icons": "fluent_flat", "palette": "pop", "fonts": "poster", "icon_style": "sticker", "typography": "classic"}
 
 
 def key_of(title: str) -> str:
@@ -108,10 +108,12 @@ def recent(title: str) -> dict:
 def options(fmt: str = None) -> dict:
     """What a look part may be. Palette sets, font pairs and icon styles come from the video's format."""
     from . import formats as Fm
+    from . import typography as TY
     f = Fm.get(fmt)
     return {"icons": L.usable_families(rotation=True) or ["fluent_flat"],
             "icons_all": L.usable_families() or ["fluent_flat"], "palette": list(f["palettes"]),
-            "fonts": list(f["fonts"]), "icon_style": list(f["icon_style"]), "format": Fm.names()}
+            "fonts": list(f["fonts"]) + [x for x in TY.EXTRA_FONTS.get(fmt or Fm.DEFAULT, []) if x not in f["fonts"]],
+            "icon_style": list(f["icon_style"]), "typography": TY.pool(fmt or Fm.DEFAULT), "format": Fm.names()}
 
 
 def choose_format(meta: dict, title: str, beats: list = None) -> str:
@@ -130,7 +132,10 @@ def choose_format(meta: dict, title: str, beats: list = None) -> str:
 def choose_look(meta: dict, title: str, beats: list = None) -> dict:
     pins = {"icons": (meta.get("icons") or "").strip().lower(), "palette": (meta.get("palette") or "").strip().lower(),
             "fonts": (meta.get("fonts") or "").strip().lower(),
-            "icon_style": (meta.get("icon_style") or "").strip().lower()}
+            "icon_style": (meta.get("icon_style") or "").strip().lower(),
+            "typography": (meta.get("typography") or "").strip().lower()}
+    if pins["typography"] == "auto":
+        pins["typography"] = ""
     mode = (meta.get("look") or "auto").strip().lower()
     fmt = choose_format(meta, title, beats)
     opts = options(fmt)
@@ -143,19 +148,28 @@ def choose_look(meta: dict, title: str, beats: list = None) -> dict:
             base = {"icons": base.get("icons")}
         looks = recent(title)["looks"]
         h = int(hashlib.sha1(title.encode("utf-8")).hexdigest()[:8], 16)
-        for part in ("icons", "palette", "fonts", "icon_style"):
+        for part in ("icons", "palette", "fonts", "icon_style", "typography"):
             if base.get(part) in (opts["icons_all"] if part == "icons" else opts[part]):
                 continue
             used = [lk.get(part) for lk in looks]
             n = len(opts[part])
             order = [opts[part][(h + k) % n] for k in range(n)]
             base[part] = min(order, key=lambda o: (used.count(o), order.index(o)))
+    from . import typography as TY
+    from . import design as D
+    if pins["typography"] in TY.STYLES:                      # any style may be pinned, also outside the format's pool
+        opts["typography"] = opts["typography"] + [pins["typography"]]
     for part, v in pins.items():
         if v:
             base[part] = v
-    for part in ("icons", "palette", "fonts", "icon_style"):
+    for part in ("icons", "palette", "fonts", "icon_style", "typography"):
         if base.get(part) not in (opts["icons_all"] if part == "icons" else opts[part]):
             base[part] = CLASSIC[part] if CLASSIC[part] in opts[part] else opts[part][0]
+    st = TY.STYLES[base["typography"]]                       # the type style brings its fonts / palette set
+    if st.get("fonts") and not pins["fonts"]:
+        base["fonts"] = st["fonts"]
+    if st.get("palette") and not pins["palette"] and st["palette"] in D.PALETTE_SETS:
+        base["palette"] = st["palette"]
     base["format"] = fmt
     return base
 

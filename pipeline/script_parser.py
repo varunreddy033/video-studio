@@ -47,7 +47,7 @@ META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed"
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
              "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method",
              "icons", "icon_reuse", "icons_pin", "icons_ban",
-             "look", "fonts", "icon_style", "scene_order", "show"}     # + voice / music: preset ids (presets/), see presets.py
+             "look", "fonts", "icon_style", "scene_order", "show", "camera", "transitions", "critique", "typography"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -451,6 +451,10 @@ def parse(text: str) -> dict:
         fm = (meta.get("show") or "").strip().lower()       # the video's format (show package); format: = 16:9 / 9:16
         if fm and fm != "auto" and fm not in MF.FORMATS:
             err(1, f"show must be auto or one of {', '.join(MF.FORMATS)}, got '{fm}'")
+        from .motion_gfx import typography as MT
+        ty = (meta.get("typography") or "").strip().lower()
+        if ty and ty != "auto" and ty not in MT.STYLES:
+            err(1, f"typography must be auto or one of {', '.join(MT.STYLES)}, got '{ty}'")
         for key, valid in (("palette", list(MD.PALETTE_SETS)), ("fonts", list(MD.FONT_PAIRS)),
                            ("icon_style", ["sticker", "plain"]), ("look", ["auto", "classic"])):
             v = (meta.get(key) or "").strip().lower()
@@ -468,9 +472,45 @@ def parse(text: str) -> dict:
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
     elif meta.get("palette") and vstyle != "motion":
         warn(1, "palette: only applies to style: motion and rendering_method: motion")
-    if rm != "motion" and any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style", "show")):
-        warn(1, "icons / icon_reuse / icons_pin / icons_ban / look / fonts / icon_style only apply to "
+    if rm != "motion" and any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style", "show", "typography")):
+        warn(1, "icons / icon_reuse / icons_pin / icons_ban / look / fonts / icon_style / typography only apply to "
                 "rendering_method: motion")
+    # ---------------------------------------------------------------- camera + transitions (header)
+    def key_line(key):
+        for n, raw in enumerate(lines[:max(1, start)]):
+            if raw.split(":", 1)[0].strip().lower() == key:
+                return n + 1
+        return 1
+    from .motion_gfx import camera as MCam
+    cam_raw = str(meta.get("camera") or "").strip().lower()
+    if cam_raw:
+        _mode, _pool, bad = MCam.parse_setting(cam_raw)
+        if bad:
+            err(key_line("camera"), f"camera: unknown or mixed value(s) {', '.join(bad)}; use auto, off, flat, or one "
+                                    f"or more of {', '.join(MCam.MOVES)} (comma list)")
+        if vstyle == "motion":
+            warn(key_line("camera"), "camera: applies to motion graphics and AI-image videos, not to style: motion")
+        meta["camera"] = cam_raw
+    tr_raw = str(meta.get("transitions") or "").strip().lower()
+    if tr_raw:
+        from .motion_gfx import planner as PLN2
+        _mode, _allowed, bad = PLN2.parse_transitions(tr_raw)
+        if bad:
+            err(key_line("transitions"), f"transitions: unknown value(s) {', '.join(bad)}; use auto, off, a set "
+                                         f"({', '.join(PLN2.TRANSITION_SETS)}) or names from "
+                                         f"{', '.join(PLN2._all_transitions())}")
+        if rm != "motion":
+            warn(key_line("transitions"), "transitions: only applies to rendering_method: motion (AI-image videos "
+                                          "use hard cuts)")
+        meta["transitions"] = tr_raw
+    crit = str(meta.get("critique") or "").strip().lower()
+    if crit:
+        if crit not in ("auto", "report", "off"):
+            err(key_line("critique"), f"critique must be auto (watch every frame, fix and re-render scenes under 8/10), "
+                                      f"report (score only) or off, got '{crit}'")
+        if rm != "motion":
+            warn(key_line("critique"), "critique: only applies to rendering_method: motion")
+        meta["critique"] = crit
     if not segments and not clip:
         err(start + 1, "no narration found")
 

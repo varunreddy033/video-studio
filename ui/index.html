@@ -70,6 +70,16 @@ a.btn.primary { color: var(--accent-ink); }
   -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .job .m { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; margin-top: 3px; flex-wrap: wrap; }
 .empty { color: var(--muted); font-size: 14px; padding: 8px 4px; }
+.job { position: relative; }
+.job .del { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 15px; padding: 2px 6px; border-radius: 6px; opacity: 0; }
+.job:hover .del, .job:focus-within .del { opacity: 1; }
+.job .del:hover { background: var(--line); color: #b3261e; }
+.job.picking { display: grid; grid-template-columns: 22px 1fr; gap: 6px; align-items: start; }
+.job.picking input { margin-top: 3px; }
+.jobtools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; align-items: center; }
+.jobtools .n { font-size: 12px; color: var(--muted); }
+@media (hover: none) { .job .del { opacity: 1; } }
 h2 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.015em; }
 h3 { font-size: 15px; margin: 0 0 10px; }
 .sub { color: var(--muted); margin: 0 0 16px; }
@@ -184,6 +194,7 @@ video { width: 100%; border-radius: var(--radius); background: #000; display: bl
 ul.goals { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 12px; font-size: 13px; }
 ul.goals li.ok { color: var(--ok); } ul.goals li.bad { color: var(--bad); }
 .style .pv.wide { aspect-ratio: 32/9; }
+.pv.typv { padding: 6px 10px; box-sizing: border-box; overflow: hidden; }
 .pv.autopv { display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--accent); font-size: 28px; letter-spacing: .1em; }
 .chip.type { background: var(--info-soft); color: var(--info); }
 .icongrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 8px; }
@@ -228,6 +239,7 @@ a.link { color: var(--info); font-size: 14px; }
       <button class="btn primary" id="shortBtn">Make Short</button>
       <button class="btn primary" id="fullBtn">Make full video</button>
     </div>
+    <div class="jobtools" id="jobtools"></div>
     <div class="joblist" id="jobs"></div>
   </aside>
   <main id="main"></main>
@@ -329,19 +341,63 @@ async function showAccount() {
 }
 
 // ---------------------------------------------------------------- sidebar
+let picking = false; const picked = new Set(); let lastJobs = [];
+const BUSY = ["queued", "rendering"];
+async function deleteJobs(ids) {
+  // moves the job folders to the Trash (server: jobs.delete); queued / rendering ones are refused there
+  if (!ids.length) return;
+  const one = ids.length === 1 && lastJobs.find(j => j.id === ids[0]);
+  const msg = one ? `Delete “${one.title || "Untitled"}”?` : `Delete ${ids.length} videos?`;
+  if (!confirm(msg + "\n\nThe folder (script, videos, thumbnails, cache) goes to the Trash, so you can still get it back from there."
+    + " A Short clipped from it can't be re-rendered afterwards.")) return;
+  let r; try { r = await api("/api/jobs/delete", { method: "POST", body: JSON.stringify({ ids }) }); } catch (e) { toast(e.message); return; }
+  r.deleted.forEach(id => picked.delete(id));
+  toast(`Moved ${r.deleted.length} to the Trash` + (r.skipped.length ? ` · ${r.skipped.length} skipped (${r.skipped[0].reason})` : ""));
+  if (r.deleted.includes(current)) { current = null; location.hash = ""; showNewView(); }
+  if (!picked.size) picking = false;
+  loadJobs();
+}
+function drawJobTools() {
+  const box = $("#jobtools");
+  if (!lastJobs.length) { box.replaceChildren(); return; }
+  if (!picking) { box.replaceChildren(h("button", { class: "btn small", title: "Pick several videos to delete", onclick: () => { picking = true; loadJobs(); } }, "Select…")); return; }
+  const pickWhere = (f) => { lastJobs.filter(j => !BUSY.includes(j.status) && f(j)).forEach(j => picked.add(j.id)); loadJobs(); };
+  box.replaceChildren(
+    h("button", { class: "btn small", onclick: () => pickWhere(j => j.status === "failed") }, "Failed"),
+    h("button", { class: "btn small", onclick: () => pickWhere(j => !j.has_final) }, "Without final"),
+    h("button", { class: "btn small", onclick: () => pickWhere(() => true) }, "All"),
+    h("button", { class: "btn small", onclick: () => { picked.clear(); picking = false; loadJobs(); } }, "Cancel"),
+    h("button", { class: "btn small primary", disabled: !picked.size, onclick: () => deleteJobs([...picked]) }, `Delete ${picked.size || ""}`.trim()),
+    h("span", { class: "n" }, picked.size ? `${picked.size} selected` : "tick the videos to delete"));
+}
 async function loadJobs() {
   let jobs; try { jobs = await api("/api/jobs"); } catch { return; }
+  lastJobs = jobs;
+  [...picked].forEach(id => { if (!jobs.some(j => j.id === id)) picked.delete(id); });
   const list = $("#jobs"); list.replaceChildren();
   if (!jobs.length) list.append(h("div", { class: "empty" }, "No videos yet."));
   for (const j of jobs) {
     let [label, cls] = STATUS[j.status] || [j.status || "old test", ""];
     if (j.status === "rendering") label = `Rendering ${j.mode || ""}`.trim();
     const len = j.duration ? dur(j.duration) : j.est_seconds ? "~" + dur(j.est_seconds) : "";
-    list.append(h("div", { class: "job" + (j.id === current ? " active" : ""), onclick: () => select(j.id) },
-      h("div", { class: "t" }, j.title || "Untitled"),
+    const busy = BUSY.includes(j.status);
+    const body = [h("div", { class: "t" }, j.title || "Untitled"),
       h("div", { class: "m" }, h("span", { class: "chip " + cls }, label), j.type === "short" ? h("span", { class: "chip type" }, "Short") : null,
-        h("span", {}, [len, when(j.created)].filter(Boolean).join("  ·  ")))));
+        h("span", {}, [len, when(j.created)].filter(Boolean).join("  ·  ")))];
+    if (picking) {
+      const cb = h("input", { type: "checkbox", "aria-label": "Select " + (j.title || "video") });
+      cb.checked = picked.has(j.id); cb.disabled = busy;
+      const flip = () => { if (busy) return; if (picked.has(j.id)) picked.delete(j.id); else picked.add(j.id); cb.checked = picked.has(j.id); drawJobTools(); };
+      cb.onclick = (e) => { e.stopPropagation(); flip(); };
+      list.append(h("div", { class: "job picking" + (picked.has(j.id) ? " active" : ""), onclick: flip, title: busy ? "Can't delete while it renders" : "" },
+        cb, h("div", {}, ...body)));
+    } else {
+      list.append(h("div", { class: "job" + (j.id === current ? " active" : ""), onclick: () => select(j.id) }, ...body,
+        busy ? null : h("button", { class: "del", title: "Delete this video", "aria-label": "Delete " + (j.title || "video"),
+          onclick: (e) => { e.stopPropagation(); deleteJobs([j.id]); } }, "🗑")));
+    }
   }
+  drawJobTools();
 }
 
 // ------------------------------------------------------------- navigation
@@ -608,10 +664,12 @@ const PANES = {
   voice: { label: "Voice", show: (r) => !isClip(r), summary: (r) => (r.voice || {}).label, build: voicePane },
   captions: { label: "Captions", summary: (r) => (r.captions || {}).label, build: captionsPane },
   show: { label: "Style", show: (r) => !!r.show && !isClip(r), summary: (r) => (r.show || {}).label, build: stylePane },
+  camera: { label: "Camera", show: (r) => !!r.camera && !isClip(r), summary: cameraSummary, build: cameraPane },
+  typography: { label: "Typography", show: (r) => !!r.typography && !isClip(r), summary: (r) => (r.typography || {}).label, build: typographyPane },
   style: { label: "Art style", show: (r) => r.art_style && !isClip(r) && (r.stats || {}).rendering_method !== "motion", summary: (r) => (r.art_style || {}).label,
            build: (r, g, s, c) => styleCard(r, g, s, c, true) },
 };
-const PANE_ORDER = ["show", "voice", "music", "captions", "sfx", "style"];
+const PANE_ORDER = ["show", "typography", "camera", "voice", "music", "captions", "sfx", "style"];
 function iconCard(r, getText, setText, recheck) {
   // rendering_method: motion: the icons the render will pick (topic pool + one per scene), with pin / ban buttons
   const s = r.stats || {};
@@ -655,6 +713,20 @@ function iconCard(r, getText, setText, recheck) {
   return card;
 }
 
+function critiqueCard(cr, id, isFinal) {
+  // smooth-motion-studio step 5: every frame watched, scenes under 8/10 fixed and re-rendered (render.log has the detail)
+  const a = cr.first, b = cr.last || cr.first;
+  const line = (x) => `mean ${x.mean}/10, lowest ${x.min}, ${x.under} under ${cr.pass_score || 8}, ${x.dead_frames} still frames, ${x.hitches} stutters, ${x.jumps} one-frame pops`;
+  return h("div", { class: "card", id: "critique" }, h("h3", {}, `Smoothness check (${b.under ? b.under + " scene(s) under 8" : "every scene 8/10 or better"})`),
+    h("p", { class: "hint", style: "margin-top:-4px" }, "Every frame of the picture is watched; a frame is still when nothing on screen moves. "
+      + "Scenes under 8/10 get a fix (a spring settle on the cut, a slow float) and only they are re-rendered."),
+    h("div", { class: "stats" },
+      h("div", { class: "stat" }, h("b", {}, `${a.mean} → ${b.mean}`), h("span", {}, "mean scene score (first render → delivered)")),
+      h("div", { class: "stat" }, h("b", {}, `${a.min} → ${b.min}`), h("span", {}, "lowest scene")),
+      h("div", { class: "stat" }, h("b", {}, (cr.fixed_scenes || []).length), h("span", {}, `scene(s) fixed in ${Math.max(0, (cr.passes || 1) - 1)} extra pass(es)`))),
+    h("p", { class: "hint" }, "First render: " + line(a) + ". Delivered: " + line(b) + "."),
+    (cr.under || []).length ? h("p", { class: "hint" }, "Still under 8: " + cr.under.map(u => `${ts(u.start)} (${u.score}: ${u.notes.join(", ")})`).join("; ")) : null);
+}
 function varietyCard(v, estimated, fmt) {
   // docs/VARIETY_PLAN.md section 7: scene-type mix, most-used type + layout, transitions, goals
   if (!v) return null;
@@ -665,7 +737,7 @@ function varietyCard(v, estimated, fmt) {
   const fits = fmt && fmt.fit ? Object.entries(fmt.fit).slice(0, 3).map(([k, x]) => `${k.replace("_", " ")} ${x.toFixed(2)}`).join(", ") : "";
   return h("div", { class: "card", id: "variety" }, h("h3", {}, `Variety (${v.goals_met} of ${v.goals_total} goals)`),
     fmt ? h("p", { class: "hint", style: "margin-top:-4px" }, `Format: ${fmt.label} (${fmt.why}). Best topic fits: ${fits}. `
-      + "Pin another with show: pop_poster / tech_desk / data_lab / paper_notebook / newsroom / case_file / arcade_retro / blueprint.") : null,
+      + "Pin another with show: pop_poster / tech_desk / data_lab / paper_notebook / newsroom / case_file / arcade_retro / blueprint / type_studio.") : null,
     v.warning ? h("div", { class: "banner warn", style: "margin:8px 0" }, v.warning) : null,
     h("div", { class: "stats" },
       h("div", { class: "stat" }, h("b", {}, v.types), h("span", {}, `scene types in ${v.scenes} scenes`)),
@@ -678,6 +750,8 @@ function varietyCard(v, estimated, fmt) {
       h("span", {}, k), h("i", { style: `width:${Math.max(2, Math.round(100 * n / max))}%` }), h("b", {}, `${n} · ${v.scene_share[k]}%`)))),
     h("p", { class: "hint" }, "Transitions: " + Object.entries(v.transition_mix).map(([k, n]) => `${k} ${n}`).join(", ")
       + `. Same type twice in a row: ${v.same_type_twice}. A-B-A-B runs: ${v.abab}.`),
+    v.camera_mix && Object.keys(v.camera_mix).length ? h("p", { class: "hint" }, "Camera moves: " + Object.entries(v.camera_mix).map(([k, n]) => `${k} ${n}`).join(", ")
+      + (v.new_transitions ? `. New transitions used: ${v.new_transitions}.` : ".")) : null,
     h("ul", { class: "goals" }, Object.entries(v.goals).map(([k, ok]) => h("li", { class: ok ? "ok" : "bad" }, (ok ? "✓ " : "✗ ") + (G[k] || k)))),
     estimated ? h("p", { class: "hint" }, "Estimated from the script; the render re-plans on the real voice timings.") : null);
 }
@@ -717,6 +791,74 @@ function stylePane(r, getText, setText, recheck) {
       h("div", { class: "styles" }, auto, list.map(f => tile(f.id === cur, () => pick(f.id), "Use this style",
         h("div", { class: "pv wide" }, h("img", { src: f.preview_url, alt: f.label + " preview", loading: "lazy" })),
         h("b", {}, f.label + (f.id === cur ? " ✓" : "")), h("span", {}, f.description)))));
+  })();
+  return box;
+}
+const cap1 = (x) => x.charAt(0).toUpperCase() + x.slice(1).replace(/_/g, " ");
+function cameraSummary(r) { const c = r.camera || {}; if (!c.camera) return "";
+  const cam = c.camera === "classic" ? "Classic moves" : cap1(c.camera);
+  return c.method === "motion" ? `${cam} · ${cap1(c.transitions)} transitions` : cam; };
+function cameraPane(r, getText, setText, recheck) {
+  // camera: (3D-feel moves) and transitions: (motion graphics) header keys
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading camera moves…"));
+  (async () => {
+    let o; try { o = await lookList("camera", "/api/camera"); } catch (e) { box.firstChild.textContent = e.message; return; }
+    const c = r.camera, motion = c.method === "motion";
+    const pick = (key, id, def) => { setText(setHeaderKey(getText(), key, id === def ? null : id)); recheck(); };
+    const camDef = motion ? "auto" : "classic";
+    const camTiles = [
+      motion ? ["auto", "Auto (recommended)", "A move per scene that suits it: push-in on a number, rack focus on a quote, orbit on a held scene, handheld in quick bursts."]
+             : ["classic", "Classic (default)", "The 8 alternating zoom / pan moves (depth parallax in finals). Same as before."],
+      ...(motion ? [] : [["auto", "Auto 3D", "Cycles the 3D depth moves below shot by shot (finals use each image's depth map; drafts show the nearest flat move)."]]),
+      ["flat", "Flat 2D", motion ? "The old slow 2D zoom: no layers, no 3D." : "Same as Classic."],
+      ["off", "Off", "No camera move: the picture stays still."],
+      ...o.moves.map(m => [m.id, cap1(m.id), m.description]),
+    ];
+    const kids = [h("p", { class: "hint", style: "margin-top:0" }, "Camera: how each scene moves. "
+      + (motion ? "The scene is drawn in three layers (background, frame, content) that move at different speeds, so it feels 3D."
+               : "3D moves use the depth map of each AI image: near things move more than far ones.")
+      + " Click to put camera: in the script header."),
+      h("div", { class: "styles" }, camTiles.map(([id, label, d]) => tile(c.camera === id, () => pick("camera", id, camDef), "Use this camera",
+        h("b", {}, label + (c.camera === id ? " ✓" : "")), h("span", {}, d))))];
+    if (motion) {
+      const sets = [["auto", "Auto (recommended)", "The style's own mix, chosen by how two scenes connect; no transition above 35%."],
+        ["off", "Off", "Hard cuts only."], ...o.transition_sets.map(t => [t.id, cap1(t.id), t.items.map(cap1).join(", ")])];
+      kids.push(h("p", { class: "hint" }, "Transitions between scenes. Click a set to put transitions: in the header "
+        + "(or write your own list, for example transitions: cube, ink, whip_blur). New ones: "
+        + o.transitions.map(t => `${cap1(t.id)} (${t.description})`).join("; ") + "."),
+        h("div", { class: "styles" }, sets.map(([id, label, d]) => tile(c.transitions === id, () => pick("transitions", id, "auto"), "Use these transitions",
+          h("b", {}, label + (c.transitions === id ? " ✓" : "")), h("span", {}, d)))));
+    }
+    box.replaceChildren(...kids);
+  })();
+  return box;
+}
+function typographyPane(r, getText, setText, recheck) {
+  // motion graphics: the type style (fonts, text effect, key-word emphasis, word animations). Samples use the render's own CSS.
+  const box = h("div", {}, h("p", { class: "hint" }, "Loading type styles…"));
+  (async () => {
+    let d; try { d = await lookList("typography", "/api/typography"); } catch (e) { box.firstChild.textContent = e.message; return; }
+    if (!document.getElementById("ty-faces")) {
+      const st = document.createElement("style"); st.id = "ty-faces";
+      st.textContent = d.fonts.map(f => `@font-face { font-family: "${f.family}"; src: url("${f.url}"); font-weight: 100 900; }`).join("\n");
+      document.head.appendChild(st);
+    }
+    const cur = (r.typography || {}).id || "auto";
+    const pick = (id) => { if (id === cur) return; setText(setHeaderKey(getText(), "typography", id === "auto" ? null : id)); recheck(); };
+    const sample = (x) => {
+      const pv = h("div", { class: "pv wide typv", id: "typv-" + x.id, style: `background:${x.bg}` });
+      pv.innerHTML = `<style>${x.css}</style>${x.html}`;           // our own server's markup (the render's CSS)
+      return pv;
+    };
+    const auto = tile(cur === "auto", () => pick("auto"), "Let Video Studio choose",
+      h("div", { class: "pv wide autopv" }, h("b", {}, "AUTO")), h("b", {}, "Auto (recommended)" + (cur === "auto" ? " ✓" : "")),
+      h("span", {}, "Picks a type style that suits the video's Style (format) and that your last 5 videos used least."));
+    box.replaceChildren(
+      h("p", { class: "hint", style: "margin-top:0" }, "How the words in the scenes look and move: fonts, text effect, how key words stand out "
+        + "and the word animations. Click a style to put typography: in the script header. Classic = the look before typography styles."),
+      h("div", { class: "styles" }, auto, d.styles.map(x => tile(x.id === cur, () => pick(x.id), "Use this type style", sample(x),
+        h("b", {}, x.label + (x.id === cur ? " ✓" : "")), h("span", {}, x.description),
+        h("small", {}, "Animations: " + x.entrances.join(", ") + (x.formats.length ? " · auto in " + x.formats.map(f => f.replace("_", " ")).join(", ") : ""))))));
   })();
   return box;
 }
@@ -990,6 +1132,7 @@ function showJob() {
   if (running) m.append(progressCard());
   const vc = videoCard(d); if (vc) m.append(vc);
   { const v = ((d.final || d.draft || {}).motion || {}).variety; const c = varietyCard(v, false); if (c) m.append(c); }
+  { const cr = ((d.final || d.draft || {}).motion || {}).critique; if (cr && cr.first) m.append(critiqueCard(cr, d.id, !!d.final)); }
   if (d.files.some(f => f.startsWith("thumb_"))) {
     const isShort = d.type === "short";
     m.append(h("div", { class: "card" }, h("h3", {}, isShort ? "Cover" : "Thumbnails"),

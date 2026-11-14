@@ -28,13 +28,19 @@ FONTS = {"display": ("Anton", "Anton-Regular.ttf", 400), "heavy": ("Barlow Black
          "condensed": ("Barlow Condensed ExtraBold", "BarlowCondensed-ExtraBold.ttf", 800),
          "bold": ("Barlow Bold", "Barlow-Bold.ttf", 700)}
 
+# the premium blocks' faces (pipeline/motion_gfx/premium/core.py FONT_FACES): copied into every motion project and
+# declared in index.html like the fonts above ("Poppins" 400/500/600, Inter, Jost, Nunito, Modak, Bagel Fat One...)
+from .premium.core import FONT_FACES as _PREMIUM_FACES  # noqa: E402
+for _i, (_fam, _file, _w) in enumerate(_PREMIUM_FACES):
+    FONTS.setdefault(f"premium_{_i}", (_fam, _file, _w))
+
 # one font pairing per video: headline font (+ its caps width per character, for fit()) and body font
 FONT_PAIRS = {"poster": {"head": "Anton", "char_w": 0.5, "body": "Poppins SemiBold"},
               "condensed": {"head": "Barlow Condensed ExtraBold", "char_w": 0.5, "body": "Barlow Bold"},
               "comic": {"head": "Bangers", "char_w": 0.55, "body": "Poppins SemiBold"}}
 
 EASE_IN = "expo.out"            # signature entrance (kinetic-typography: cubic-bezier(0.16,1,0.3,1))
-EASE_POP = "back.out(2.2)"      # pops with ~20 % overshoot (Energetic)
+EASE_POP = "spring.snappy"      # closed-form spring (spring.py): 23 % overshoot, settles 0.56 s
 EASE_SOFT = "power3.out"
 EASE_OUT = "power2.in"          # exits: shorter and accelerating
 WORD_IN = 0.32                  # one word's entrance (s)

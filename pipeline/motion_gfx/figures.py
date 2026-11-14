@@ -88,23 +88,23 @@ def pose_js(P, n, pose, dur, word_times, seed=0):
             js.append(f'tl.fromTo("{f}-mouth", {{scaleY: 1, transformOrigin: "50% 0%"}}, {{scaleY: 2.2, duration: '
                       f'{max(0.06, (w1 - w0) / 2):.2f}, yoyo: true, repeat: 1, ease: "sine.inOut"}}, {max(0, w0):.2f});')
     if pose == "point":
-        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -118, 0.25, 0.45, "back.out(2)"))
+        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -118, 0.25, 0.45, "spring.snappy"))
         js.append(_rot(f"{f}-foreR", (220, 248), 0, -28, 0.35, 0.4))
         js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 12, 0.25, 0.5))
     elif pose == "shrug":
-        js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 58, 0.25, 0.4, "back.out(2)"))
-        js.append(_rot(f"{f}-foreL", (80, 248), 0, -95, 0.3, 0.4, "back.out(2)"))
-        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -58, 0.25, 0.4, "back.out(2)"))
-        js.append(_rot(f"{f}-foreR", (220, 248), 0, 95, 0.3, 0.4, "back.out(2)"))
+        js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 58, 0.25, 0.4, "spring.snappy"))
+        js.append(_rot(f"{f}-foreL", (80, 248), 0, -95, 0.3, 0.4, "spring.snappy"))
+        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -58, 0.25, 0.4, "spring.snappy"))
+        js.append(_rot(f"{f}-foreR", (220, 248), 0, 95, 0.3, 0.4, "spring.snappy"))
         js.append(_rot(f"{f}-head", NECK, 0, -9, 0.3, 0.4))
     elif pose == "shocked":
         js.append(f'tl.fromTo("{f}-all", {{y: 0}}, {{y: -46, duration: 0.18, ease: "power2.out", yoyo: true, '
                   f'repeat: 1}}, 0.18);')
-        js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 150, 0.18, 0.3, "back.out(2.5)"))
-        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -150, 0.18, 0.3, "back.out(2.5)"))
+        js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 150, 0.18, 0.3, "spring.bouncy"))
+        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -150, 0.18, 0.3, "spring.bouncy"))
         js.append(f'tl.set("{f}-mouth", {{opacity: 0}}, 0.2); tl.set("{f}-mouthO", {{opacity: 1}}, 0.2);')
         js.append(f'tl.fromTo("{f}-eyes", {{scale: 1, transformOrigin: "50% 50%"}}, {{scale: 1.5, duration: 0.2, '
-                  f'ease: "back.out(3)"}}, 0.2);')
+                  f'ease: "spring.bouncy"}}, 0.2);')
         cues.append((0.18, "pop"))
     elif pose == "walk":
         steps = max(1, int(end / 0.36))
@@ -129,11 +129,11 @@ def pose_js(P, n, pose, dur, word_times, seed=0):
         js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -40, 0.1, 0.4))
     elif pose == "think":
         js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -32, 0.25, 0.45))
-        js.append(_rot(f"{f}-foreR", (220, 248), 0, -148, 0.3, 0.45, "back.out(1.6)"))
+        js.append(_rot(f"{f}-foreR", (220, 248), 0, -148, 0.3, 0.45, "spring.snappy"))
         js.append(_rot(f"{f}-head", NECK, 0, 7, 0.3, 0.5))
     elif pose == "cheer":
-        js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 160, 0.2, 0.35, "back.out(2.5)"))
-        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -160, 0.28, 0.35, "back.out(2.5)"))
+        js.append(_rot(f"{f}-armL", SHOULDER_L, 0, 160, 0.2, 0.35, "spring.bouncy"))
+        js.append(_rot(f"{f}-armR", SHOULDER_R, 0, -160, 0.28, 0.35, "spring.bouncy"))
         js.append(f'tl.fromTo("{f}-all", {{y: 0}}, {{y: -26, duration: 0.2, ease: "power2.out", yoyo: true, '
                   f'repeat: {max(1, int(end / 0.4)) * 2 - 1}}}, 0.25);')
     elif pose == "worried":

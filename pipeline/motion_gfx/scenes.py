@@ -654,7 +654,7 @@ def newspaper(P, beat, ctx):
     if v == 0:
         js = [f'tl.fromTo("#{P}p", {{scale: 0.1, rotation: 720, opacity: 0}}, {{scale: 1, rotation: -3, opacity: 1, duration: 0.7, ease: "power3.out"}}, 0.02);']
     else:
-        js = [_in(f"#{P}p", 0.02, "{opacity: 0, y: 200, rotation: 8}", '{opacity: 1, y: 0, rotation: 2, duration: 0.5, ease: "back.out(1.6)"}')]
+        js = [_in(f"#{P}p", 0.02, "{opacity: 0, y: 200, rotation: 8}", '{opacity: 1, y: 0, rotation: 2, duration: 0.5, ease: "spring.snappy"}')]
         html.append(f'<div id="{P}tag" style="position:absolute;left:{int(px - W * .03)}px;top:{int(py + ph * .1)}px;background:{pal["pop"]};'
                     f'border:5px solid #111111;font-family:\'{T.HEAD}\';font-size:{int(H * .045)}px;padding:.1em .5em;transform:rotate(-8deg);color:#111111">BREAKING</div>')
         js.append(_pop(f"#{P}tag", 0.55))
@@ -980,7 +980,7 @@ def sticky(P, beat, ctx):
                     f'<div style="position:absolute;left:8%;right:8%;top:22%;font-family:\'{T.HEAD}\';font-size:{T.fit(note, sz * 1.5, int(sz * .2), 18, 0.42)}px;'
                     f'line-height:1.05;color:#1F2A44;text-align:center">{_esc(note)}</div></div>')
         t = 0.1 + 0.3 * k
-        js.append(f'tl.fromTo("#{P}n{k}", {{y: -120, opacity: 0, rotation: {rot - 12:.1f}}}, {{y: 0, opacity: 1, rotation: {rot:.1f}, duration: 0.45, ease: "back.out(1.6)"}}, {t:.2f});')
+        js.append(f'tl.fromTo("#{P}n{k}", {{y: -120, opacity: 0, rotation: {rot - 12:.1f}}}, {{y: 0, opacity: 1, rotation: {rot:.1f}, duration: 0.45, ease: "spring.snappy"}}, {t:.2f});')
     if n > 1:
         js.append(f'/* notes in a row */')
     return _out(html, "", js, [(0.1, "paper")] + [(0.1 + 0.3 * k, "paper") for k in range(1, n)])
@@ -1043,7 +1043,7 @@ def evidence(P, beat, ctx):
                     f'<div style="position:absolute;left:46%;top:-4%;width:8%;height:7%;border-radius:50%;background:#B3261E"></div></div>')
         pts.append((px + pw * .5, py + ph * .02))
         js.append(f'tl.fromTo("#{P}p{k}", {{y: -60, opacity: 0, rotation: {rot - 15:.1f}}}, {{y: 0, opacity: 1, rotation: {rot:.1f}, '
-                  f'duration: 0.4, ease: "back.out(1.4)"}}, {0.15 + 0.25 * k:.2f});')
+                  f'duration: 0.4, ease: "spring.soft"}}, {0.15 + 0.25 * k:.2f});')
     if len(pts) > 1:
         d = "M" + " L".join(f"{x:.0f} {y:.0f}" for x, y in pts)
         html.append(f'<svg style="position:absolute;left:0;top:0" width="{W}" height="{H}"><path id="{P}str" d="{d}" fill="none" '

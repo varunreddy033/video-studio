@@ -73,6 +73,8 @@ def prepare(project: Path, voice_wav: Path):
     for sub in ("compositions", "assets/js", "assets/fonts", "assets/audio", "snapshots", "logs"):
         (project / sub).mkdir(parents=True, exist_ok=True)
     shutil.copy(hf.GSAP_JS, project / "assets/js/gsap.min.js")
+    from . import spring
+    (project / "assets/js/springs.js").write_text(spring.js(), encoding="utf-8")
     for fam, f, w in D.FONTS.values():
         shutil.copy(C.FONTS_DIR / f, project / "assets/fonts" / f)
     shutil.copy(voice_wav, project / "assets/audio/voice.wav")
@@ -106,46 +108,90 @@ def frame_html(kind, hid, pal, W, H):
     return ""
 
 
+def life_js(hid, ov, length, H, fix=(), cam_kind="flat"):
+    """smooth-motion-studio steps 3 + 5. #<host>-life wraps the camera rig (frame + content; the backdrop stays).
+    Every scene: frame + content settle on a closed-form spring right at the cut,
+    so something moves from the first frame. Critique fixes (render.py, a scene scored under 8): "onset" = a
+    stronger settle that starts on the cut, "dead" = a slow breathing float + sway for the whole scene so no
+    stretch is ever still."""
+    if cam_kind in ("off", "flat") and not fix:
+        return ""                                       # camera off / the old look: leave the scene as it was
+    sel, at = f"#{hid}-life", f"{ov:.2f}"
+    out = []
+    if "onset" in fix:
+        out.append(f'scene.fromTo("{sel}", {{scale: 0.9, y: {int(H * 0.03)}, transformOrigin: "50% 55%"}}, '
+                   f'{{scale: 1, y: 0, duration: 0.56, ease: "spring.snappy"}}, {max(0.0, ov - 0.05):.2f});')
+    else:
+        out.append(f'scene.fromTo("{sel}", {{scale: 0.975, transformOrigin: "50% 55%"}}, {{scale: 1, duration: 0.56, '
+                   f'ease: "spring.snappy"}}, {at});')
+    if "dead" in fix:
+        n = max(1, int((length - ov - 0.6) / 1.6))
+        for k in range(n):
+            t0 = ov + 0.6 + k * 1.6
+            out.append(f'scene.to("{sel}", {{y: {(-1) ** k * int(H * 0.012)}, rotation: {(-1) ** k * 0.6:.1f}, '
+                       f'duration: 1.6, ease: "sine.inOut"}}, {t0:.2f});')
+    return "\n".join(out)
+
+
 def _entrance_js(kind, hid, ov, W, H):
     sel, at = f"#{hid}-ent", f"{ov:.2f}"
-    return {"pop": f'scene.fromTo("{sel}", {{scale: 0.88, opacity: 0.4}}, {{scale: 1, opacity: 1, duration: 0.45, ease: "back.out(2)"}}, {at});',
+    return {"pop": f'scene.fromTo("{sel}", {{scale: 0.88, opacity: 0.4}}, {{scale: 1, opacity: 1, duration: 0.56, ease: "spring.snappy"}}, {at});',
             "rise": f'scene.fromTo("{sel}", {{y: {int(H * .06)}}}, {{y: 0, duration: 0.45, ease: "expo.out"}}, {at});',
-            "drop": f'scene.fromTo("{sel}", {{y: {-int(H * .06)}}}, {{y: 0, duration: 0.45, ease: "bounce.out"}}, {at});',
+            "drop": f'scene.fromTo("{sel}", {{y: {-int(H * .06)}}}, {{y: 0, duration: 0.7, ease: "spring.bouncy"}}, {at});',
             "mask": f'scene.fromTo("{sel}", {{clipPath: "inset(0% 100% 0% 0%)"}}, {{clipPath: "inset(0% 0% 0% 0%)", duration: 0.5, ease: "power3.inOut"}}, {at});',
-            "flip": f'scene.fromTo("{sel}", {{rotationX: 55, transformPerspective: 1200, transformOrigin: "50% 100%"}}, {{rotationX: 0, duration: 0.55, ease: "back.out(1.4)"}}, {at});',
+            "flip": f'scene.fromTo("{sel}", {{rotationX: 55, transformPerspective: 1200, transformOrigin: "50% 100%"}}, {{rotationX: 0, duration: 0.55, ease: "spring.soft"}}, {at});',
             "skew": f'scene.fromTo("{sel}", {{skewX: 12, x: {-int(W * .03)}}}, {{skewX: 0, x: 0, duration: 0.45, ease: "expo.out"}}, {at});',
             }.get(kind, "")
 
 
 def scene_file(i, beat, parts, pal, ov, W, H, show=None):
-    from . import formats as Fm
+    from . import camera as Cam, formats as Fm, transitions as Tr
     hid = host(i)
     show = show or Fm.get(None)
     back = Fm.backdrop_html(show, pal, W, H)
+    cam_kind = beat.get("camera") or "flat"
+    if cam_kind not in ("off", "flat") and not show.get("backdrop") and show.get("ambient", True) is not False:
+        # (no depth dots on formats that draw no ambient shapes, e.g. Type Studio: flat colour only)
+        back += Cam.depth_html(hid, pal, W, H, beat.get("seed", 0))
     rough = Fm.ROUGH_FILTER if show.get("rough") else ""
     length = beat["dur"] + ov
-    tr = _transition_js(beat["transition"], ov, W, H).replace("__H__", hid)
+    kind = beat["transition"]
+    if kind in Tr.NEW:
+        tr = Tr.enter_js(kind, hid, ov, W, H) if ov > 0 else ""
+    else:
+        tr = _transition_js(kind, ov, W, H).replace("__H__", hid)
+    nxt, nov = beat.get("exit"), beat.get("exit_ov", 0.0)
+    ex = Tr.exit_js(nxt, hid, length - nov, nov, W, H) if nxt and nov > 0 else ""
+    fx = Tr.overlay_html(kind, hid, W, H) if ov > 0 else ""
+    defs = Tr.defs_html(hid) if {kind, nxt} & {"whip_blur", "rgb_split"} else ""
+    shade = (f'<div id="{hid}-shade" style="position:absolute;inset:0;pointer-events:none;opacity:0;background:'
+             f'linear-gradient(90deg, rgba(0,0,0,.5), rgba(0,0,0,0) 40%, rgba(255,255,255,.25) 85%, rgba(0,0,0,.35))">'
+             f'</div>') if nxt == "page_curl" else ""
     frame = frame_html(beat.get("frame"), hid, pal, W, H)
     ent = _entrance_js(beat.get("entrance"), hid, ov, W, H)
     tilt = "transform:rotate(-1.5deg) scale(0.96);" if beat.get("frame") == "tilt" else ""
+    cam = Cam.js(cam_kind, hid, length, W, H, bool(beat.get("breather")), beat.get("seed", 0))
+    life = life_js(hid, ov, length, H, beat.get("fix") or (), cam_kind)
     return f"""<template>
 <style>
 #root {{ position: absolute; inset: 0; overflow: hidden; }}
 #{hid}-stage {{ position: absolute; inset: 0; background: {pal['bg']}; overflow: hidden; }}
-#{hid}-cam {{ position: absolute; inset: 0; }}
+#{hid}-far, #{hid}-cam, #{hid}-mid, #{hid}-near, #{hid}-life {{ position: absolute; inset: 0; }}
 #{hid}-ent {{ position: absolute; inset: 0; {tilt}{"filter: url(#rough);" if rough else ""} }}
 {parts['css']}
 </style>
 <div id="root" data-composition-id="{hid}" data-width="{W}" data-height="{H}">
-  {rough}<div id="{hid}-stage">{back}<div id="{hid}-cam">{frame}<div id="{hid}-ent">
+  {rough}{defs}<div id="{hid}-stage"><div id="{hid}-far">{back}</div><div id="{hid}-life"><div id="{hid}-cam"><div id="{hid}-mid">{frame}</div><div id="{hid}-near"><div id="{hid}-ent">
 {parts['html']}
-  </div></div></div>
+  </div></div></div></div>{shade}</div>{fx}
 </div>
 <script>
 const scene = gsap.timeline({{ paused: true }});
 {tr}
 {ent}
-scene.fromTo("#{hid}-cam", {{scale: 1, x: 0}}, {{scale: {1.09 if beat.get("breather") else 1.035}, x: {-int(W * 0.02) if beat.get("breather") else 0}, transformOrigin: "50% 50%", duration: {length:.2f}, ease: "{"sine.inOut" if beat.get("breather") else "none"}"}}, 0);
+{cam}
+{life}
+{ex}
 const tl = gsap.timeline();
 (function (tl) {{
 {parts['js']}
@@ -182,7 +228,7 @@ def captions_file(words, total, W, H, fmt):
         end = min(total, (groups[g + 1][0][1] - 0.02) if g + 1 < len(groups) else grp[-1][2] + 0.4)
         end = max(end, start + 0.2)
         js.append(f'tl.fromTo("#c{g}", {{opacity: 0, scale: 0.8, x: -14}}, {{opacity: 1, scale: 1, x: 0, duration: 0.14, '
-                  f'ease: "back.out(2)"}}, {start:.3f});')
+                  f'ease: "spring.snappy"}}, {start:.3f});')
         js.append(f'tl.set("#c{g}", {{opacity: 0, visibility: "hidden"}}, {end:.3f});')
         for k, w in enumerate(grp):
             js.append(f'tl.set("#c{g}w{k}", {{backgroundColor: "#FFD21F"}}, {max(start, w[1] - 0.02):.3f});')
@@ -213,18 +259,20 @@ window.__timelines["caps"] = tl;
 def index_file(beats, total, W, H, fps, title, with_captions):
     faces = "\n".join(f'@font-face {{ font-family: "{fam}"; font-weight: {w}; src: url("assets/fonts/{f}"); }}'
                       for fam, f, w in D.FONTS.values())
-    hosts = []
+    from . import transitions as Tr
+    hosts, z = [], 50000
     for i, b in enumerate(beats):
+        z = z - 1 if i and b.get("transition") in Tr.UNDER else z + 1     # page_curl: the new scene lies under
         start = max(0.0, b["start"] - b["ov"])
         end = total if i == len(beats) - 1 else b["end"]
         hid = host(i)
         hosts.append(f'  <div id="{hid}" data-composition-id="{hid}" data-composition-src="compositions/scene_{i + 1:03d}.html" '
                      f'data-start="{start:.3f}" data-duration="{end - start:.3f}" data-track-index="1" '
-                     f'data-track-kind="graphics" data-width="{W}" data-height="{H}" style="z-index: {i + 1}"></div>')
+                     f'data-track-kind="graphics" data-width="{W}" data-height="{H}" style="z-index: {z}"></div>')
     if with_captions:
         hosts.append(f'  <div id="caps" data-composition-id="caps" data-composition-src="compositions/captions.html" '
                      f'data-start="0" data-duration="{total:.3f}" data-track-index="2" data-track-kind="captions" '
-                     f'data-width="{W}" data-height="{H}" style="z-index: 100000"></div>')
+                     f'data-width="{W}" data-height="{H}" style="z-index: 1000000"></div>')
     hosts.append(f'  <audio id="voice" class="clip" src="assets/audio/voice.wav" data-start="0" data-duration="{total:.3f}" '
                  f'data-track-index="3" data-volume="1"></audio>')
     return f"""<!doctype html>
@@ -237,6 +285,7 @@ def index_file(beats, total, W, H, fps, title, with_captions):
 html, body {{ margin: 0; background: #111111; }}
 </style>
 <script src="assets/js/gsap.min.js"></script>
+<script src="assets/js/springs.js"></script>
 </head>
 <body>
 <div id="root" data-composition-id="main" data-start="0" data-duration="{total:.3f}" data-width="{W}" data-height="{H}" data-fps="{fps}">
