@@ -16,8 +16,16 @@ work on whichever laptop is with me.
 | Music | per chapter, with crossfades | one track, no crossfade |
 | Captions | bottom, standard size | bigger, placed higher: keep the bottom 20% and right 12% clear of the Shorts buttons |
 | Ending | question for the comments | a line that loops back into the first line |
-| Thumbnails | 3 options | 1 (Shorts mostly show a frame) |
+| Thumbnails | 3 designed options, 3 different layouts (Test & compare) | 1 designed 9:16 cover + 2 alternates (thumb_2/3, not in the upload pack) |
 | Upload pack | final.mp4, thumbs, metadata, chapters | final.mp4, 1 thumb, metadata, #Shorts in the description |
+
+## Shorts cover rules (designed thumbnails, docs/THUMBNAIL_PLAN.md)
+- 1080x1920 JPG (quality 90, under 2 MB), drawn from the script, ready on the Check page before any render.
+- Headline, hero number and stamp stay inside the centre 1080x1080 square (y 420-1500): feeds and the channel page
+  crop Shorts covers to square / 4:5. The tag pill and the stick figure may sit outside it.
+- Big text at most 4 words, headline cap height at least 18 px when the cover is shown 180x320, contrast >= 4.5.
+- thumb_1.jpg is the cover in the upload pack; thumb_2/3 are alternates to choose from in YouTube Studio.
+- `thumbnail_mode: frames` brings back the old frame cover; clip Shorts always use a frame of the source.
 
 ## Making a Short: two ways (both behind the same button)
 1. **From scratch** — I paste a short script. Needs 0-2 new AI images when it's mostly Sterling talking

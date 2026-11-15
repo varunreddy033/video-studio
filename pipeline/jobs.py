@@ -279,6 +279,37 @@ def _upload_pack(d: Path, parsed, result, thumbs, short_info):
     return zp.name
 
 
+def remake_thumbnails(job_id: str) -> dict:
+    """A video's page, "Remake thumbnails": the designed thumbnails again from the saved script (no re-render).
+    Writes thumb_1..3.jpg, refreshes them inside upload_pack.zip when there is one, returns the report."""
+    import zipfile
+    if not valid(job_id):
+        raise ValueError("no such video")
+    st = read_state(job_id)
+    if st.get("status") in ("queued", "rendering"):
+        raise ValueError(f"it is {st['status']}; wait until it finishes")
+    d = jdir(job_id)
+    parsed = script_parser.parse((d / "script.md").read_text(encoding="utf-8"))
+    if parsed["meta"].get("rendering_method") != "motion" or parsed["meta"].get("clip"):
+        raise ValueError("designed thumbnails are for motion-graphics videos and Shorts; AI-image videos keep theirs")
+    from .thumbs import render as thumbs_render
+    rep = thumbs_render.build(parsed, d, "thumb_", lambda m: log(d, "remake " + m))
+    files = [o["file"] for o in rep["options"]]
+    zp = d / "upload_pack.zip"
+    if zp.exists():
+        keep = files[:1] if parsed["meta"]["type"] == "short" else files
+        tmp = d / "upload_pack.tmp.zip"
+        with zipfile.ZipFile(zp) as src, zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as dst:
+            for item in src.infolist():
+                if not re.fullmatch(r"thumb_\d\.jpg", item.filename):
+                    dst.writestr(item, src.read(item.filename))
+            for f in keep:
+                dst.write(d / f, f)
+        tmp.replace(zp)
+    set_state(job_id, thumbnails=files, thumbs_made=time.time())
+    return rep
+
+
 def _run(job_id: str, mode: str):
     d = jdir(job_id)
     text = (d / "script.md").read_text(encoding="utf-8")
@@ -321,7 +352,19 @@ def _run(job_id: str, mode: str):
     thumbs = []
     if mode == "final":
         shots = json.loads((d / "timeline_final.json").read_text(encoding="utf-8"))["shots"]
-        if gfx and not is_short:
+        designed = gfx and not parsed["meta"].get("clip") and \
+            (parsed["meta"].get("thumbnail_mode") or "designed").strip().lower() != "frames"
+        if designed:                     # designed thumbnails (docs/THUMBNAIL_PLAN.md); frames only as a fallback
+            progress("thumbnails", 0, 3)
+            try:
+                from .thumbs import render as thumbs_render
+                thumbs = thumbs_render.make(parsed, d, lambda m: log(d, m))
+            except Exception as e:  # noqa: BLE001  (never lose a finished video over its thumbnails)
+                log(d, f"designed thumbnails failed, using frames of the video instead: {e}")
+                thumbs = []
+        if thumbs:
+            pass
+        elif gfx and not is_short:
             progress("thumbnails", 0, 3)
             from .motion_gfx import render as motion_render
             thumbs = motion_render.thumbnails(parsed, d, d / "final.mp4")
@@ -334,6 +377,9 @@ def _run(job_id: str, mode: str):
             progress("thumbnails", 0, 3)
             first_visual = next((t for t in shots if t["type"] in ("ai", "stock")), {"start": 1.0, "dur": 1.0})
             thumbs = thumbnails.make(parsed, d, d / "final.mp4", first_visual["start"] + first_visual["dur"] / 2)
+        all_thumbs = thumbs
+        if is_short:                     # a Short's upload pack keeps ONE cover (thumb_1); 2 and 3 are alternates
+            thumbs = thumbs[:1]
         (d / "metadata.txt").write_text(_metadata(parsed, result, thumbs), encoding="utf-8")
         short_info = None
         if (not is_short and parsed["meta"].get("character_data")
@@ -355,7 +401,8 @@ def _run(job_id: str, mode: str):
         result["upload_pack"] = pack_name
     key = "draft" if mode == "draft" else "final"
     set_state(job_id, status="draft_ready" if mode == "draft" else "done", stage="finished",
-              **{key: result}, thumbnails=thumbs if thumbs else read_state(job_id).get("thumbnails", []))
+              **{key: result}, thumbnails=(all_thumbs if mode == "final" else thumbs) or
+              read_state(job_id).get("thumbnails", []))
 
 
 def _worker():

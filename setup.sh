@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-time setup for the Mac render server. Safe to re-run.
-# Usage:  bash ~/youtube-pipeline/setup.sh
+# Usage:  bash ~/youtube-pipeline/setup.sh   (works from any folder the repo is cloned to)
 set -euo pipefail
-P="$HOME/youtube-pipeline"
+P="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # the folder this script is in
 PY="$P/bin/python"
 cd "$P"
 
@@ -55,7 +55,7 @@ from kokoro import KPipeline
 import soundfile as sf, numpy as np, os
 p = KPipeline(lang_code="a")
 a = np.concatenate([x.numpy() if hasattr(x, "numpy") else x for _, _, x in p("Pipeline voice check.", voice="am_michael")])
-out = os.path.expanduser("~/youtube-pipeline/output/voice_check.wav")
+out = os.path.abspath("output/voice_check.wav")   # setup.sh runs from the project folder
 sf.write(out, a, 24000)
 print("   ok: Kokoro works ->", out)
 EOF

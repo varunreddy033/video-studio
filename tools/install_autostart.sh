@@ -4,10 +4,11 @@
 #
 #   bash ~/youtube-pipeline/tools/install_autostart.sh            install / update
 #   bash ~/youtube-pipeline/tools/install_autostart.sh remove     stop and remove
+# (works from any folder the repo is cloned to: the services run the copy this script is in)
 #
-# Logs: ~/youtube-pipeline/output/server.log and ~/Library/Application Support/vs-tailscale/tailscaled.log
+# Logs: <project folder>/output/server.log and ~/Library/Application Support/vs-tailscale/tailscaled.log
 set -euo pipefail
-P="$HOME/youtube-pipeline"
+P="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # the project folder (one up from tools/)
 TS="$HOME/Library/Application Support/vs-tailscale"
 LA="$HOME/Library/LaunchAgents"
 UIDN="$(id -u)"

@@ -648,6 +648,54 @@ def render(job_id):
     return jsonify({"ok": True})
 
 
+_thumbs_lock = threading.Lock()     # designed thumbnails: one Chromium batch at a time
+
+
+@app.post("/api/thumbs")
+def thumbs_preview():
+    """Check page: the designed thumbnails of a motion-graphics script (3 options, or a Short's cover + 2), cached by
+    the brief. Takes a few seconds the first time (headless Chromium), instantly after that."""
+    from pipeline.thumbs import render as TR
+    parsed = script_parser.parse((request.get_json(force=True) or {}).get("text", ""))
+    if parsed["meta"].get("rendering_method") != "motion" or parsed["meta"].get("clip"):
+        return jsonify({"error": "designed thumbnails are for motion-graphics videos and Shorts"}), 400
+    if parsed["errors"]:
+        return jsonify({"error": "fix the script's errors first"}), 400
+    try:
+        with _thumbs_lock:
+            rep = TR.preview(parsed)
+    except Exception as e:  # noqa: BLE001  (ThumbsFailed or a missing Chromium: say why on the card)
+        return jsonify({"error": str(e)}), 400
+    for o in rep["options"]:
+        o["url"] = f"/api/thumbs/{rep['key']}/{o['file']}"
+    return jsonify(rep)
+
+
+@app.get("/api/thumbs/<key>/<name>")
+def thumbs_file(key, name):
+    from pipeline.thumbs import render as TR
+    if not re.fullmatch(r"[0-9a-f]{16}", key) or not re.fullmatch(r"thumb_[1-3]\.jpg", name):
+        abort(404)
+    p = TR.PREVIEWS / key / name
+    if not p.exists():
+        abort(404)
+    return send_file(p, mimetype="image/jpeg", max_age=86400)
+
+
+@app.post("/api/jobs/<job_id>/thumbnails")
+def remake_thumbnails(job_id):
+    if not jobs.valid(job_id):
+        abort(404)
+    try:
+        with _thumbs_lock:
+            rep = jobs.remake_thumbnails(job_id)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"ok": True, "options": rep["options"], "failed": rep["failed"], "seconds": rep["seconds"]})
+
+
 @app.get("/api/jobs/<job_id>/file/<name>")
 def get_file(job_id, name):
     if not jobs.valid(job_id) or not FILE_RE.fullmatch(name):

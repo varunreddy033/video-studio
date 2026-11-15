@@ -265,6 +265,41 @@ back/bounce curves, and every scene's frame + content settle on a spring right a
 one beat late so its beat grid meets as many cuts as possible (only on tracks with a clear beat; render.log
 "beat lock").
 
+### Designed thumbnails (motion graphics and Shorts)
+
+Motion-graphics videos (the default) and their Shorts get **designed** thumbnails, drawn from the script, not frames
+grabbed from the video (pipeline/thumbs/, docs/THUMBNAIL_PLAN.md): a full video gets 3 options in 16:9 with 3
+different layouts (for YouTube's Test & compare), a Short gets a 9:16 cover + 2 alternates. Layouts: `big_number`
+(huge number + headline + a stick figure), `face_off` (two icons and a VS bar, for "X vs Y" videos), `hero_icon`
+(one giant icon, a figure reacting), `stamp` (headline + scene + a red stamp). Every option is checked in code:
+big text at most 4 words, readable at phone size, contrast, the duration-badge corner (16:9) / the centre square
+(9:16) kept clear, nothing over the headline. They appear on the Check page in a few seconds (Thumbnails card, with
+fields that write the lines below), the final saves them as thumb_1..3.jpg, and a video's page has
+**Remake thumbnails**. Colours, fonts and icon family follow the video's own look.
+
+| Key | What it sets (empty = automatic) |
+|---|---|
+| `thumbnail: 88% SAID STAY` | the big headline, at most 4 words (longer ones are shortened); a number in it becomes the hero number |
+| `thumbnail_number: 88%` | the hero number (at most 8 characters); auto = the number in the headline, else the `[number:]` tags (% first, then money), else the first number spoken in the first 30 s |
+| `thumbnail_tag: NVIDIA'S CEO JUST QUIT` | the small red pill on top (at most 5 words); auto = the first `[card:]` title that isn't the headline, else a short title |
+| `thumbnail_stamp: HE'S GONE` | the red stamp (at most 3 words); none by default (the stamp layout then says EXPLAINED) |
+| `thumbnail_icons: package, door` | 1-2 icons by name from the video's icon family (`set:name` for another set) |
+| `thumbnail_pose: walk` | the stick figure: idle, talk, point, shrug, shocked, walk, think, sneak, cheer, worried |
+| `thumbnail_layout: big_number` | the first option's layout (big_number, face_off, hero_icon, stamp) |
+| `thumbnail_mode: frames` | the old thumbnails (frames of the finished video + text) instead |
+
+Example (the Nvidia Short's hand-made cover, as header lines):
+
+```
+thumbnail: 88% SAID STAY
+thumbnail_tag: NVIDIA'S CEO JUST QUIT
+thumbnail_stamp: HE'S GONE
+thumbnail_icons: package, door
+thumbnail_pose: walk
+```
+
+`rendering_method: ai_image` videos keep their thumbnails (2 AI images + a frame); clip Shorts keep a frame cover.
+
 ### Art style (`art_style:`)
 
 The look of every `[ai:]` and `[stock:]` image and the 2 AI thumbnails. After **Check**, Video Studio shows an

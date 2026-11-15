@@ -609,6 +609,13 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       com.videostudio.server, waits for /login 200/302 from the NEW pid (90 s), opens the browser. Tailscale read only.
       The script runs as one function so the pull can replace it while it runs; the launcher runs origin/main's copy
       when the folder's branch doesn't have it.
+- [x] Designed thumbnails (2026-11-15, branch varun/thumbnail-generator, PR for review, docs/THUMBNAIL_PLAN.md):
+      pipeline/thumbs/ (brief.py from the script + thumbnail_* header keys, design.py theme from the video's look,
+      layouts.py big_number / face_off / hero_icon / stamp in 16:9 and 9:16, render.py: HTML -> HyperFrames' headless
+      Chromium via puppeteer-core (shoot.mjs, one browser per batch) -> rule checks -> JPG q90). Motion full = 3 options,
+      Short = cover + 2 alternates (upload pack keeps thumb_1); failure -> the old frame thumbnails. Check page
+      "Thumbnails" card (POST /api/thumbs, cached in output/thumb_previews), "Remake thumbnails" on a video's page
+      (POST /api/jobs/<id>/thumbnails). tools/check_thumbs.py = "thumbs: clean", ~0.2 s per option.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with

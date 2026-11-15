@@ -47,7 +47,9 @@ META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed"
              "character", "short", "type", "clip_from", "clip_start", "clip_end",
              "language", "captions", "art_style", "sfx", "style", "palette", "rendering_method",
              "icons", "icon_reuse", "icons_pin", "icons_ban",
-             "look", "fonts", "icon_style", "scene_order", "show", "camera", "transitions", "critique", "typography"}     # + voice / music: preset ids (presets/), see presets.py
+             "look", "fonts", "icon_style", "scene_order", "show", "camera", "transitions", "critique", "typography",
+             "thumbnail_number", "thumbnail_tag", "thumbnail_stamp", "thumbnail_icons", "thumbnail_pose",
+             "thumbnail_layout", "thumbnail_mode"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -472,6 +474,31 @@ def parse(text: str) -> dict:
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
     elif meta.get("palette") and vstyle != "motion":
         warn(1, "palette: only applies to style: motion and rendering_method: motion")
+    # ---------------------------------------------------------------- designed thumbnails (docs/THUMBNAIL_PLAN.md)
+    from .thumbs import brief as TB
+    th_lay = str(meta.get("thumbnail_layout") or "").strip().lower()
+    if th_lay and th_lay not in TB.LAYOUTS:
+        err(1, f"thumbnail_layout must be one of {', '.join(TB.LAYOUTS)}, got '{th_lay}'")
+    th_pose = str(meta.get("thumbnail_pose") or "").strip().lower()
+    if th_pose and th_pose not in TB.POSES:
+        err(1, f"thumbnail_pose must be one of {', '.join(TB.POSES)}, got '{th_pose}'")
+    th_mode = str(meta.get("thumbnail_mode") or "").strip().lower()
+    if th_mode and th_mode not in ("designed", "frames"):
+        err(1, f"thumbnail_mode must be designed or frames, got '{th_mode}'")
+    if len(str(meta.get("thumbnail_number") or "").strip()) > 8:
+        err(1, "thumbnail_number: at most 8 characters (88%, $29,990, 100K+), it is drawn huge")
+    if len(str(meta.get("thumbnail_tag") or "").split()) > 5:
+        err(1, "thumbnail_tag: at most 5 words (the small red pill on top)")
+    if len(str(meta.get("thumbnail_stamp") or "").split()) > 3:
+        err(1, "thumbnail_stamp: at most 3 words (the red stamp)")
+    if len(str(meta.get("thumbnail") or "").split()) > TB.MAX_WORDS and rm == "motion":
+        warn(1, f"thumbnail: has more than {TB.MAX_WORDS} words; the designed thumbnails shorten it (big text must "
+                f"stay readable on a phone)")
+    designed_keys = ("thumbnail_number", "thumbnail_tag", "thumbnail_stamp", "thumbnail_icons", "thumbnail_pose",
+                     "thumbnail_layout")
+    if rm != "motion" and any(meta.get(k) for k in designed_keys + ("thumbnail_mode",)):
+        warn(1, "thumbnail_number / _tag / _stamp / _icons / _pose / _layout / _mode only apply to "
+                "rendering_method: motion (AI-image videos keep their AI thumbnails)")
     if rm != "motion" and any(meta.get(k) for k in ("icons", "icon_reuse", "icons_pin", "icons_ban", "look", "fonts", "icon_style", "show", "typography")):
         warn(1, "icons / icon_reuse / icons_pin / icons_ban / look / fonts / icon_style / typography only apply to "
                 "rendering_method: motion")

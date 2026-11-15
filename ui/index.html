@@ -138,6 +138,10 @@ video { width: 100%; border-radius: var(--radius); background: #000; display: bl
 .thumbs img { width: 100%; border-radius: 8px; display: block; aspect-ratio: 16/9; object-fit: cover; border: 1px solid var(--line); }
 .thumbs.vert { grid-template-columns: repeat(auto-fill, minmax(160px, 220px)); }
 .thumbs.vert img { aspect-ratio: 9/16; }
+.tfields { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 12px; margin-top: 12px; }
+.tfield { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.tfield span { color: var(--muted, #888); }
+.tfield input, .tfield select { font: inherit; padding: 5px 8px; }
 .styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
 .style { border: 1px solid var(--line); border-radius: 8px; padding: 8px; cursor: pointer; display: flex;
   flex-direction: column; gap: 3px; background: var(--panel); }
@@ -756,6 +760,50 @@ function varietyCard(v, estimated, fmt) {
     estimated ? h("p", { class: "hint" }, "Estimated from the script; the render re-plans on the real voice timings.") : null);
 }
 
+function thumbsCard(r, getText, setText, recheck) {
+  // motion-graphics videos and Shorts: the designed thumbnails (docs/THUMBNAIL_PLAN.md), drawn from the script in a
+  // few seconds; the brief's fields write the thumbnail_* header lines and check again
+  const s = r.stats || {}, meta = r.meta || {};
+  if (s.rendering_method !== "motion" || !r.ok || s.clip) return null;
+  const isShort = meta.type === "short";
+  const card = h("div", { class: "card", id: "thumbsCard" }, h("h3", {}, isShort ? "Cover (Short)" : "Thumbnails"),
+    h("p", { class: "hint" }, "Drawing the thumbnails…"));
+  const FIELDS = [["thumbnail", "Headline (max 4 words)", "headline_full"], ["thumbnail_number", "Big number", "number"],
+    ["thumbnail_tag", "Tag (red pill)", "tag"], ["thumbnail_stamp", "Stamp", "stamp"], ["thumbnail_icons", "Icons", "icons"]];
+  api("/api/thumbs", { method: "POST", body: JSON.stringify({ text: getText() }) }).then((x) => {
+    const b = x.brief || {};
+    const auto = (k) => Array.isArray(b[k]) ? b[k].map(i => i.split(":")[1]).join(", ") : (b[k] || "");
+    const inputs = {};
+    const fields = FIELDS.map(([key, label, bk]) => {
+      const cur = headerValue(getText(), key) || "";
+      inputs[key] = h("input", { type: "text", value: key === "thumbnail" ? (cur || "") : cur, placeholder: auto(bk) ? "auto: " + auto(bk) : "none" });
+      return h("label", { class: "tfield" }, h("span", {}, label), inputs[key]);
+    });
+    const sel = (key, opts, autoTxt) => { const v = headerValue(getText(), key) || "";
+      inputs[key] = h("select", {}, h("option", { value: "" }, "auto" + (autoTxt ? ` (${autoTxt})` : "")),
+        ...opts.map(o => h("option", { value: o, selected: o === v }, o.replace(/_/g, " ")))); return inputs[key]; };
+    fields.push(h("label", { class: "tfield" }, h("span", {}, "First layout"), sel("thumbnail_layout", ["big_number", "face_off", "hero_icon", "stamp"], (x.options[0] || {}).layout)));
+    fields.push(h("label", { class: "tfield" }, h("span", {}, "Figure pose"), sel("thumbnail_pose",
+      ["idle", "talk", "point", "shrug", "shocked", "walk", "think", "sneak", "cheer", "worried"], b.pose)));
+    const apply = h("button", { class: "btn small", onclick: () => {
+      let t = getText();
+      for (const k of Object.keys(inputs)) { const v = inputs[k].value.trim(); t = setHeaderKey(t, k, v ? v : (k === "thumbnail" ? headerValue(t, k) : null)); }
+      setText(t); recheck(); } }, "Apply and redraw");
+    const ms = x.options.map(o => o.ms);
+    card.replaceChildren(h("h3", {}, isShort ? "Cover (Short) + 2 alternates" : "Thumbnails (3 options for Test & compare)"),
+      h("p", { class: "hint" }, `Drawn from the script in ${x.cached ? "cache" : x.seconds + " s"} · look: ${(x.look || {}).format || ""}, ${(x.look || {}).icons || ""} · ` +
+        `${ms.length ? Math.max(...ms) : 0} ms per option. The final render saves these as thumb_1..3.jpg.`),
+      h("div", { class: "thumbs" + (isShort ? " vert" : "") }, x.options.map((o, i) => h("figure", {},
+        h("img", { src: o.url, alt: o.layout }), h("figcaption", {}, `${i === 0 && isShort ? "Cover" : "Option " + (i + 1)} · ${o.layout.replace(/_/g, " ")}`)))),
+      (x.failed || []).length ? h("details", {}, h("summary", { class: "hint" }, `${x.failed.length} layout(s) dropped by the rules`),
+        h("ul", { class: "msgs" }, x.failed.map(f => h("li", { class: "w" }, h("span", { class: "ln" }, f.layout.replace(/_/g, " ")), h("span", {}, f.why.join("; ")))))) : null,
+      (b.notes || []).length ? h("p", { class: "hint" }, b.notes.join(" · ")) : null,
+      h("div", { class: "tfields" }, fields), h("div", { class: "row", style: "margin-top:10px" }, apply,
+        h("span", { class: "hint" }, "Empty fields = auto. Icons: names from the Icons card, comma separated.")));
+  }).catch((e) => card.replaceChildren(h("h3", {}, "Thumbnails"), h("p", { class: "hint" }, e.message)));
+  return card;
+}
+
 function lookCard(r, getText, setText, recheck) {
   const ids = PANE_ORDER.filter(id => PANES[id] && (!PANES[id].show || PANES[id].show(r)));
   if (!ids.includes(lookTab)) lookTab = ids.includes("captions") ? "captions" : ids[0];
@@ -1008,7 +1056,8 @@ function showNew(kind = "full") {
     try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: withType(newText, kind) }) });
       out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => withType(newText, kind))),
         lookCard(r, () => newText, (t) => { newText = t; ta.value = t; }, doCheck),
-        iconCard(r, () => withType(newText, kind), (t) => { newText = t; ta.value = t; }, doCheck) || "");
+        iconCard(r, () => withType(newText, kind), (t) => { newText = t; ta.value = t; }, doCheck) || "",
+        thumbsCard(r, () => withType(newText, kind), (t) => { newText = t; ta.value = t; }, doCheck) || "");
       { const sel = $("#methodSel"), v = (r.stats || {}).rendering_method;   // what the script really gets
         if (sel && METHOD_LABEL[v] && sel.value !== v) { sel.value = v; if (sel._show) sel._show(); } }
       createBtn.disabled = !r.ok; if (r.ok) (lastChoice() === "draft" ? draftBtn : finalBtn).focus();
@@ -1133,10 +1182,18 @@ function showJob() {
   const vc = videoCard(d); if (vc) m.append(vc);
   { const v = ((d.final || d.draft || {}).motion || {}).variety; const c = varietyCard(v, false); if (c) m.append(c); }
   { const cr = ((d.final || d.draft || {}).motion || {}).critique; if (cr && cr.first) m.append(critiqueCard(cr, d.id, !!d.final)); }
-  if (d.files.some(f => f.startsWith("thumb_"))) {
+  const designedOk = d.rendering_method === "motion" && !d.clip && d.script;
+  if (d.files.some(f => f.startsWith("thumb_")) || (designedOk && d.final)) {
     const isShort = d.type === "short";
-    m.append(h("div", { class: "card" }, h("h3", {}, isShort ? "Cover" : "Thumbnails"),
-      h("p", { class: "hint", style: "margin-top:-4px" }, isShort ? "Shorts mostly show a frame; pick this as the cover when you upload."
+    const remake = designedOk ? h("button", { class: "btn small", disabled: running, title: "Draw the designed thumbnails again from the saved script (no re-render)",
+      onclick: async (ev) => { ev.target.disabled = true; ev.target.textContent = "Drawing…";
+        try { const r = await api(`/api/jobs/${d.id}/thumbnails`, { method: "POST", body: "{}" });
+          toast(`Thumbnails remade in ${r.seconds} s` + (r.failed.length ? ` (${r.failed.length} layout(s) dropped)` : ""));
+          data = await api("/api/jobs/" + current); showJob(); } catch (e) { toast(e.message); ev.target.disabled = false; ev.target.textContent = "Remake thumbnails"; } } },
+      "Remake thumbnails") : null;
+    m.append(h("div", { class: "card" }, h("div", { class: "row", style: "margin-bottom:6px" }, h("h3", { style: "margin:0" }, isShort ? "Cover" : "Thumbnails"),
+        h("div", { class: "spacer" }), remake),
+      h("p", { class: "hint", style: "margin-top:-4px" }, isShort ? "Option 1 is the cover in the upload pack; 2 and 3 are alternates. Pick one as the cover when you upload."
         : "Upload all three in YouTube Studio with “Test & compare” and let YouTube pick the winner."),
       h("div", { class: "thumbs" + (isShort ? " vert" : "") }, [1, 2, 3].filter(i => d.files.includes(`thumb_${i}.jpg`)).map(i => h("figure", {},
         h("img", { src: file(`thumb_${i}.jpg`), alt: `Thumbnail ${i}` }),
@@ -1162,7 +1219,8 @@ function editorCard(d, open) {
     } catch (e) { toast(e.message); } };
   const out = h("div", { style: "margin-top:14px" }, rep ? report(rep, (ln) => jumpTo(ta, ln), () => editText) : null,
     rep && !running ? lookCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null,
-    rep && !running ? iconCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null);
+    rep && !running ? iconCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null,
+    rep && !running ? thumbsCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null);
   return h("details", { class: "card", open },
     h("summary", {}, "Script"),
     ta,
