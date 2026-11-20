@@ -117,6 +117,12 @@ def video_names(texts) -> frozenset:
     return frozenset(out)
 
 
+def set_names(beats) -> None:
+    """This video's names, set before anything counts content words (the planner's fit tests, the icon plan).
+    Unset, the thread would keep the last video's names and the same script would plan differently."""
+    VIDEO_NAMES.set(video_names([" ".join(b["text"] for b in beats)]))     # joined: clause starts aren't starts
+
+
 def without_names(text: str) -> str:
     """The clause without names: "Apple", "Lily-Rose Depp", "Bose" mean a company or a person, not an apple or a rose.
     A capitalised word counts as a name unless it starts the clause or a sentence; a word the video capitalises
@@ -304,7 +310,7 @@ def plan(beats: list, names: list, meta: dict, history: dict = None, needs: list
     Returns {"family", "picks": {(beat, slot): {"id", "score", "how"}}, "pool": [...], "nouns": [...], "report": {...}}.
     """
     import numpy as np
-    VIDEO_NAMES.set(video_names([" ".join(b["text"] for b in beats)]))     # joined: clause starts aren't starts
+    set_names(beats)
     family = family_of(meta)
     banned = set(id_list(meta.get("icons_ban"), family))
     pins = [p for p in id_list(meta.get("icons_pin"), family) if p not in banned]
@@ -466,7 +472,9 @@ def plan_video(beats: list, meta: dict, seen: dict, seed: int):
     without an icon becomes kinetic words. Returns (names, variants, info, plan)."""
     from . import extras as X
     from . import planner as PL
-    exclude = {i: set(meta.get("format_banned") or []) for i in range(len(beats))}
+    set_names(beats)                         # before the planner: its fit tests count content words (without names)
+    exclude = {i: set(meta.get("format_banned") or []) | set((meta.get("sb_exclude") or {}).get(i) or ())
+               for i in range(len(beats))}                    # sb_exclude: one scene's regeneration (storyboard.py)
     order = [x.strip().lower() for x in str(meta.get("scene_order") or "").split(",") if x.strip()] or None
     names, info = PL.plan(beats, seed, exclude, meta.get("format_weights"), order)
     p = None

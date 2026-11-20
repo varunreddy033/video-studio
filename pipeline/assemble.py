@@ -24,7 +24,7 @@ import soundfile as sf
 
 from . import config as C
 from . import captions, encoder, visuals, voice
-from .util import PipelineError, SfxPicker, best_match, best_matches, fmt_ts, log, media_duration, music_files, run, sfx_files
+from .util import PipelineError, SfxPicker, best_match, best_matches, blocky_music_files, fmt_ts, log, media_duration, music_files, run, sfx_files
 
 SR = voice.SR
 
@@ -77,6 +77,8 @@ def music_tracks(meta, rng):
     if meta.get("music_off"):                        # music: none
         return []
     files = music_files(60)
+    if meta.get("rendering_method") == "blocky3d":   # blocky 3D: the person's own tracks first, else the library
+        files = blocky_music_files(60) or files
     if C.BGM_FILE and (C.BGM_DIR / C.BGM_FILE).exists():
         return [C.BGM_DIR / C.BGM_FILE]
     names = [n.strip() for n in (meta.get("music") or "").split(",") if n.strip()] or [""]
@@ -106,6 +108,48 @@ def loudnorm(src: Path, dst: Path, job_dir: Path):
          f"measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:"
          f"linear=true,aresample=48000", "-c:a", "pcm_s16le", dst], job_dir, "loudness normalise")
     return float(m["input_i"])
+
+
+# FFmpeg opens every -i at once: a 15-minute motion video has 250+ sound effects, over macOS's 256 open files per
+# process. Mixes with more inputs than this put the sound effects into stems first (_sfx_stems).
+MAX_INPUTS = 64
+
+
+def _sfx_stems(cues, head, total, job_dir):
+    """cues = [(file, filter tail, label)] -> 32-bit float WAV stems in cache/sfx_stems/, each from at most MAX_INPUTS
+    files (one input per file, asplit for every use), every cue with the same filters, volume and delay as in the
+    single-call mix. Float stems and amix normalize=0 = the same sum as one big mix (no clipping, no rounding)."""
+    d = Path(job_dir) / "cache" / "sfx_stems"
+    shutil.rmtree(d, ignore_errors=True)
+    d.mkdir(parents=True)
+    by_file = {}
+    for f, tail, _u in cues:
+        by_file.setdefault(str(f), []).append(tail)
+    files = list(by_file)
+    out = []
+    for b in range(0, len(files), MAX_INPUTS):
+        batch = files[b:b + MAX_INPUTS]
+        inputs, fc, labels = [], [], []
+        for i, f in enumerate(batch):
+            tails = by_file[f]
+            inputs += ["-i", f]
+            if len(tails) == 1:
+                fc.append(f"[{i}:a]{head},{tails[0]}[c{i}_0]")
+            else:
+                fc.append(f"[{i}:a]{head},asplit={len(tails)}" + "".join(f"[h{i}_{j}]" for j in range(len(tails))))
+                fc += [f"[h{i}_{j}]{t}[c{i}_{j}]" for j, t in enumerate(tails)]
+            labels += [f"[c{i}_{j}]" for j in range(len(tails))]
+        if len(labels) > 1:
+            fc.append(f"{''.join(labels)}amix=inputs={len(labels)}:duration=longest:normalize=0,apad[st]")
+        else:
+            fc.append(f"{labels[0]}apad[st]")
+        stem = d / f"stem_{b // MAX_INPUTS + 1:02d}.wav"
+        run(["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(fc), "-map", "[st]", "-t", f"{total:.3f}",
+             "-c:a", "pcm_f32le", stem], job_dir, f"sound effects stem {b // MAX_INPUTS + 1}")
+        out.append(stem)
+    log(job_dir, f"  sound effects: {len(cues)} cues from {len(files)} files mixed in {len(out)} stem(s) "
+                 f"(at most {MAX_INPUTS} files per FFmpeg call)")
+    return out
 
 
 def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
@@ -165,49 +209,50 @@ def _mix_audio(parsed, tl, total, voice_wav, job_dir, warnings, rng):
             warnings.append("no music files (>= 60 s) in assets/library/music or assets/audio/bgm")
     used = []
     picker = SfxPicker(sfx_all, rng, parsed.get("sfx_stale"))   # each file of a kind in turn (no file 3x in a row)
+    cues = []                                            # (file, its filter after the shared head, label in `used`)
     for seg, s in zip(parsed["segments"], tl):
         for cue in seg["sfx"]:
             f = picker.pick(cue)
             if not f:
                 continue
             ms = int(max(0, s["start"] - 0.15) * 1000)
-            inputs += ["-i", f]
-            fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{C.SFX_MAX_SEC},"
-                      f"afade=t=out:st={max(0.0, C.SFX_MAX_SEC - 0.5)}:d=0.5,volume={C.SFX_VOLUME},"
-                      f"adelay={ms}|{ms}[s{k}]")
-            mix.append(f"[s{k}]")
-            used.append(f"{cue} -> {f.name}")
-            k += 1
+            cues.append((f, f"volume={C.SFX_VOLUME},adelay={ms}|{ms}", f"{cue} -> {f.name}"))
         for a in seg.get("sfx_auto") or []:              # sfx: auto (pipeline/sfx.py)
             f = picker.pick(a["kind"])
             if not f:
                 continue
             ms = int(max(0, s["start"] - a["lead"]) * 1000)
-            inputs += ["-i", f]
-            fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{C.SFX_MAX_SEC},"
-                      f"afade=t=out:st={max(0.0, C.SFX_MAX_SEC - 0.5)}:d=0.5,volume={C.SFX_VOLUME * a['gain']:.3f},"
-                      f"adelay={ms}|{ms}[s{k}]")
-            mix.append(f"[s{k}]")
-            used.append(f"auto {a['kind']} -> {f.name}")
-            k += 1
+            cues.append((f, f"volume={C.SFX_VOLUME * a['gain']:.3f},adelay={ms}|{ms}", f"auto {a['kind']} -> {f.name}"))
     for a in parsed.get("sfx_timed") or []:              # the motion renderer: cues at exact animation moments
         f = picker.pick(a["kind"])
         if not f:
             continue
         ms = int(max(0, a["t"]) * 1000)
-        inputs += ["-i", f]
         lim = f",alimiter=limit={a['limit']:.4f}:attack=1:release=60:level=false" if a.get("limit") else ""
-        fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{C.SFX_MAX_SEC},"
-                  f"afade=t=out:st={max(0.0, C.SFX_MAX_SEC - 0.5)}:d=0.5,volume={C.SFX_VOLUME * a['gain']:.3f}{lim},"
-                  f"adelay={ms}|{ms}[s{k}]")
-        mix.append(f"[s{k}]")
-        used.append(f"{a['t']:.1f}s {a['kind']} -> {f.name}")
-        k += 1
+        cues.append((f, f"volume={C.SFX_VOLUME * a['gain']:.3f}{lim},adelay={ms}|{ms}", f"{a['t']:.1f}s {a['kind']} -> {f.name}"))
+    used = [c[2] for c in cues]
+    head = (f"aresample=48000,aformat=channel_layouts=stereo,atrim=0:{C.SFX_MAX_SEC},"
+            f"afade=t=out:st={max(0.0, C.SFX_MAX_SEC - 0.5)}:d=0.5")
+    stems = []
+    if k + len(cues) <= MAX_INPUTS:                      # fits in one call: exactly the command of before
+        for f, tail, _u in cues:
+            inputs += ["-i", f]
+            fc.append(f"[{k}:a]{head},{tail}[s{k}]")
+            mix.append(f"[s{k}]")
+            k += 1
+    elif cues:                                           # long videos: sound effects in stems of <= MAX_INPUTS files
+        stems = _sfx_stems(cues, head, total, job_dir)   # (one input per file, split for every use of it)
+        for st in stems:
+            inputs += ["-i", st]
+            mix.append(f"[{k}:a]")
+            k += 1
     fc.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:normalize=0,"
               f"aformat=channel_layouts=stereo[aout]")
     mixed = work / "mix.wav"
     run(["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(fc), "-map", "[aout]", "-t", f"{total:.3f}",
          "-c:a", "pcm_s16le", mixed], job_dir, "audio mix")
+    for st in stems:
+        st.unlink(missing_ok=True)
     norm = work / "mix_norm.wav"
     loud_in = loudnorm(mixed, norm, job_dir)
     music = [{"start": round(a, 2), "track": f.name} for a, b, f in pieces]

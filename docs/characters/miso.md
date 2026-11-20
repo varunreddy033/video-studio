@@ -1,6 +1,6 @@
 # Character: MISO (smart ginger kitten with glasses)
 
-Converted from the character bible docs/CHARACTER.md (2026-11-09) into the format the pipeline loads
+Converted from the character bible docs/CHARACTER.md (2026-11-09; removed 2026-11-17, still in git history) into the format the pipeline loads
 (`character: miso`). The look, voice and lines below are from that bible, word for word. The SEED is new: build
 the pack, look at contact_sheet.jpg, and change SEED only if the master looks off (then rebuild).
 

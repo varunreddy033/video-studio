@@ -1,8 +1,8 @@
 # Character: STERLING (grey-and-white cat in a navy blazer)
 
 Status: ACTIVE for the first presenter video (2026-11-08). Built from the step-1 benchmark cat
-(tools/presenter_bench.py, fixed-seed set B = 10/10 consistent). One character per video: a script picks it with
-`character: sterling` in its header. Later characters (e.g. Miso, docs/CHARACTER.md) get their own file here.
+(the presenter benchmark, docs/presenter_bench/RESULTS.md; fixed-seed set B = 10/10 consistent). One character per video: a script picks it with
+`character: sterling` in its header. Later characters (e.g. Miso, docs/characters/miso.md) get their own file here.
 
 ## Who he is
 - A calm, sharp, slightly dry cat in a suit who explains money and tech like a smart friend. Skeptical of hype.

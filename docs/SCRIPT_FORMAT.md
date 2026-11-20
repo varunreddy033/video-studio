@@ -66,6 +66,21 @@ All of these are picked in Video Studio after **Check**, in the **Look & sound**
 Captions, Sound effects, Art style). A click writes the header line for you. Check all preset files with
 `bin/python tools/check_presets.py`.
 
+### Theme (`theme:`) and the Storyboard
+`theme: <id>` picks one storyboard theme for the video (files in `presets/storyboard_themes/`, docs/STORYBOARD_PLAN.md):
+auto (the default, no line needed = as before), documentary_cinematic, minimalist_editorial, modern_motion_graphics,
+illustrated_explainer, newspaper_editorial, dark_atmospheric, clean_corporate, scientific_visualization.
+A theme fills in header lines you did not write: for motion graphics `show`, `typography`, `camera`, `transitions`
+(some themes bring a scene design of their own: colours, fonts, shadows, which scene types are used); for AI-image
+videos `art_style`, `captions`, `camera`. A line you write yourself always wins over the theme. An unknown id is a
+Check error listing the valid ids. In Video Studio: Look & sound -> Theme.
+
+Motion-graphics videos have a **Storyboard** page (button on the video's page): every scene as a card, a scene editor
+(move, resize, restyle and rewrite text and pictures; undo / redo; saved by itself), single-scene regeneration with
+Accept / Reject and earlier versions to restore. Draft and final renders contain every accepted change; only changed
+scenes are rendered again when a picture of that mode already exists. Nothing of this is written into script.md: it
+lives in `output/jobs/<id>/storyboard/`.
+
 ### Voice (`voice:`)
 
 28 English Kokoro voices (20 American, 8 British), each `presets/voices/<id>.json`: `voice: en_us_heart`,
@@ -231,7 +246,9 @@ map (Depth Anything) in finals; drafts show the nearest flat move.
 scenes connect, none above 35 %), `off` (hard cuts only), a set, or a comma list of names (sets and names mix:
 `transitions: 3d, ink`). Sets: `3d` (cube, flip, page_curl, spin, zoom_through), `film` (light_leak, film_burn,
 whip_blur, zoom_blur, fade), `clean` (cut, fade, push, slide, luma_wipe), `glitch` (rgb_split, glitch, zoom_blur,
-flash), `popular` (whip_blur, zoom_blur, zoom_through, spin, light_leak, cube, luma_wipe, ink, shape).
+flash), `popular` (whip_blur, zoom_blur, zoom_through, spin, light_leak, cube, luma_wipe, ink, shape), `sizzle`
+(band_sweep, shutter, whip_blur, flash, zoom_blur). `band_sweep` = three slanted colour bands sweep up the frame,
+`shutter` = four colour bars close top-down and open on the new scene.
 New transitions (both scenes move): `whip_blur` (whip pan with motion blur), `zoom_blur`, `zoom_through` (fly into the
 old scene, out of the new one), `spin`, `light_leak`, `film_burn`, `rgb_split`, `cube` (3D cube turn), `flip` (3D
 card flip), `page_curl` (the old page peels away), `ink` (ink blot reveal), `luma_wipe` (soft diagonal wipe), `shape`
@@ -574,3 +591,90 @@ Amazon, Microsoft, Alphabet and Meta
 [label: FOLLOW THE MONEY | door: bills] Let's follow the money.
 ```
 
+
+## 6. Blocky 3D (`rendering_method: blocky3d`)
+
+Story Shorts with blocky 3D characters in a 3D world (docs/BLOCKY3D_PLAN.md), rendered on this Mac
+(pipeline/blocky3d/render.py: Three.js scenes in HyperFrames, ~13 ms a frame). A script with `[shot:]` tags and no
+`rendering_method:` line gets blocky3d by itself. No `captions:` line = the two-line key-word captions drawn in the
+picture (a captions: preset burns that style instead). Music: your tracks in assets/blocky3d/music/<mood>/ first
+(`music: funny` picks from that folder), else the library.
+
+Header:
+
+```
+rendering_method: blocky3d
+cast: me = hero_green, guard = agent_suit, crowd = townsfolk x300
+set: town_square        # where shots happen unless a shot says set=...
+grade: bright           # bright | dusk | night | fog
+speed: 1.3              # story Shorts are narrated fast (references: 195-323 words a minute)
+```
+
+- `cast:` gives each person a name and a look from presets/blocky_cast/ (hero_green, girl_red, kid_blue, old_man,
+  agent_suit, townsfolk). `x300` makes a crowd (1-500); `townsfolk` gives every person random clothes.
+- Sets: town_square, street, beach, house_inside, bedroom, classroom, cafeteria, park, arena, forest, night_town,
+  dorm_room, space, farm (barn, crops, windmill, hay, grain sacks), market (food stalls,
+  crates, coins), river (a river across the frame with a broken bridge, a grain cart).
+
+Body: one tag = one shot, cut where its narration starts (like `[ai:]`).
+
+| Tag | Meaning |
+|---|---|
+| `[shot: who \| action \| camera \| set=beach face=scared]` | `who` = cast names (comma list, empty = only the place); `action` = idle, talk, walk, run, jump, fall, sit, lie, wave, point, dance, cheer, scared, cry, freeze, sleep (default idle); `camera` = auto, locked, push_in, pull_out, track, orbit, crane_up, crane_down, low_angle, high_angle, over_shoulder, close_up, whip (default auto); options `set=` and `face=` (neutral, happy, sad, angry, scared, shocked, smirk, crying, shut) |
+| `[sign: kind \| text]` | an in-world note, tablet, board, scoreboard or phone in close-up (kind first) |
+| `[sfx: ...]` `[pause: ...]` | as in every video |
+
+**Studio pack** (assets/blocky3d/studio, own models made by tools/blocky_studio/build_all.py): 38 poseable
+characters usable straight in `cast:` (`me = stripe_kid, mia = goth_girl, rival = rival_blond`... a preset id wins when
+both exist, e.g. old_man), 28 face textures (`face=` also takes troll_grin, love, laugh, blush_shy, nervous_sweat,
+screaming, smug, wink, determined, yelling, sleeping...; code-drawn characters show their nearest face) and 137 props:
+`[shot: me | idle | push_in | prop=trophy]` puts the prop beside the lead, `[shot: | idle | push_in | prop=pet_snail]`
+(nobody in the shot) makes the prop the subject. Prop ids = the file names in assets/blocky3d/studio/models/props/*/.
+
+`[ai:]`, `[card:]` and the other picture tags are Check errors in a blocky3d video, and `[shot:]` / `[sign:]` are
+errors in any other video. Check warns when a shot stays on screen longer than ~4 s (the references cut every
+1-3 s). Example: docs/sample_blocky3d_script.md.
+
+## 7. 3D explainer (`rendering_method: explainer3d`)
+
+Clean CG "what if" explainers: one subject on a white disc in a coloured gradient world, gentle eased camera moves,
+infographic overlays and 1-3 word captions at 62 % height (pipeline/explainer3d, shared engine pipeline/three_video.py,
+~14 ms a frame). A script with `[scene:]` tags and no `rendering_method:` line gets explainer3d by itself.
+
+`[scene: subject | camera | bg=... | title: ... | meter: ... | chart: ... | count: ...]`, one per line of narration:
+
+| Part | Values |
+|---|---|
+| subject | a model id from assets/explainer3d/models (apple, bread_loaf, fish, rice_bowl, smartphone, metal_bucket, kiddie_pool, chain_link, basketball, hospital_bed, chrome_faucet, oxygen_mask, power_pylon, earth, planet_titan, pictogram_person_red/green, purple_titan, power_gauntlet) or any blocky3d id (`cars/police`, `studio/trophy`); `crowd 300 red` (pictogram people: red, green, blue); `pile apple x8`; `food` (apple, bread, fish, rice); `none` (background + overlays only) |
+| camera | push_in (default), pull_out, orbit, dolly, top, close |
+| bg= | blue (default), deep, red, space, dusk, white |
+| title: | big red title on top, e.g. `title: WHAT IF?` |
+| meter: | a bar at the bottom, `meter: HUNGER 78` (0-100) |
+| chart: | a white line-chart card, `chart: Food 1 2 2 2 / People 1 1.4 2 2.6` (up to 3 lines) |
+| count: | a green multiplier on top, `count: x8` |
+
+Check warns when a scene stays on screen longer than ~5 s. Example: docs/sample_explainer3d_script.md.
+purple_titan / power_gauntlet are look-alikes of a famous film villain: fine for tests, risky in monetised uploads.
+
+## 8. Neon motion (`rendering_method: neon`)
+
+Kinetic typography on near-black (#050505) with off-white type, lime #D4FF2A highlights and magenta #FF2FD0 numbers,
+UI windows and a 3D camera on every scene (pipeline/neon, shared engine pipeline/three_video.py; DOM + canvas, no 3D
+models). Things land on the spoken words of their scene; a top-left caption bar shows the clause with its key word in
+a lime box; film grain + HUD corner labels; every scene exits with a fast zoom + blur. A script with `[neon:]` tags and no
+`rendering_method:` line gets neon by itself.
+
+| Tag | Shows |
+|---|---|
+| `[neon: headline \| HELL / YES.]` | 1-3 huge stacked lines (`/` = next line), each slams in on its word, the last one lime |
+| `[neon: logo \| OPUS 5.5 \| made with]` | small spaced kicker + a huge lime word between two spinning sparks |
+| `[neon: prompt \| Create a *30-second* video \| PROMPT]` | a UI window opens like a shutter; the text is typed as it is spoken, `*words*` highlighted |
+| `[neon: nodes \| Idea > Script > Video]` | 2-5 boxes, joined one by one by a glowing wire with a running comet |
+| `[neon: stack \| Layers, Keyframes, Easing]` | 2-6 tilted cards sliding in and stacking up in depth |
+| `[neon: number \| 5H \| saved on every video]` | a giant magenta number that counts up + a spaced label |
+| `[neon: tunnel \| CAMERA]` | lime frames flying at the camera around one stretching word |
+| `[neon: words \| the letters *stretch* here]` | the sentence word by word on its spoken words, `*word*` in a lime box |
+| `[neon: endcard \| MOTION \| your turn]` | closing lockup + a "COMMENT <WORD>" pill |
+
+Check warns when a scene stays on screen longer than ~6 s. Example: docs/sample_neon_script.md. The reference pack's
+music bed (copyrighted) and its vidIQ voiceover are NOT used; voice = Kokoro, music = the library as usual.

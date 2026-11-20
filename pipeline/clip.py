@@ -70,8 +70,8 @@ def _still(shot, sp, src_dir: Path):
     if shot["type"] == "act":
         return visuals.act_image(shot, sp["meta"]["character_data"], 1920, 1080, src_dir, cached_only=True)
     # the SOURCE video's art style (its script header), or its cached images wouldn't be found
-    stock = shot["type"] == "stock"
-    return visuals.ai_image(shot["query"] if stock else shot["prompt"], 1920, 1080, src_dir, cached_only=True,
+    prompt, stock, seed_extra = visuals.shot_image(shot)
+    return visuals.ai_image(prompt, 1920, 1080, src_dir, seed_extra, cached_only=True,
                             style=sp["meta"]["presets"]["art_style"], stock=stock)
 
 

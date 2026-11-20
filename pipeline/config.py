@@ -1,4 +1,4 @@
-"""All settings in one place. Values come from ~/youtube-pipeline/.env (existing env vars win)."""
+"""All settings in one place. Values come from the project folder's .env (existing env vars win)."""
 
 import os
 import sys
@@ -49,7 +49,10 @@ IMAGE_COOLDOWN = float(env("IMAGE_COOLDOWN", "8"))           # rest after each n
 KOKORO_VOICE = env("KOKORO_VOICE", "am_michael")
 KOKORO_SPEED = float(env("KOKORO_SPEED", "1.0"))
 WHISPER_BIN = env("WHISPER_BIN", "whisper-cli")
-WHISPER_MODEL = os.path.expanduser(env("WHISPER_MODEL", str(BASE_DIR / "models" / "ggml-small.bin")))
+_WHISPER_DEFAULT = str(BASE_DIR / "models" / "ggml-small.bin")
+WHISPER_MODEL = os.path.expanduser(env("WHISPER_MODEL", _WHISPER_DEFAULT))
+if not os.path.exists(WHISPER_MODEL) and os.path.exists(_WHISPER_DEFAULT):
+    WHISPER_MODEL = _WHISPER_DEFAULT       # a .env written for another folder (old ~/youtube-pipeline path)
 
 # mix
 BGM_VOLUME = float(env("BGM_VOLUME", "0.18"))
@@ -61,10 +64,37 @@ FPS = int(env("FPS", "30"))
 # how the pictures are made (script header rendering_method:). motion = motion graphics (the default since
 # 2026-11-11, .env DEFAULT_RENDERING_METHOD); ai_image = the original AI-image renderer. Scripts without the line
 # that need AI images (character:, [talk:]/[act:], clip Shorts, style: motion) still get ai_image (script_parser).
-RENDERING_METHODS = {"ai_image": "AI images", "motion": "Motion graphics"}
+RENDERING_METHODS = {"ai_image": "AI images", "motion": "Motion graphics", "blocky3d": "Blocky 3D",
+                     "explainer3d": "3D explainer", "neon": "Neon motion"}
 DEFAULT_RENDERING_METHOD = env("DEFAULT_RENDERING_METHOD", "motion").lower()
 if DEFAULT_RENDERING_METHOD not in RENDERING_METHODS:
     DEFAULT_RENDERING_METHOD = "motion"
+# Script kit per picture style (New video screen: "Prompt to give Claude" + "Load sample" follow the Pictures choice).
+# prompts: kind (full | short) -> [(id, label)], id = docs/script_prompts/<id>.md, first = the one shown first;
+# sample: kind -> docs/<file>. A kind that isn't listed falls back to "full". tools/check_script_kits.py checks that
+# every style has both, the files exist and every sample passes Check with that style for both kinds.
+SCRIPT_KITS = {
+    "ai_image": {"prompts": {"full": [("ai_image", "No presenter"), ("ai_image_sterling", "Sterling presents")],
+                             "short": [("ai_image_short", "No presenter"), ("ai_image_sterling_short", "Sterling Short")]},
+                 "sample": {"full": "sample_script.md", "short": "sample_ai_image_short_script.md"}},
+    "motion": {"prompts": {"full": [("motion", "Motion graphics")]},
+               "sample": {"full": "sample_motion_gfx_script.md"}},
+    "blocky3d": {"prompts": {"full": [("blocky3d", "Blocky 3D story")]},
+                 "sample": {"full": "sample_blocky3d_script.md"}},
+    "explainer3d": {"prompts": {"full": [("explainer3d", "3D explainer")]},
+                    "sample": {"full": "sample_explainer3d_script.md"}},
+    "neon": {"prompts": {"full": [("neon", "Neon motion")]},
+             "sample": {"full": "sample_neon_script.md"}},
+}
+SCRIPT_PROMPTS_DIR = BASE_DIR / "docs" / "script_prompts"
+
+
+def script_kit(method, kind="full"):
+    """{prompts: [{id, label}], sample: file name} for one picture style and video kind (short | full)."""
+    kit = SCRIPT_KITS[method]
+    prompts = kit["prompts"].get(kind) or kit["prompts"]["full"]
+    return {"prompts": [{"id": i, "label": l} for i, l in prompts],
+            "sample": kit["sample"].get(kind) or kit["sample"]["full"]}
 GAP_IN_PARAGRAPH = 0.12       # silence between voice segments of one paragraph (at a shot cut)
 GAP_AFTER_PARAGRAPH = float(env("SCENE_PAD", "0.35"))
 WORDS_PER_MIN = 155           # measured: Kokoro am_michael at speed 1.0

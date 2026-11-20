@@ -90,4 +90,7 @@ FONT_FACES = [     # (family, file, weight). Files live in assets/fonts (pipelin
     ("Modak", "Modak-Regular.ttf", "400"),
     ("Bagel Fat One", "BagelFatOne-Regular.ttf", "400"),
     ("SpaceMono", "SpaceMono-Bold.ttf", "700"),
+    ("Archivo Black", "ArchivoBlack-Regular.ttf", "400"),          # studio-sizzle blocks (blocks_d)
+    ("Fraunces", "Fraunces-wght.ttf", "100 900"),
+    ("Fraunces Italic", "Fraunces-Italic-wght.ttf", "100 900"),
 ]

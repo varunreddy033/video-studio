@@ -22,9 +22,9 @@ from pathlib import Path
 from . import config as C
 
 PRESETS_DIR = C.BASE_DIR / "presets"
-KINDS = ("voices", "captions", "art_styles", "music", "niches")
+KINDS = ("voices", "captions", "art_styles", "music", "niches", "storyboard_themes", "blocky_cast")
 DEFAULTS = {"voices": "en_us_michael", "captions": "amber_word", "art_styles": "doc_photo", "music": "any",
-            "niches": "general"}
+            "niches": "general", "storyboard_themes": "auto", "blocky_cast": "hero_green"}
 DEFAULT_LANGUAGE = "en"
 HEADER_KEYS = {"voice": "voices", "captions": "captions", "art_style": "art_styles", "music": "music"}
 DEFAULT_CHOSEN = {"language": DEFAULT_LANGUAGE, **{key: DEFAULTS[kind] for key, kind in HEADER_KEYS.items()}}
@@ -59,6 +59,11 @@ SCHEMA = {
               "duck": {"threshold": NUM, "ratio": NUM, "attack_ms": NUM, "release_ms": NUM},
               "fade_in_sec": NUM, "chapter_crossfade_sec": NUM, "loudness_lufs": NUM},
     "niches": {"language": str, "voice": str, "captions": str, "art_style": str, "music": str},
+    # storyboard theme = default header values + an optional scene design of its own (pipeline/themes.py)
+    "storyboard_themes": {"description": str, "settings": {}},
+    # blocky 3D avatar (rendering_method: blocky3d, cast: header). Our own designs, drawn in code.
+    "blocky_cast": {"description": str, "skin": "colour", "hair": str, "hair_colour": "colour", "shirt": str,
+                    "shirt_colour": "colour", "shirt_colour2": "colour", "pants_colour": "colour"},
 }
 # fields a preset may leave out (checked when present)
 OPTIONAL = {
@@ -67,8 +72,12 @@ OPTIONAL = {
     "voices": {"description": str, "gender": str, "accent": str, "grade": str},
     # motion style (pipeline/props_gen.py): words for a cut-out prop and for a background set plate
     "art_styles": {"prop_suffix": str, "plate_suffix": str},
+    "storyboard_themes": {"scene_style": {}, "supports": {}, "version": int},
+    "blocky_cast": {"random": bool},          # true = a crowd: every person gets seeded random colours
 }
-CHOICES = {("captions", "highlight"): ("word", "box", "none"), ("captions", "case"): ("as_is", "upper", "lower")}
+CHOICES = {("captions", "highlight"): ("word", "box", "none"), ("captions", "case"): ("as_is", "upper", "lower"),
+           ("blocky_cast", "hair"): ("spiky", "short", "long", "bun", "cap", "bald"),
+           ("blocky_cast", "shirt"): ("solid", "stripes", "jacket", "dress", "suit")}
 
 
 def _rel(path: Path) -> str:
@@ -125,6 +134,9 @@ def validate(kind: str, pid: str, data) -> None:
     for (k, field), allowed in CHOICES.items():
         if k == kind and data[field] not in allowed:
             raise PresetError(f"{where}: field '{field}' must be one of {', '.join(allowed)}, got {data[field]!r}")
+    if kind == "storyboard_themes":
+        from . import themes
+        themes.check(pid, data)
     if kind == "niches":
         for key, k in HEADER_KEYS.items():
             if data[key] not in ids(k):
@@ -185,6 +197,10 @@ def list(kind: str):   # noqa: A001  (the brief's name: presets.list(kind))
             f = preview_path(pid)
             item["realistic"] = p["realistic"]
             item["preview_url"] = f"/api/art_styles/{pid}/preview.jpg?v={int(f.stat().st_mtime)}" if f.exists() else None
+        if kind == "storyboard_themes":
+            from . import themes
+            item.update(settings=p["settings"], supports=p.get("supports") or {}, swatch=themes.swatch(p),
+                        show=themes.defaults(p, "motion").get("show"), base=(p.get("scene_style") or {}).get("base"))
         out.append(item)
     return out
 
@@ -314,6 +330,16 @@ def _config_overrides(meta):
     return out
 
 
+def _theme_spec(meta):
+    """The whole theme file + its version + which header values it supplied (job.json "storyboard_theme")."""
+    from . import themes
+    try:
+        th = load("storyboard_themes", meta.get("theme") or DEFAULTS["storyboard_themes"])
+    except PresetError:
+        return None
+    return {**th, "config_version": themes.version(th), "applied": meta.get("theme_applied") or {}}
+
+
 def job_spec(job_id: str, mode: str, parsed: dict) -> dict:
     meta = parsed["meta"]
     chosen = meta["presets"]
@@ -336,6 +362,7 @@ def job_spec(job_id: str, mode: str, parsed: dict) -> dict:
             "art_style": load("art_styles", chosen["art_style"]),
             "music": load("music", chosen["music"]),
         },
+        "storyboard_theme": _theme_spec(meta),
         "overrides": _config_overrides(meta),
         "rendering_method": meta.get("rendering_method", "ai_image"),
         "output": {"resolution": f"{W}x{H}", "fps": C.FPS, "video_bitrate": C.VIDEO_BITRATE[
@@ -346,6 +373,10 @@ def job_spec(job_id: str, mode: str, parsed: dict) -> dict:
 def write_job(job_dir: Path, job_id: str, mode: str, parsed: dict) -> Path:
     out = job_dir / "job.json"
     tmp = job_dir / "job.json.tmp"
-    tmp.write_text(json.dumps(job_spec(job_id, mode, parsed), indent=1, ensure_ascii=False), encoding="utf-8")
+    spec = job_spec(job_id, mode, parsed)
+    if spec["rendering_method"] == "motion":                 # what the user changed in the storyboard (ids, versions)
+        from .motion_gfx import storyboard
+        spec["storyboard"] = storyboard.summary(job_dir)
+    tmp.write_text(json.dumps(spec, indent=1, ensure_ascii=False), encoding="utf-8")
     tmp.replace(out)
     return out

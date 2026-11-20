@@ -48,7 +48,7 @@ Don't re-propose decisions marked DECIDED unless the person you're working with 
 
 ## Architecture (DECIDED 2026-11-08, final): "script.md -> Video Studio"
 ```
-Claude chat (docs/CLAUDE_SCRIPT_PROMPT.md)  ->  script.md (docs/SCRIPT_FORMAT.md)
+Claude chat (docs/script_prompts/<style>.md)  ->  script.md (docs/SCRIPT_FORMAT.md)
 Video Studio web app  http://localhost:8765  (render_server.py = Flask, ui/index.html = plain HTML/JS)
   paste script -> Check -> Draft -> Final -> download -> manual upload in YouTube Studio
 pipeline/
@@ -170,7 +170,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   8 s cool-down per new image. Depth parallax on every still in finals: Depth Anything V2 Small (Apache-2.0 ONLY).
 - Finals of character videos also make: vertical Short (first chapter), 3 thumbnails (scene, cutout on set,
   frame), captions_final.srt, upload_pack.zip. If the pack isn't built, the final waits for it.
-- Characters: docs/characters/{sterling,miso,biscuit,nova}.md (miso = converted from the docs/CHARACTER.md bible,
+- Characters: docs/characters/{sterling,miso,biscuit,nova}.md (miso = converted from the docs/CHARACTER.md bible, removed 2026-11-17, still in git history;
   SEED 1300 new). Loader reads "Kokoro x, speed y" or "Voice: x, speed y", "Presenter poses:" or "Poses:" (with
   "name (description)" for extra poses), and bare set names (default description). Body words NOUN / LIMBS / FUR /
   OUTFIT / EARS fill the pack, [act:] and thumbnail prompts; Sterling's words reproduce his old prompts exactly
@@ -184,10 +184,10 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 
 ## Decisions and why (don't undo these)
 - Scripts are written by us with Claude in chat, pasted as script.md. No LLM API in the pipeline (Rs 0, and we
-  review every fact). The Gemini script writer is retired (old/script_gen_gemini.py).
-- n8n is RETIRED (synchronous 30-min render call broke long videos). n8n/ folder kept for reference.
+  review every fact). The Gemini script writer is retired.
+- n8n is RETIRED (synchronous 30-min render call broke long videos). 
   Docker isn't needed.
-  old/render_server_v1.py and old/index_v1.html are the previous versions (nothing deleted).
+  old/ (previous server, UI, Gemini writer) and n8n/ were removed 2026-11-17, still in git history (last commit with them: 27aebd8).
 - NO stock video (DECIDED 2026-11-08): Pexels paused new API keys. Visual mix: ~65% AI images (6-10 s each,
   ~45-55 per 10 min) + ~35% cards/numbers/quotes/charts (3-6 s, instant). Parser warns above 12 s per photo shot,
   10 s per graphic. A 10-min final takes ~20-25 min (images cached, so re-renders only redo changed shots).
@@ -260,7 +260,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - [ ] MOTION style (docs/MOTION_PLAN.md, opt-in `style: motion`; classic stays the default and untouched):
   - [x] Phase 1 look test (2026-11-10): motion/ = Remotion 4.0.539 (React 18.3.1, TS 5.9.3, all pinned, lockfile),
         Node 22 via Homebrew (setup.sh installs it + npm ci + Remotion's headless browser). Montserrat (OFL) bundled.
-        tools/motion_demo.py: Kokoro bm_george voice -> word timings (motion/src/demo/timing.json) -> Remotion picture
+        tools/motion_demo.py (removed 2026-11-17, still in git history): Kokoro bm_george voice -> word timings (motion/src/demo/timing.json) -> Remotion picture
         -> voice + ducked music -> -14 LUFS -> output/motion_demo.mp4. 27.5 s demo, 3 scenes: 4 doors grow on their
         words with label tags + word-by-word headline pill; line chart draws while -5.5% counts, calendar page flips,
         shake on "slammed"; push-from-right with shadow band; zoom-through into the chart's red end dot; doors with
@@ -316,8 +316,9 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
   - [x] Phase 6 = 3D Sterling inside motion scenes (DECIDED 2026-11-10: no 2D conversion; quality first).
         [char:] is the normal 3D pack, lip-synced + blinking in Remotion (Placed.tsx CharView, pack mouth pictures,
         Kokoro phoneme timings), pose switches mid-scene; [act:]/[talk:]/[ai:] are full-frame motion scenes.
-        Sterling Flat is PARKED (benchmark passed: docs/presenter_bench/RESULTS_FLAT.md, docs/characters/sterling_flat.md,
-        tools/flat_bench.py, assets/characters/sterling_flat; ask before deleting).
+        Sterling Flat was PARKED after its benchmark passed; its files (docs/presenter_bench/RESULTS_FLAT.md,
+        docs/characters/sterling_flat.md, tools/flat_bench.py) were removed 2026-11-17, still in git history. The local
+        assets/characters/sterling_flat folder (not in git) is untouched: ask before deleting.
         Layout rules added: slots shrink things to fit, small cards = tiles (2 x 2 for four), check/cross stamp on
         the prop, labels flip under a target when the top is taken, bigger numbers. New SVG props earphones, earbuds
         (the FLUX "gen" earphone cut-out came out as a white blob; SVG props are sharper and instant).
@@ -616,6 +617,122 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       Short = cover + 2 alternates (upload pack keeps thumb_1); failure -> the old frame thumbnails. Check page
       "Thumbnails" card (POST /api/thumbs, cached in output/thumb_previews), "Remake thumbnails" on a video's page
       (POST /api/jobs/<id>/thumbnails). tools/check_thumbs.py = "thumbs: clean", ~0.2 s per option.
+- [x] STORYBOARD THEMES + EDITOR = roadmap F11 (2026-11-17, branch raju/storyboard-editor, docs/STORYBOARD_PLAN.md;
+      motion graphics): header `theme:` = presets/storyboard_themes/<id>.json (9 files; auto = before themes), new
+      preset kind + pipeline/themes.py: a theme = default header values per rendering method (show, typography, camera,
+      transitions, captions, art_style...) + an optional scene design of its own (base format + own palettes, fonts,
+      shadows, scene-type weights), registered as format theme_<id>, never auto-picked. job.json: storyboard_theme
+      (file + config_version) and storyboard (edited scenes / versions). pipeline/motion_gfx/storyboard.py +
+      output/jobs/<id>/storyboard/: scenes.json, plan.json (the plan is stored and reused: untouched scenes are
+      identical in every build), state.json (current / pending version, edits per scene), versions/<scene id>/vN.
+      Edits = a CSS block (+ JS for text) appended to the scene (margins / relative offsets / zoom, never transform:
+      GSAP owns it), positions as fractions of the frame; an edit made on another layout is kept, flagged stale and not
+      applied. render(mode="storyboard") = voice + scenes only; single-scene regeneration (another type / next layout /
+      another picture, ~4 s) waits for Accept / Reject; draft / final re-render only changed scenes and splice them in
+      (render._reuse_render), nothing changed = picture reused. UI: Look & sound -> Theme tab; Storyboard button on a
+      motion video's page (ui/storyboard.js: grid of live scenes, editor with canvas / properties / regenerate /
+      versions). Checks: tools/check_storyboard.py ("storyboard: clean"). Fixed on the way: picker.VIDEO_NAMES was only
+      set midway through planning, so the first build of a server process planned differently from later ones.
+      Not done: scene editor for AI-image videos; free-text regeneration instructions (no LLM in the pipeline).
+- [x] Long-video audio fix (2026-11-17, branch varun/long-video-audio-fix): a 15:23 motion final failed with "audio
+      mix failed: Too many open files" (one ffmpeg -i per sound effect, 250+ inputs; macOS gives a process 256 files).
+      assemble._mix_audio: up to 64 inputs = the same single command as before; more = sound effects first mixed into
+      32-bit float stems in cache/sfx_stems/ (<= 64 files per call, one input per file + asplit per use), then voice +
+      music + stems. Tested on that video: 300 cues / 87 files in 2 stems under a 256 limit, max 1 LSB difference vs
+      the old single call, same input loudness. com.videostudio.server plist: Soft/HardResourceLimits NumberOfFiles
+      8192 (install_autostart.sh; the launcher adds it to an older plist and reloads the service). Motion re-renders
+      reuse a finished picture: work/video.mp4 + motion/picture.json (mode, size, critique mode, fingerprint of
+      index.html / beats / icons / scene files before the critique); same fingerprint = "picture reused" (no
+      HyperFrames, no critique), straight to captions, audio, encode, thumbnails. Older failed jobs without the stamp:
+      the project files on disk minus the critique-fixed scenes.
+      Same VIDEO_NAMES bug as the storyboard entry above, found separately: picker.set_names(beats) now runs before
+      every planner call (renders, the Check page's plan_video, formats.goals_by_format), and motion renders reset
+      fonts / typography / easing first. Reuse order: nothing changed since a finished picture = "picture reused"
+      (no HyperFrames, no critique); storyboard edits = render._reuse_render (changed scenes re-rendered, critique runs). Tests: motion sample draft
+      failed on purpose after its picture -> re-render 8 s "picture reused" (first render 116 s); another look ->
+      picture rendered again. Pattinson job 20261117-092129-54833b re-rendered in Pop Poster (its script was changed to
+      show: pop_poster, so no reuse): 15:23 final in 3247 s, 300 SFX in 2 stems, -14.1 LUFS, 2 designed thumbnails
+      (big_number / hero_icon dropped: "ROBERT PATTINSON AS 007" too small at 320x180). Classic sample draft 13 s.
+- [x] ONE MOTION SKILL (2026-11-17, branch raju/one-motion-skill): the GSAP showcase of github.com/iart-ai/motion-skills
+      (MIT, commit 9b9ce04; the repo itself is an index of 19 skill packs, showcase.html is its one animation) rebuilt as
+      6 more premium blocks in pipeline/motion_gfx/premium/blocks_d.py: char_flip (kicker + huge word, letters flip up
+      in 3D, spiral out), serif_scatter (italic serif phrase, seeded scattered rise), outline_slam (outline word slams
+      in from 5x + shake; shock words), three_beat (3 words / 3 colours / 3 entrances; lists of 3), crop_lockup
+      (2-line lockup, crop marks + amber rule; conclusions), signature_dot (closing word + pulsing amber full stop).
+      Shared look: dark violet backdrop, 3 drifting blurred blobs, grain. No reference text (iart.ai, "Motion Skills")
+      reaches a video; back.out eases -> our springs; they hold for the whole beat (slow push-in, exit in the last
+      0.5 s), short beats only (0.8x cycle .. 6 s). Wired via premium_scenes.py (fit tests + roles, SIZZLE set).
+      Transitions band_sweep + shutter (transitions.py; in the default next/shot groups) + set `transitions: sizzle`.
+      Font added: Fraunces + Fraunces Italic (OFL). Test reel output/tests/one_motion_reel.md (scene_order of the 6).
+- [x] STUDIO UI REDESIGN + FAST STORYBOARD (2026-11-17, branch raju/studio-ui-redesign): ui/studio.css =
+      one design system for login + app + storyboard (tokens, light / dark / follow the Mac toggle remembered per
+      browser, Jost + Barlow Condensed served from assets/fonts at /ui/fonts/, an ambient background that only animates
+      transform and pauses while a video renders and with reduced motion). Storyboard: posters instead of live scene
+      pages (was ~20 s frozen on 30 scenes, now <= 9 ms blocks), hover preview, reel strip, editor tabs Element / Scene
+      / Cut + camera with per-scene layout, palette, text entrance, transition in, camera, entrance and sounds
+      (docs/STORYBOARD_PLAN.md section 5).
+- [ ] BLOCKY 3D story Shorts (2026-11-17, branch raju/blocky3d, docs/BLOCKY3D_PLAN.md): 6 reference reels analysed
+      (blocky avatars, one shot per clause every 1.1-2.8 s, world-rule hook, 195-323 wpm, -14 LUFS). Never "Roblox" in
+      code/UI/videos (trademark). Step 1 spike (output/blocky3d_spike, not in git): Three.js 0.170.0 inside HyperFrames
+      on hf-seek, 11.4 s 1080x1920 in 7.7 s (22 ms/frame), hero + 300 instanced crowd, -14.1 LUFS, critic 10/10.
+      Step 2: `rendering_method: blocky3d` (config "Blocky 3D"), header cast: / set: / grade:, tags [shot: who | action
+      | camera | set= face=] and [sign: kind | text] (pipeline/blocky3d/script.py: the vocabulary + Check rules),
+      preset kind presets/blocky_cast/ (6 avatars), docs/SCRIPT_FORMAT.md section 6, docs/sample_blocky3d_script.md
+      (passes Check clean). [shot:] without a rendering_method line = blocky3d. 16 existing scripts parse identically
+      to main; presets clean; storyboard clean. Renders refuse ("renderer isn't built yet") until step 5; the UI's
+      Pictures picker doesn't offer it yet (step 7).
+      RENDERER (2026-11-17, step 5): pipeline/blocky3d/render.py + js/world.js + sets.py; three 0.170.0 pinned in the
+      root package.json (npm ci). Job project output/jobs/<id>/blocky3d/ (index.html + the shots as JSON, three +
+      GLTF/OBJ/MTL loaders, only the Kenney model files used), HyperFrames render at the output size, then the shared
+      _mix_audio (whoosh per cut, pop per sign, story sounds; music from assets/blocky3d/music first) + final_encode +
+      .srt; finals get frame thumbnails (Shorts: 1 cover) + metadata + upload pack. Own rig (presets/blocky_cast), 9 faces
+      + talking mouth, 16 actions, 13 cameras (auto by action), 13 sets from the Kenney packs, 4 grades, signs as
+      styled cards, 2-line key-word captions in the picture. Tested on the Mac: sample draft 0:37 in 26 s, lie story
+      FINAL 0:51 1080x1920 in 38 s (picture 13 ms a frame), -14.2 LUFS, all 13 sets in a reel; classic sample draft
+      11 s (-14.1 LUFS) and motion sample draft 100 s unchanged; 17 scripts parse as on main. Renders need the
+      server restarted after this change. Picker offers Blocky 3D; no cast/set/grade tabs yet.
+      Assets (2026-11-17): assets/blocky3d/<category>/<pack>/ = 24 Kenney CC0 packs from Kenney's OpenGameArt uploads
+      (kenney.nl itself refuses scripted downloads): characters (blocky_characters with built-in idle/walk/sprint/sit/
+      die/emote animations, mini, animated FBX), city (commercial, suburban, roads, industrial, retro urban, building
+      kit, modular), interiors (furniture OBJ, shop, food), nature (nature, survival, pirate), vehicles, themed
+      (holiday, graveyard, castle, space, platformer, fantasy town): 2,352 models, 76 MB, NOT in git;
+      `bin/python tools/fetch_blocky3d_assets.py` (setup.sh runs it) downloads the zips pinned by SHA-256 in
+      assets/blocky3d/packs.json, checks CC0 + every GLB's textures, writes index.json (tags, animations); `--check`
+      must say "blocky3d assets: clean". assets/blocky3d/asset_check.jpg = 22 models rendered by Three.js 0.170 GLTFLoader
+      inside HyperFrames (all load, skinned walk plays). assets/blocky3d/music/<mood>/ = the person's own tracks,
+      gitignored (only music/SOURCES.md is tracked; trending Instagram audio gets Content ID claims on YouTube).
+      Script writing: Claude Code skill .claude/skills/blocky3d-script (SKILL.md + references/style_guide.md = the
+      style extracted from the 5 narrated reels: formats A "I woke up and...", B "In this world, [rule]", C "In this
+      town, when X..."); test script scripts/2026-11-17-every-lie-shrinks-you.md passes Check clean (47 s, 20 shots).
+- [ ] 3D EXPLAINER (2026-11-18, branch raju/explainer3d on top of raju/blocky3d, docs/SCRIPT_FORMAT.md section 7):
+      `rendering_method: explainer3d`, clean CG what-if explainers (reference: the explainer pack in Downloads, made by
+      another session; the creator's name is never used). [scene: subject | camera | bg= | title: | meter: | chart: |
+      count:]; subjects = assets/explainer3d/models (19 own GLBs, in git, 6.8 MB) or any blocky3d id, crowd N colour,
+      pile <id> xN, food, none. pipeline/three_video.py = the shared Three.js engine (voice, HyperFrames render, sound,
+      encode) used by blocky3d and explainer3d (each style = build() + cues() + world.js). Test (docs/sample_explainer3d
+      _script.md): final 0:29 1080x1920 in 24 s, 14 ms a frame, -14.1 LUFS, frame critic 10/10 every scene.
+      purple_titan / power_gauntlet = film-villain look-alikes: tests only. Blocky studio pack (same day, raju/blocky3d):
+      assets/blocky3d/studio from tools/blocky_studio (38 poseable characters, 28 faces, 137 props, prop= on shots).
+- [ ] NEON MOTION (2026-11-18, branch raju/neon-motion on top of raju/explainer3d, docs/SCRIPT_FORMAT.md section 8):
+      `rendering_method: neon`, kinetic type on #050505, lime #D4FF2A + magenta #FF2FD0, rebuilt from the neon remake
+      pack (Downloads) as a scripted style: [neon: headline | logo | prompt | nodes | stack | number | tunnel | words |
+      endcard] on the shared engine (DOM + canvas, things land on their spoken words, caption bar, grain, HUD, 3D
+      camera, zoom-blur exits). Pack music (copyrighted) and vidIQ voiceover NOT used. Sample docs/sample_neon_script.md:
+      final 0:35 1080x1920 in 45 s, frame critic 10/10 every scene (grain at 24/s froze every 5th frame: fixed),
+      -14.2 LUFS; 16 older scripts parse as on main; presets clean.
+- [x] SCRIPT KIT PER PICTURE STYLE (2026-11-19, branch raju/per-style-script-kits): each picture style has its own
+      prompt to give Claude and its own sample. Before, the New video screen had one prompt file and Load sample only
+      knew AI images / Motion graphics, so Blocky 3D got the AI-image sample and failed Check. pipeline/config.py
+      SCRIPT_KITS (style -> prompts per kind full/short + sample), docs/script_prompts/<id>.md (ai_image = old prompt B,
+      ai_image_sterling = A, ai_image_sterling_short = C, motion = D, new: ai_image_short, blocky3d, explainer3d, neon;
+      every template writes its own rendering_method: line, B didn't and so came out as motion), new sample
+      docs/sample_ai_image_short_script.md (AI images behind Make Short; sample_script.md has format: landscape = a
+      Short error). docs/CLAUDE_SCRIPT_PROMPT.md is now the index. API: GET /api/script_kit/<style>?kind=short|full,
+      GET /docs/prompt/<id>. UI: the Pictures choice sets the "Prompt to give Claude" link(s) + Copy button(s) and what
+      Load sample loads; switching style while the box holds an untouched sample loads that style's sample instead
+      (an edited script only gets its rendering_method: line changed, as before). Check: tools/check_script_kits.py
+      ("script kits: clean": every sample passes Check as its style, full and Short). Tested in a headless browser
+      on a cloud copy: all 5 styles x full/Short load their own sample + prompt; presets clean.
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
@@ -657,6 +774,8 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - Finish a task: `bash tools/check_secrets.sh && git commit -am "..." && git push -u origin HEAD && gh pr create --fill && gh pr merge --squash --delete-branch`, then `git switch main && git pull --rebase`
 - Secret check before every commit (must say "clean"): `bash tools/check_secrets.sh`
 - Preset check (must say "presets: clean"): `bin/python tools/check_presets.py`
+- Storyboard edit-layer check (must say "storyboard: clean"): `bin/python tools/check_storyboard.py`
+- Script kit check (must say "script kits: clean"): `bin/python tools/check_script_kits.py` (each style's prompt + sample)
 - GitHub login (gh CLI, your own account): `gh auth status`.
 - Start Video Studio, then open http://localhost:8765 : `~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py`
 - Restart Video Studio (after code changes): `launchctl kickstart -k gui/$(id -u)/com.videostudio.server`

@@ -371,10 +371,10 @@ def variants(names: list, seed: int = 0, recent: dict = None) -> list:
 # -------------------------------------------------------------------------------------------- transitions
 TRANSITIONS = ["cut", "fade", "push", "slide", "push_up", "blinds", "split", "whip", "zoom", "zoom_out", "flash",
                "glitch", "wipe", "whip_blur", "zoom_blur", "zoom_through", "spin", "light_leak", "film_burn",
-               "rgb_split", "cube", "flip", "page_curl", "ink", "luma_wipe", "shape"]
+               "rgb_split", "cube", "flip", "page_curl", "ink", "luma_wipe", "shape", "band_sweep", "shutter"]
 GROUPS = {"same": ["cut", "fade", "cut"],
-          "next": ["push", "slide", "push_up", "blinds", "split", "luma_wipe", "shape"],
-          "shot": ["whip_blur", "zoom_blur", "cube", "spin", "flash", "glitch", "push", "light_leak"],
+          "next": ["push", "slide", "push_up", "blinds", "split", "luma_wipe", "shape", "shutter"],
+          "shot": ["whip_blur", "zoom_blur", "cube", "spin", "flash", "glitch", "push", "light_leak", "band_sweep"],
           "reveal": ["zoom", "zoom_through", "zoom_out"],
           "chapter": ["wipe"]}
 TRANSITION_SHARE = 0.35
@@ -384,6 +384,7 @@ TRANSITION_SETS = {
     "film": ["light_leak", "film_burn", "whip_blur", "zoom_blur", "fade"],
     "clean": ["cut", "fade", "push", "slide", "luma_wipe"],
     "glitch": ["rgb_split", "glitch", "zoom_blur", "flash"],
+    "sizzle": ["band_sweep", "shutter", "whip_blur", "flash", "zoom_blur"],     # iart-ai/motion-skills showcase
     "popular": ["whip_blur", "zoom_blur", "zoom_through", "spin", "light_leak", "cube", "luma_wipe", "ink", "shape"],
 }
 

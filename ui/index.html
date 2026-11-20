@@ -4,236 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Video Studio</title>
-<style>
-:root {
-  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc;
-  --accent: #c2410c; --accent-ink: #ffffff; --soft: #fff3ec;
-  --ok: #15803d; --ok-soft: #e8f6ed; --warn: #a16207; --warn-soft: #fdf6e3;
-  --bad: #b91c1c; --bad-soft: #fdecec; --info: #1d4ed8; --info-soft: #ebf0fd;
-  --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
-  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #151517; --panel: #1f1f22; --ink: #ececee; --muted: #9a9aa2; --line: #313136;
-    --accent: #f97316; --accent-ink: #111; --soft: #2b1d14;
-    --ok: #4ade80; --ok-soft: #15281c; --warn: #facc15; --warn-soft: #2a2512;
-    --bad: #f87171; --bad-soft: #2c1717; --info: #93b4ff; --info-soft: #18203a; --shadow: none;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #151517; --panel: #1f1f22; --ink: #ececee; --muted: #9a9aa2; --line: #313136;
-  --accent: #f97316; --accent-ink: #111; --soft: #2b1d14;
-  --ok: #4ade80; --ok-soft: #15281c; --warn: #facc15; --warn-soft: #2a2512;
-  --bad: #f87171; --bad-soft: #2c1717; --info: #93b4ff; --info-soft: #18203a; --shadow: none;
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--ink);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; }
-button, input, textarea, select { font: inherit; color: inherit; }
-header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line);
-  background: var(--panel); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
-header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
-.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-.chip { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line);
-  color: var(--muted); white-space: nowrap; }
-.chip.ok { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
-.chip.bad { color: var(--bad); background: var(--bad-soft); border-color: transparent; }
-.chip.warn { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
-.chip.info { color: var(--info); background: var(--info-soft); border-color: transparent; }
-.layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: calc(100vh - 53px); }
-aside { border-right: 1px solid var(--line); padding: 14px; background: var(--panel); }
-main { padding: 22px 28px 70px; max-width: 1100px; width: 100%; }
-@media (max-width: 820px) {
-  .layout { grid-template-columns: 1fr; }
-  aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 260px; overflow: auto; }
-  main { padding: 16px; }
-}
-.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 7px 14px; cursor: pointer;
-  text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-.btn:hover { border-color: var(--muted); }
-a.btn { color: var(--ink); }
-input.inp { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; outline: none; }
-.row input.inp { width: auto; flex: 1; min-width: 160px; }
-#userbox { margin-left: 8px; }
-a.btn.primary { color: var(--accent-ink); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-.btn.primary:hover { filter: brightness(1.07); }
-.btn.small { padding: 3px 10px; font-size: 13px; }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
-.newbtn { width: 100%; justify-content: center; margin-bottom: 12px; }
-.joblist { display: flex; flex-direction: column; gap: 4px; }
-.job { padding: 9px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
-.job:hover { background: var(--bg); }
-.job.active { background: var(--soft); border-color: var(--line); }
-.job .t { font-weight: 550; font-size: 14px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.job .m { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; margin-top: 3px; flex-wrap: wrap; }
-.empty { color: var(--muted); font-size: 14px; padding: 8px 4px; }
-.job { position: relative; }
-.job .del { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer;
-  font-size: 15px; padding: 2px 6px; border-radius: 6px; opacity: 0; }
-.job:hover .del, .job:focus-within .del { opacity: 1; }
-.job .del:hover { background: var(--line); color: #b3261e; }
-.job.picking { display: grid; grid-template-columns: 22px 1fr; gap: 6px; align-items: start; }
-.job.picking input { margin-top: 3px; }
-.jobtools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; align-items: center; }
-.jobtools .n { font-size: 12px; color: var(--muted); }
-@media (hover: none) { .job .del { opacity: 1; } }
-h2 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.015em; }
-h3 { font-size: 15px; margin: 0 0 10px; }
-.sub { color: var(--muted); margin: 0 0 16px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;
-  box-shadow: var(--shadow); margin-bottom: 16px; }
-.hint { color: var(--muted); font-size: 13px; }
-textarea.script { width: 100%; min-height: 420px; font: 13px/1.55 var(--mono); border: 1px solid var(--line);
-  background: var(--bg); border-radius: 8px; padding: 12px; outline: none; resize: vertical; tab-size: 2; }
-textarea.script:focus { border-color: var(--accent); }
-.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.spacer { flex: 1; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.stat { background: var(--bg); border-radius: 8px; padding: 9px 12px; }
-.stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
-.stat span { font-size: 12px; color: var(--muted); }
-.msgs { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.msgs li { padding: 7px 10px; border-radius: 8px; font-size: 14px; cursor: pointer; display: flex; gap: 10px; }
-.msgs li.e { background: var(--bad-soft); }
-.msgs li.w { background: var(--warn-soft); }
-.msgs .ln { font: 12px var(--mono); color: var(--muted); white-space: nowrap; padding-top: 2px; }
-.okline { color: var(--ok); font-weight: 600; margin-bottom: 12px; }
-table.shots { width: 100%; border-collapse: collapse; font-size: 13px; }
-table.shots th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 8px; border-bottom: 1px solid var(--line); }
-table.shots td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-table.shots td.t { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
-table.shots td.n { color: var(--muted); }
-.tscroll { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
-.ty { font-size: 11px; padding: 1px 7px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
-.ty.stock { background: var(--soft); color: var(--accent); }
-.ty.ai { background: var(--soft); color: var(--accent); }
-.ty.card, .ty.number, .ty.quote, .ty.chart { background: var(--ok-soft); color: var(--ok); }
-.steps { display: flex; gap: 0; margin: 4px 0 18px; flex-wrap: wrap; }
-.step { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); padding-right: 18px; }
-.step .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center;
-  font-size: 12px; font-weight: 700; }
-.step.done { color: var(--ink); } .step.done .dot { background: var(--ok); border-color: var(--ok); color: var(--panel); }
-.step.now { color: var(--ink); font-weight: 600; } .step.now .dot { border-color: var(--accent); color: var(--accent); }
-.step + .step::before { content: ""; width: 24px; height: 2px; background: var(--line); margin-right: 10px; }
-.bar { height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
-.bar > div { height: 100%; background: var(--accent); width: 0; transition: width .5s; }
-.bar.indet > div { width: 30%; animation: slide 1.4s infinite ease-in-out; }
-@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
-.stages { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 8px; }
-.stages span { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--bg); color: var(--muted); }
-.stages span.done { color: var(--ok); background: var(--ok-soft); }
-.stages span.now { color: var(--accent-ink); background: var(--accent); font-weight: 600; }
-.log { font: 12px/1.5 var(--mono); background: var(--bg); border-radius: 8px; padding: 10px; white-space: pre-wrap;
-  color: var(--muted); max-height: 200px; overflow: auto; margin-top: 12px; }
-video { width: 100%; border-radius: var(--radius); background: #000; display: block; max-height: 70vh; }
-.tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
-.tabs button { border: 0; background: transparent; padding: 6px 14px; cursor: pointer; border-right: 1px solid var(--line); }
-.tabs button:last-child { border-right: 0; }
-.tabs button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.thumbs figure { margin: 0; }
-.thumbs img { width: 100%; border-radius: 8px; display: block; aspect-ratio: 16/9; object-fit: cover; border: 1px solid var(--line); }
-.thumbs.vert { grid-template-columns: repeat(auto-fill, minmax(160px, 220px)); }
-.thumbs.vert img { aspect-ratio: 9/16; }
-.tfields { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px 12px; margin-top: 12px; }
-.tfield { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
-.tfield span { color: var(--muted, #888); }
-.tfield input, .tfield select { font: inherit; padding: 5px 8px; }
-.styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
-.style { border: 1px solid var(--line); border-radius: 8px; padding: 8px; cursor: pointer; display: flex;
-  flex-direction: column; gap: 3px; background: var(--panel); }
-.style:hover { border-color: var(--muted); }
-.style.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: var(--soft); }
-.style .pv { aspect-ratio: 16/9; border-radius: 6px; background: var(--bg); display: flex; align-items: center;
-  justify-content: center; overflow: hidden; margin-bottom: 4px; }
-.style .pv img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.style b { font-size: 14px; }
-.style span { font-size: 12px; color: var(--muted); }
-.style small { font-size: 11px; color: var(--warn); }
-.style .pv video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ltabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 2px 0 14px; border-bottom: 1px solid var(--line); }
-.ltab { border: 0; background: none; color: var(--ink); border-radius: 0; padding: 8px 12px 9px; cursor: pointer; text-align: left; border-bottom: 2px solid transparent;
-  margin-bottom: -1px; display: flex; flex-direction: column; gap: 1px; min-width: 96px; }
-.ltab b { font-size: 14px; }
-.ltab span { font-size: 12px; color: var(--muted); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ltab:hover b { color: var(--accent); }
-.ltab.on { border-bottom-color: var(--accent); }
-.ltab.on b { color: var(--accent); }
-.vfilters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.vchip { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 4px 12px;
-  font-size: 13px; cursor: pointer; }
-.vchip.on { border-color: var(--accent); background: var(--soft); color: var(--accent); font-weight: 600; }
-.voices { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: 8px; }
-.vrow { display: flex; gap: 10px; align-items: center; min-width: 0; }
-.vrow > div { min-width: 0; display: flex; flex-direction: column; }
-.play { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); color: var(--accent);
-  cursor: pointer; flex: none; font-size: 13px; line-height: 1; padding: 0; }
-.play:hover { border-color: var(--accent); }
-.play.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.mood { margin: 14px 0 6px; display: flex; gap: 10px; align-items: center; }
-.mood b { text-transform: capitalize; }
-.cues { margin: 6px 0 0; padding: 0; list-style: none; font-size: 13px; }
-.cues li { padding: 3px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
-.cues li span:first-child { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 40px; }
-.newbtns { display: grid; gap: 8px; }
-.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.choice { text-align: left; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
-  cursor: pointer; box-shadow: var(--shadow); }
-.choice:hover { border-color: var(--accent); }
-.choice b { display: block; font-size: 16px; margin-bottom: 4px; }
-.choice span { color: var(--muted); font-size: 14px; }
-.srclist { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
-.src { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
-.src.on { border-color: var(--accent); background: var(--soft); }
-.src .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.timebox { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.timebox .inp { width: 90px; font-family: var(--mono); }
-.bars { display: grid; gap: 4px; margin: 10px 0; }
-.barrow { display: grid; grid-template-columns: 110px 1fr 90px; gap: 8px; align-items: center; font-size: 13px; }
-.barrow i { display: block; height: 10px; border-radius: 5px; background: var(--accent); }
-.barrow b { font-weight: 500; color: var(--muted, inherit); }
-ul.goals { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 12px; font-size: 13px; }
-ul.goals li.ok { color: var(--ok); } ul.goals li.bad { color: var(--bad); }
-.style .pv.wide { aspect-ratio: 32/9; }
-.pv.typv { padding: 6px 10px; box-sizing: border-box; overflow: hidden; }
-.pv.autopv { display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--accent); font-size: 28px; letter-spacing: .1em; }
-.chip.type { background: var(--info-soft); color: var(--info); }
-.icongrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 8px; }
-.icontile { margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
-.icontile.pin { border-color: var(--accent, #e0a100); }
-.icontile img { width: 56px; height: 56px; align-self: center; }
-.icontile figcaption { font-size: 12px; display: flex; flex-direction: column; min-height: 3em; overflow: hidden; }
-.icontile figcaption span { color: var(--muted, #888); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.icontile .row { gap: 4px; justify-content: center; }
-.scenegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-.scenegrid figure { margin: 0; cursor: pointer; }
-.scenegrid img, .scenegrid .ph { width: 100%; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid var(--line); display: block; object-fit: cover; }
-.scenegrid .ph { display: flex; align-items: center; justify-content: center; background: var(--soft); color: var(--muted); font-size: 13px; }
-.scenegrid figcaption { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; font-size: 13px; }
-.scenegrid figcaption span { color: var(--muted); }
-.stagetimes { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 10px; }
-.stagetimes .stg { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--soft); border: 1px solid var(--line); }
-.stagetimes .stg b { font-weight: 650; }
- display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 13px; }
-pre.meta { white-space: pre-wrap; font: 13px/1.5 var(--mono); background: var(--bg); padding: 12px; border-radius: 8px;
-  max-height: 340px; overflow: auto; margin: 0; }
-.banner { border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; font-size: 14px; border: 1px solid var(--line); }
-.banner.bad { background: var(--bad-soft); white-space: pre-wrap; }
-.banner.warn { background: var(--warn-soft); }
-details > summary { cursor: pointer; font-weight: 600; }
-details[open] > summary { margin-bottom: 12px; }
-.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg);
-  padding: 8px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
-.toast.show { opacity: 1; }
-a.link { color: var(--info); font-size: 14px; }
-</style>
+<link rel="stylesheet" href="/ui/studio.css">
+<script>try { const t = localStorage.getItem("vs.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
 <body>
+<div class="ambient" aria-hidden="true"><i></i><i></i><b></b></div>
 <header>
-  <h1>Video Studio</h1>
+  <h1><span class="tally" aria-hidden="true"></span>Video Studio</h1>
   <div class="chips" id="health"></div>
   <div class="row" id="userbox"></div>
 </header>
@@ -259,7 +36,7 @@ const STAGE_ORDER = ["voice", "images + presenter", "visuals", "timeline", "pict
 const STAGES = ["voice", "visuals", "captions", "audio mix", "encoding", "thumbnails"];
 const TYPE_LABEL = { stock: "AI photo", ai: "AI image", card: "card", number: "number", quote: "quote", chart: "chart" };
 let health = {}, current = null, data = null, editText = null, lastReport = null, pollTimer = null, tab = null;
-let newText = "", newKind = "full";   // full | short-choice | short | clip
+let newText = "", newKind = "full", loadedSample = "";   // full | short-choice | short | clip
 
 const $ = (s, el = document) => el.querySelector(s);
 function h(tag, attrs = {}, ...kids) {
@@ -295,13 +72,40 @@ const file = (name, extra = "") => `/api/jobs/${current}/file/${name}?v=${Math.r
 // ----------------------------------------------------------------- header
 async function loadHealth() {
   try { health = await api("/health"); } catch { health = {}; }
-  const c = $("#health"); c.replaceChildren();
-  const chip = (t, cls, title) => c.append(h("span", { class: "chip " + cls, title }, t));
-  chip(health.local_image_model ? "Images: local FLUX.2" : "Images: cached only on this machine", health.local_image_model ? "ok" : "warn",
-       health.local_image_model ? "" : "New AI images need the Mac; clips and talk + graphics Shorts work here");
-  if (health.encoder) chip(`Encoder: ${health.encoder.replace("h264_", "")}`, "");
-  chip(`Voice: ${health.voice || "?"}`, "ok");
-  chip(`Music: ${health.music_tracks ?? "?"} · SFX: ${health.sfx_files ?? "?"}`, health.music_tracks ? "" : "warn");
+  drawHealth();
+}
+// Header chips. With a video's Check report on screen they show THAT video's picture style, voice, music and sound
+// effects (they change as soon as a Look & sound choice re-checks the script); a click opens that Look & sound tab.
+// Without one they show this Mac's defaults.
+let headerReport = null;
+function setHeaderLook(r) { headerReport = r && !isClip(r) ? r : null; drawHealth(); }
+function openLookTab(id) {
+  const look = $("#look"), btn = look && look.querySelector(`.ltab[data-tab="${id}"]`);
+  if (!btn) { toast(headerReport ? "That choice isn't available for this video" : "Open a video's script and press Check to change this for that video"); return; }
+  const det = look.closest("details"); if (det) det.open = true;
+  btn.click();
+  ($("#look") || look).scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+function drawHealth() {
+  const c = $("#health"); if (!c) return;
+  const r = headerReport, st = (r && r.stats) || {}, motion = st.rendering_method === "motion";
+  const chip = (text, cls, title, onclick) => h("button", { class: "chip chipbtn " + cls, type: "button", title, onclick }, text);
+  const flux = health.local_image_model;
+  const pictures = !r ? chip(flux ? "Images: local FLUX.2" : "Images: cached only on this machine", flux ? "ok" : "warn",
+      flux ? "New AI images are made on this Mac. Click to choose a video's picture style." : "New AI images need the Mac; clips and talk + graphics Shorts work here",
+      () => openLookTab("style"))
+    : motion ? chip(`Pictures: motion graphics${(r.show || {}).label ? ", " + (r.show || {}).label.toLowerCase() + " style" : ""}`, "ok", "This video's style (motion graphics). Click to change it.", () => openLookTab(r.show ? "show" : "theme"))
+    : chip(`Art style: ${(r.art_style || {}).label || "default"}`, flux ? "ok" : "warn",
+      (flux ? "AI images on this Mac (FLUX.2)." : "New AI images need the Mac.") + " Click to change this video's art style.", () => openLookTab("style"));
+  const enc = (health.encoder || "").replace("h264_", "");
+  c.replaceChildren(pictures,
+    enc ? chip(`Encoder: ${enc}`, "", "Picked automatically for this machine", () => toast(`Videos are encoded with ${health.encoder}: picked automatically for this machine (VIDEO_ENCODER in .env forces another).`)) : "",
+    chip(`Voice: ${r ? (r.voice || {}).label || (r.voice || {}).preset || "?" : health.voice || "?"}`, "ok",
+      r ? "This video's voice. Click to change it." : "Default voice of this Mac (.env). Click to change a video's voice.", () => openLookTab("voice")),
+    chip(`Music: ${r ? musicSummary(r) || "?" : (health.music_tracks ?? "?") + " tracks"}`, r || health.music_tracks ? "" : "warn",
+      r ? "This video's music. Click to change it." : "Music tracks in the library. Click to choose a video's music.", () => openLookTab("music")),
+    chip(`SFX: ${r ? sfxSummary(r) || "?" : (health.sfx_files ?? "?") + " files"}`, "",
+      r ? "This video's sound effects. Click to change them." : "Sound effects in the library. Click to choose a video's sound effects.", () => openLookTab("sfx")));
 }
 
 // ------------------------------------------------------------------ account
@@ -309,12 +113,24 @@ let me = {};
 async function loadMe() {
   try { me = await api("/api/me"); } catch { me = {}; }
   const box = $("#userbox"); box.replaceChildren(
+    themeButton(),
     h("span", { class: "hint" }, me.user ? `Signed in as ${me.user}` : ""),
     h("button", { class: "btn small", onclick: () => { history.replaceState(null, "", "/"); current = "__account"; loadJobs(); showAccount(); } }, "Account"),
     h("button", { class: "btn small", onclick: async () => { await api("/api/logout", { method: "POST" }).catch(() => {}); location.replace("/login"); } }, "Log out"));
 }
+// light / dark / follow the Mac (remembered per browser)
+function themeButton() {
+  const order = ["", "dark", "light"], label = { "": "Theme: follows your Mac", dark: "Theme: dark", light: "Theme: light" };
+  const icon = { "": "◐", dark: "☾", light: "☀" };
+  const b = h("button", { class: "btn small themebtn" });
+  const draw = () => { const t = document.documentElement.dataset.theme || ""; b.textContent = icon[t]; b.title = label[t] + " (click to change)"; b.setAttribute("aria-label", label[t]); };
+  b.onclick = () => { const t = order[(order.indexOf(document.documentElement.dataset.theme || "") + 1) % 3];
+    if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+    try { t ? localStorage.setItem("vs.theme", t) : localStorage.removeItem("vs.theme"); } catch (e) {} draw(); };
+  draw(); return b;
+}
 async function showAccount() {
-  clearTimeout(pollTimer);
+  clearTimeout(pollTimer); setHeaderLook(null);
   const m = $("#main"); m.replaceChildren(h("h2", {}, "Account"), h("p", { class: "sub" }, `Signed in as ${me.user}${me.admin ? " (admin)" : ""}.`));
   const cur = h("input", { type: "password", autocomplete: "current-password", class: "inp" });
   const nw = h("input", { type: "password", autocomplete: "new-password", class: "inp" });
@@ -377,6 +193,7 @@ function drawJobTools() {
 async function loadJobs() {
   let jobs; try { jobs = await api("/api/jobs"); } catch { return; }
   lastJobs = jobs;
+  document.body.classList.toggle("rendering", jobs.some(j => BUSY.includes(j.status)));   // background pauses while rendering
   [...picked].forEach(id => { if (!jobs.some(j => j.id === id)) picked.delete(id); });
   const list = $("#jobs"); list.replaceChildren();
   if (!jobs.length) list.append(h("div", { class: "empty" }, "No videos yet."));
@@ -408,7 +225,8 @@ async function loadJobs() {
 function unsaved() { return editText !== null && data && editText !== data.script; }
 function select(id) {
   if (unsaved() && !confirm("You have unsaved script changes. Leave without saving?")) return;
-  current = id; data = null; editText = null; lastReport = null; tab = null;
+  current = id; data = null; editText = null; lastReport = null; tab = null; sbOpen = false; sb = null; shOpen = false; sh = null; $("#main").classList.remove("wide");
+  setHeaderLook(null);
   if ((location.hash.slice(1) || null) !== id) location.hash = id ? "#" + id : "";
   loadJobs(); refresh(true);
 }
@@ -529,9 +347,12 @@ function headerValue(text, key) {
   const v = m[1].match(new RegExp(`^${key}\\s*:\\s*(.*)$`, "m")); return v ? v[1].trim() : null;
 }
 function setArtStyle(text, id) { return setHeaderKey(text, "art_style", id); }
-const METHOD_LABEL = { ai_image: "AI images", motion: "Motion graphics" };
+const METHOD_LABEL = { ai_image: "AI images", motion: "Motion graphics", blocky3d: "Blocky 3D", explainer3d: "3D explainer", neon: "Neon motion" };
 const DRAFT_HINT = { ai_image: "Check first; errors block both buttons, warnings don't. Draft first: AI images are labelled placeholders, so it takes about a minute.",
-  motion: "Check first; errors block both buttons, warnings don't. Draft first: the real animation at 960x540 (about 1 minute per minute of video)." };
+  motion: "Check first; errors block both buttons, warnings don't. Draft first: the real animation at 960x540 (about 1 minute per minute of video).",
+  blocky3d: "Check first; errors block both buttons, warnings don't. Draft first: the real 3D picture at half size (about 30 s per minute of video).",
+  explainer3d: "Check first; errors block both buttons, warnings don't. Draft first: the real 3D picture at half size (about 30 s per minute of video).",
+  neon: "Check first; errors block both buttons, warnings don't. Draft first: the real animation at half size (about 30 s per minute of video)." };
 // Make final / Draft first: the last choice is remembered in this browser and drawn as the main button
 const CHOICE_KEY = "vs.renderChoice";
 function lastChoice() { try { return localStorage.getItem(CHOICE_KEY) === "draft" ? "draft" : "final"; } catch { return "final"; } }
@@ -540,17 +361,28 @@ function markChoice(finalBtn, draftBtn) {
   const d = lastChoice() === "draft";
   finalBtn.classList.toggle("primary", !d); draftBtn.classList.toggle("primary", d);
 }
-function methodPicker(getText, setText, recheck) {
+function methodPicker(getText, setText, recheck, hooks = {}) {
+  // hooks.onShow(method): called whenever the shown style changes (the New video screen's prompt + sample links);
+  // hooks.onPick(method): called on a pick; returns true when it replaced the script itself (then no header edit)
   // how the pictures are made: motion graphics (default, no header line needed) or AI images
   const cur = (headerValue(getText(), "rendering_method") || health.default_rendering_method || "motion").toLowerCase();
   const note = h("span", { class: "hint" });
   const show = () => { note.textContent = sel.value === "motion"
     ? "Bright-pop motion graphics: kinetic words, stick figures, transitions and sound on every beat (HyperFrames, on this Mac)."
+    : sel.value === "neon"
+    ? "Neon motion: kinetic type on black, lime + magenta, typed prompt windows, node diagrams, card stacks, a 3D camera ([neon:] tags, docs/SCRIPT_FORMAT.md section 8)."
+    : sel.value === "explainer3d"
+    ? "3D explainer: clean CG subjects on a white disc in a blue world, charts / meters / titles, 1-3 word captions ([scene:] tags, docs/SCRIPT_FORMAT.md section 7)."
+    : sel.value === "blocky3d"
+    ? "Blocky 3D story Shorts: your cast in 3D sets, one shot per line ([shot:] / [sign:] tags, docs/SCRIPT_FORMAT.md section 6)."
     : "AI pictures from the image model, with camera moves. Character (presenter) videos always use this.";
-    const dh = $("#draftHint"); if (dh) dh.textContent = DRAFT_HINT[sel.value] || DRAFT_HINT.ai_image; };
-  const sel = h("select", { id: "methodSel", class: "btn small", "aria-label": "Rendering method", onchange: () => {
+    const dh = $("#draftHint"); if (dh) dh.textContent = DRAFT_HINT[sel.value] || DRAFT_HINT.ai_image;
+    if (hooks.onShow) hooks.onShow(sel.value); };
+  const sel = h("select", { id: "methodSel", class: "btn small", "aria-label": "Rendering method", onchange: async () => {
+      show();
+      if (hooks.onPick && await hooks.onPick(sel.value)) return;
       setText(setHeaderKey(getText(), "rendering_method", sel.value));
-      show(); if (getText().trim()) recheck(); } },
+      if (getText().trim()) recheck(); } },
     Object.entries(METHOD_LABEL).map(([v, l]) => h("option", { value: v, selected: v === cur }, l)));
   sel._show = show; setTimeout(show, 0);   // after the page is built (the draft hint is added later)
   show();
@@ -663,6 +495,7 @@ const sfxSummary = (r) => { const s = (r.stats || {}).sfx; if (s && (r.stats || 
   return `${s.mode === "rich" ? "Rich" : "Auto"} · on every beat`; return !s ? "" : s.mode === "auto" || s.mode === "rich" ? `${s.mode === "rich" ? "Rich" : "Auto"} · ${s.auto} effects` : s.mode === "off" ? "Off" : `Script only · ${s.script}`; };
 const musicSummary = (r) => { const m = (r.stats || {}).music; return !m ? "" : m.off ? "No music" : m.items.length ? m.items.join(", ") : "Random track"; };
 const PANES = {
+  theme: { label: "Theme", show: (r) => !!r.theme && !isClip(r), summary: (r) => (r.theme || {}).label, build: (...a) => themePane(...a) },
   music: { label: "Music", show: (r) => !isClip(r), summary: musicSummary, build: musicPane },
   sfx: { label: "Sound effects", show: (r) => !isClip(r), summary: sfxSummary, build: sfxPane },
   voice: { label: "Voice", show: (r) => !isClip(r), summary: (r) => (r.voice || {}).label, build: voicePane },
@@ -673,7 +506,7 @@ const PANES = {
   style: { label: "Art style", show: (r) => r.art_style && !isClip(r) && (r.stats || {}).rendering_method !== "motion", summary: (r) => (r.art_style || {}).label,
            build: (r, g, s, c) => styleCard(r, g, s, c, true) },
 };
-const PANE_ORDER = ["show", "typography", "camera", "voice", "music", "captions", "sfx", "style"];
+const PANE_ORDER = ["theme", "show", "typography", "camera", "voice", "music", "captions", "sfx", "style"];
 function iconCard(r, getText, setText, recheck) {
   // rendering_method: motion: the icons the render will pick (topic pool + one per scene), with pin / ban buttons
   const s = r.stats || {};
@@ -805,6 +638,7 @@ function thumbsCard(r, getText, setText, recheck) {
 }
 
 function lookCard(r, getText, setText, recheck) {
+  setHeaderLook(r);
   const ids = PANE_ORDER.filter(id => PANES[id] && (!PANES[id].show || PANES[id].show(r)));
   if (!ids.includes(lookTab)) lookTab = ids.includes("captions") ? "captions" : ids[0];
   const card = h("div", { class: "card", id: "look" });
@@ -1031,6 +865,32 @@ async function showClip() {
   draw();
   m.append(h("div", { class: "card" }, h("h3", {}, "1. Pick a finished video"), listBox), detail);
 }
+// script kit per picture style: the prompt(s) to give Claude + the sample script (GET /api/script_kit/<method>)
+const kitCache = {};
+async function scriptKit(method, kind) {
+  const k = `${method}/${kind}`;
+  if (!kitCache[k]) kitCache[k] = api(`/api/script_kit/${method}?kind=${kind}`).catch((e) => { delete kitCache[k]; throw e; });
+  return kitCache[k];
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const ta = h("textarea", { style: "position:fixed;opacity:0" }); ta.value = text; document.body.append(ta); ta.select();
+  let ok = false; try { ok = document.execCommand("copy"); } catch {} ta.remove(); return ok;
+}
+function kitLinks(box, kit) {
+  // one "Prompt to give Claude" link + Copy button per prompt of the chosen style
+  const many = kit.prompts.length > 1;
+  box.replaceChildren(...kit.prompts.map(p => h("span", { class: "row", style: "gap:6px" },
+    h("a", { class: "link", href: p.url, target: "_blank", title: `The ${kit.label} script prompt (opens as text)` },
+      many ? `Prompt: ${p.label}` : "Prompt to give Claude"),
+    h("button", { class: "btn small", type: "button", title: `Copy the ${kit.label}${many ? " / " + p.label : ""} prompt, then paste it into a Claude chat`,
+      onclick: async () => {
+        let txt = ""; try { txt = await (await fetch(p.url)).text(); } catch {}
+        if (!txt || txt.startsWith("<")) { toast("Prompt not found"); return; }
+        toast(await copyText(txt) ? `Copied the ${kit.label}${many ? " (" + p.label + ")" : ""} prompt: paste it into Claude` : "Couldn't copy; open the link instead");
+      } }, "Copy"))));
+}
+
 function showNew(kind = "full") {
   const m = $("#main"); m.replaceChildren();
   const ta = h("textarea", { class: "script", spellcheck: "false", placeholder: kind === "short"
@@ -1039,6 +899,13 @@ function showNew(kind = "full") {
     oninput: (e) => { newText = e.target.value; createBtn.disabled = true; } });
   ta.value = newText;
   const out = h("div");
+  const kitKind = kind === "short" ? "short" : "full";
+  const kitBox = h("span", { class: "row", style: "gap:12px" });
+  const loadSample = async (method) => {
+    let txt = "";
+    try { const k = await scriptKit(method, kitKind); txt = await (await fetch(k.sample_url)).text(); } catch {}
+    if (!txt || txt.startsWith("<")) { toast("Sample not found"); return false; }
+    newText = loadedSample = txt; ta.value = txt; createBtn.disabled = true; doCheck(); return true; };
   const create = async (mode) => {
     finalBtn.disabled = draftBtn.disabled = true; rememberChoice(mode);
     try { const r = await api("/api/jobs", { method: "POST", body: JSON.stringify({ text: withType(newText, kind), render: mode }) });
@@ -1071,14 +938,16 @@ function showNew(kind = "full") {
     h("div", { class: "card" },
       h("div", { class: "row", style: "margin-bottom:10px" },
         h("a", { class: "link", href: "/docs/SCRIPT_FORMAT.md", target: "_blank" }, "Script format"),
-        h("a", { class: "link", href: "/docs/CLAUDE_SCRIPT_PROMPT.md", target: "_blank" }, "Prompt to give Claude"),
+        kitBox,
         h("div", { class: "spacer" }),
         h("button", { class: "btn small", onclick: () => fileIn.click() }, "Open .md file"), fileIn,
-        h("button", { class: "btn small", title: "Loads the sample for the Pictures choice below (Motion graphics: the Nvidia honey-trap story)", onclick: async () => {
-          const motion = ($("#methodSel") || {}).value === "motion";
-          try { newText = await (await fetch(motion ? "/docs/sample_motion" : "/docs/sample")).text(); } catch { newText = ""; }
-          if (!newText || newText.startsWith("<")) { toast("Sample not found"); return; } ta.value = newText; doCheck(); } }, "Load sample")),
-      methodPicker(() => newText, (t) => { newText = t; ta.value = t; createBtn.disabled = true; }, doCheck),
+        h("button", { class: "btn small", title: "Loads the sample script of the Pictures choice below (it passes Check)",
+          onclick: () => loadSample(($("#methodSel") || {}).value || health.default_rendering_method || "motion") }, "Load sample")),
+      methodPicker(() => newText, (t) => { newText = t; ta.value = t; createBtn.disabled = true; }, doCheck, {
+        onShow: (v) => { if (v === kitBox._method) return; kitBox._method = v;
+          scriptKit(v, kitKind).then((k) => { if (kitBox._method === v) kitLinks(kitBox, k); }).catch((e) => toast(e.message)); },
+        // switching style while the box still holds an untouched sample: load that style's sample instead
+        onPick: async (v) => (newText.trim() && newText === loadedSample) ? loadSample(v) : false }),
       ta,
       h("div", { class: "row", style: "margin-top:12px" },
         h("button", { class: "btn", onclick: doCheck }, "Check"), finalBtn, draftBtn,
@@ -1165,7 +1034,9 @@ function jobButtons(d, off) {
 }
 
 function showJob() {
-  const d = data; const m = $("#main"); m.replaceChildren();
+  if (sbOpen && data && data.rendering_method === "motion") { showStoryboard(true); return; }
+  if (shOpen && data && data.rendering_method !== "motion") { showShots(); return; }
+  const d = data; const m = $("#main"); m.classList.remove("wide"); m.replaceChildren();
   const running = ["queued", "rendering"].includes(d.status);
   const ok = (d.check || {}).ok;
   const [label, cls] = STATUS[d.status] || [d.status || "old test", ""];
@@ -1173,6 +1044,10 @@ function showJob() {
     h("div", { style: "flex:1;min-width:0" }, h("h2", {}, d.title || "Untitled"),
       h("div", { class: "row hint" }, h("span", { class: "chip " + cls }, label), d.type === "short" ? h("span", { class: "chip type" }, d.clip ? "Short · clip" : "Short") : null,
         when(d.created), d.format ? `· ${d.format}` : "")),
+    d.script ? h("button", { class: "btn", disabled: !ok || !!d.clip, onclick: d.rendering_method === "motion" ? openStoryboard : openShots,
+      title: d.clip ? "A clip Short re-uses another video's shots: open that video's Storyboard to change them"
+        : d.rendering_method === "motion" ? "Look at every scene, move and restyle things, regenerate single scenes"
+        : "Look at every shot, change its picture, words and options, make a new version of an AI image" }, "Storyboard") : null,
     ...jobButtons(d, running || !ok || !d.script)));
   if (!d.script) { m.append(h("div", { class: "banner warn", style: "margin-top:16px" }, "This is an older test job from before the script.md format. It can be watched but not re-rendered.")); }
   else m.append(stepsBar(d));
@@ -1241,5 +1116,6 @@ async function go(mode) {
   setInterval(loadJobs, 5000); setInterval(loadHealth, 30000);
 })();
 </script>
+<script src="/ui/storyboard.js"></script>
 </body>
 </html>

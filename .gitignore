@@ -11,14 +11,12 @@ __pycache__/
 .env
 .env.*
 !.env.example
-old/n8n_data_backup_*.tar.gz
 data/
 
 # --- generated / large, re-created by setup.sh or the pipeline ---
 output/
 models/
 setup.log
-FastVideo/
 
 # --- licensed media (YouTube Audio Library): keep on this Mac, don't redistribute ---
 assets/audio/
@@ -39,7 +37,7 @@ assets/style_previews/
 assets/voice_previews/
 assets/caption_previews/
 
-# Node tools of the parked HTML animation branch (f9-html-animation-wip)
+# Node tools (root package.json: HyperFrames, GSAP, the icon packs), installed by npm ci
 node_modules/
 
 # icon packs (docs/ASSET_PACKS_PLAN.md): the icons, search index and embeddings are rebuilt by setup.sh from the
@@ -50,3 +48,11 @@ assets/library/icons/embeddings.npy
 
 # each person's own notes for Claude Code (machine, accounts, to-dos): never shared
 CLAUDE.local.md
+
+# blocky 3D (rendering_method: blocky3d): the CC0 packs are re-downloaded by tools/fetch_blocky3d_assets.py (packs.json
+# pins them); music/ holds licensed or trending tracks and never goes to git
+/assets/blocky3d/*/*
+/assets/blocky3d/index.json
+!/assets/blocky3d/music/SOURCES.md
+# the 3D explainer's own GLB models are small and in git (the models/ rule above is for the speech/ML models)
+!/assets/explainer3d/models/

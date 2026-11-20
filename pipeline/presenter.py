@@ -13,7 +13,6 @@ on the set, with an optional slow zoom. Pack: assets/characters/<name>/ (tools/m
 import json
 import math
 import random
-import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -32,7 +31,6 @@ _WIDE = set("aɑæɐ") | {"I", "W"}
 _E = set("ɛeʌəɜɚ") | {"A"}
 _O = set("ɔɒoɵuʊw") | {"O", "Q", "Y"}
 _MBP = set("mbp")
-_SLIGHT = set("iɪjtdszkgnŋʃʒθðhrlfvɹɾʧʤɡ")
 _IGNORE = set("ˈˌːˑ.,!?;:-—'\" ")
 
 

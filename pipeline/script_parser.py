@@ -33,8 +33,12 @@ import re
 from . import config as C
 from . import characters, presets, sfx
 from .util import best_match, music_files, sfx_files
+from .blocky3d import script as B3
+from .explainer3d import script as E3
+from .neon import script as N3
 
-VISUAL = {"stock", "ai", "card", "number", "quote", "chart", "talk", "act"}
+VISUAL = {"stock", "ai", "card", "number", "quote", "chart", "talk", "act", "shot", "sign", "scene", "neon"}   # shot/sign: blocky3d, scene: explainer3d, neon
+THREE_TAGS = set(B3.TAGS) | set(E3.TAGS) | set(N3.TAGS)
 CHARACTER_SHOTS = {"talk", "act"}
 FRAMINGS = ("wide", "medium", "close")
 CAMERAS = ("static", "zoom in", "zoom out")
@@ -49,7 +53,7 @@ META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed"
              "icons", "icon_reuse", "icons_pin", "icons_ban",
              "look", "fonts", "icon_style", "scene_order", "show", "camera", "transitions", "critique", "typography",
              "thumbnail_number", "thumbnail_tag", "thumbnail_stamp", "thumbnail_icons", "thumbnail_pose",
-             "thumbnail_layout", "thumbnail_mode"}     # + voice / music: preset ids (presets/), see presets.py
+             "thumbnail_layout", "thumbnail_mode", "theme", "cast", "set", "grade"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -132,15 +136,26 @@ def _front_matter(lines):
 
 
 def _parse_visual(kind, arg, line, errors):
+    if kind in B3.TAGS:
+        return B3.parse_tag(kind, arg, line, errors)
+    if kind in E3.TAGS:
+        return E3.parse_tag(kind, arg, line, errors)
+    if kind in N3.TAGS:
+        return N3.parse_tag(kind, arg, line, errors)
     parts = [p.strip() for p in arg.split("|")]
     if not parts[0]:
         errors.append({"line": line, "msg": f"[{kind}: ...] is empty"})
         return None
     shot = {"type": kind, "line": line}
-    if kind == "stock":
-        shot["query"] = parts[0]
-    elif kind == "ai":
-        shot["prompt"] = parts[0]
+    if kind in ("ai", "stock"):
+        shot["query" if kind == "stock" else "prompt"] = parts[0]
+        for p in parts[1:]:                       # | seed=N = another version of the same picture (Storyboard)
+            m = re.fullmatch(r"seed\s*=\s*(\d{1,6})", p)
+            if not m:
+                errors.append({"line": line, "msg": f"[{kind}: prompt | seed=N]: unknown option '{p}'"})
+                return None
+            if int(m.group(1)):
+                shot["seed"] = int(m.group(1))
     elif kind == "card":
         shot["text"] = parts[0]
         shot["sub"] = parts[1] if len(parts) > 1 else ""
@@ -213,6 +228,21 @@ def _parse_visual(kind, arg, line, errors):
     return shot
 
 
+def _default_method(meta, char, clip, shots):
+    """No rendering_method: line: blocky3d tags -> blocky3d, scripts that only work with AI images -> ai_image,
+    else the default (motion graphics)."""
+    if any(sh["type"] in B3.TAGS for sh in shots):
+        return "blocky3d"
+    if any(E3.is_scene(sh) for sh in shots):
+        return "explainer3d"
+    if any(N3.is_scene(sh) for sh in shots):
+        return "neon"
+    if char or clip or (meta.get("style") or "").strip().lower() == "motion" or \
+            any(sh["type"] in CHARACTER_SHOTS for sh in shots):
+        return "ai_image"
+    return C.DEFAULT_RENDERING_METHOD
+
+
 def parse(text: str) -> dict:
     """Returns {ok, errors, warnings, meta, segments, shots, chapters, stats}."""
     lines = text.replace("\r\n", "\n").split("\n")
@@ -245,7 +275,7 @@ def parse(text: str) -> dict:
         if not shots:
             err(line, "narration starts before any shot. Put a shot tag like [ai: ...] or [card: ...] above it")
             shots.append({"type": "card", "text": meta.get("title", "…"), "sub": "", "line": line,
-                          "first_segment": 0})
+                          "first_segment": 0, "placeholder": True})
             new_shot = True
         if segments and not new_shot and para_open and not pending_sfx and not pending_pause:
             segments[-1]["text"] += " " + chunk      # same shot, same paragraph: one segment
@@ -311,6 +341,28 @@ def parse(text: str) -> dict:
         err(1, "missing 'title:' in the front matter")
     elif len(meta["title"]) > 100:
         err(1, f"title is {len(meta['title'])} characters; YouTube allows 100")
+    # storyboard theme (presets/storyboard_themes): default header values; a line the script has itself wins
+    theme_given = bool((meta.get("theme") or "").strip())
+    tid = (meta.get("theme") or "").strip().lower() or presets.DEFAULTS["storyboard_themes"]
+    meta["theme"], meta["theme_applied"] = tid, {}
+    try:
+        from . import themes
+        th = themes.load(tid)
+        rm_guess = (meta.get("rendering_method") or "").strip().lower() or \
+            _default_method(meta, meta.get("character"), meta.get("clip_from"), shots)
+        for k, v in themes.defaults(th, rm_guess).items():
+            if not meta.get(k):
+                meta[k] = meta["theme_applied"][k] = v
+        sup = th.get("supports") or {}
+        if sup.get("rendering_methods") and rm_guess not in sup["rendering_methods"] and theme_given:
+            warn(1, f"theme '{tid}' was made for {', '.join(sup['rendering_methods'])} videos")
+        if sup.get("formats") and (meta.get("format") or "landscape").lower() not in sup["formats"]:
+            warn(1, f"theme '{tid}' was made for {', '.join(sup['formats'])} videos")
+    except presets.PresetError as e:
+        err(1, f"theme: {e}" if tid in presets.ids("storyboard_themes") else
+               f"theme: '{tid}' isn't a theme in presets/storyboard_themes/. Valid: "
+               f"{', '.join(presets.ids('storyboard_themes'))}")
+        meta["theme"] = presets.DEFAULTS["storyboard_themes"]
     fmt_given = bool(meta.get("format"))
     fmt = (meta.get("format") or "landscape").lower()
     if fmt not in ("landscape", "vertical"):
@@ -419,9 +471,7 @@ def parse(text: str) -> dict:
     rm = (meta.get("rendering_method") or "").strip().lower()
     meta["rendering_method_given"] = bool(rm)
     if not rm:
-        # no line: the default (motion graphics), except scripts that only work with AI images
-        needs_ai = (char or clip or vstyle == "motion" or any(sh["type"] in CHARACTER_SHOTS for sh in shots))
-        rm = "ai_image" if needs_ai else C.DEFAULT_RENDERING_METHOD
+        rm = _default_method(meta, char, clip, shots)
     if rm not in C.RENDERING_METHODS:
         err(1, f"rendering_method must be one of {', '.join(C.RENDERING_METHODS)}, got '{rm}'")
         rm = "ai_image"
@@ -451,7 +501,7 @@ def parse(text: str) -> dict:
         from .motion_gfx import design as MD
         from .motion_gfx import formats as MF                 # (adds the formats' palettes and fonts to design)
         fm = (meta.get("show") or "").strip().lower()       # the video's format (show package); format: = 16:9 / 9:16
-        if fm and fm != "auto" and fm not in MF.FORMATS:
+        if fm and fm != "auto" and not MF.known(fm):
             err(1, f"show must be auto or one of {', '.join(MF.FORMATS)}, got '{fm}'")
         from .motion_gfx import typography as MT
         ty = (meta.get("typography") or "").strip().lower()
@@ -472,6 +522,12 @@ def parse(text: str) -> dict:
         reuse = str(meta.get("icon_reuse") or "").strip()
         if reuse and not (reuse.isdigit() and 1 <= int(reuse) <= 5):
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
+    elif rm in ("blocky3d", "explainer3d", "neon"):
+        if not header["captions"]:
+            meta["presets"]["captions"] = "none"      # the 2-line key-word captions are drawn in the picture
+        for why, bad in (("character: presenters", char), ("clip Shorts", clip), ("style: motion", vstyle == "motion")):
+            if bad:
+                err(1, f"{why} can't be used with rendering_method: {rm}")
     elif meta.get("palette") and vstyle != "motion":
         warn(1, "palette: only applies to style: motion and rendering_method: motion")
     # ---------------------------------------------------------------- designed thumbnails (docs/THUMBNAIL_PLAN.md)
@@ -557,7 +613,7 @@ def parse(text: str) -> dict:
         sh["est_dur"] = round(sum(s["est_dur"] + s["pause_before"] for s in segs), 1)
         limit = (P["hold_talk"] if sh["type"] == "talk" else P["hold_photo"] if sh["type"] in ("ai", "stock", "act")
                  else P["hold_graphic"])
-        if sh["est_dur"] > limit and not is_motion and rm != "motion":      # motion scenes have their own pacing rules
+        if sh["est_dur"] > limit and not is_motion and rm not in ("motion", "blocky3d", "explainer3d", "neon"):      # motion scenes have their own pacing rules
             warn(sh["line"], f"this {sh['type']} shot stays on screen ~{sh['est_dur']:.0f} s; "
                              f"add another shot inside that narration so the picture changes")
         if sh["type"] in CHARACTER_SHOTS and not char:
@@ -579,13 +635,13 @@ def parse(text: str) -> dict:
         if re.search(r"\b(e\.g|i\.e|etc|vs)\.", seg["text"], re.I):
             warn(seg["line"], "abbreviations like e.g. / vs. sound odd when spoken; write them out")
 
-    counts = {k: sum(1 for s in shots if s["type"] == k) for k in VISUAL}
+    counts = {k: sum(1 for s in shots if s["type"] == k) for k in VISUAL - THREE_TAGS}   # (style: motion keeps its own)   # blocky3d: stats["blocky3d"]
     sfx_all = sfx_files()
     sfx_cues, sfx_missing = [], []
     if meta["sfx"] == "off":
         for seg in segments:
             seg["sfx"] = []
-    elif meta["sfx"] in ("auto", "rich") and not clip and rm != "motion":   # motion: placed by the animation
+    elif meta["sfx"] in ("auto", "rich") and not clip and rm not in ("motion", "blocky3d", "explainer3d", "neon"):   # motion: placed by the animation
         sfx_cues, sfx_missing = sfx.auto_cues(segments, shots, chapters, sfx_all, meta["sfx"])
     for seg in segments:
         for cue in seg["sfx"]:
@@ -695,6 +751,23 @@ def parse(text: str) -> dict:
         # draft 157 s, final 155 s); a new scene every ~2.6 s (beats.py)
         stats.update(est_draft_seconds=round(20 + total * 2.3), est_final_seconds=round(25 + total * 2.3),
                      motion_scenes=max(1, round(total / 2.6)))
+    if rm == "blocky3d":
+        # Three.js picture ~22 ms a frame at 1080x1920 on the M5 (spike 2026-11-17: 342 frames in 7.7 s) + voice + mix
+        stats.update(blocky3d=B3.check(meta, shots, err, warn, key_line), est_draft_seconds=round(15 + total * 0.6),
+                     est_final_seconds=round(20 + total * 1.0))
+    elif rm == "explainer3d":
+        stats.update(explainer3d=E3.check(meta, shots, err, warn), est_draft_seconds=round(15 + total * 0.6),
+                     est_final_seconds=round(20 + total * 1.0))
+    elif rm == "neon":
+        stats.update(neon=N3.check(meta, shots, err, warn), est_draft_seconds=round(15 + total * 0.6),
+                     est_final_seconds=round(20 + total * 1.0))
+    if rm != "blocky3d" and any(sh["type"] in B3.TAGS for sh in shots):
+        err(next(sh["line"] for sh in shots if sh["type"] in B3.TAGS),
+            "[shot:] / [sign:] tags need rendering_method: blocky3d")
+    if rm != "neon" and any(N3.is_scene(sh) for sh in shots):
+        err(next(sh["line"] for sh in shots if N3.is_scene(sh)), "[neon:] tags need rendering_method: neon")
+    if rm != "explainer3d" and any(E3.is_scene(sh) for sh in shots):
+        err(next(sh["line"] for sh in shots if E3.is_scene(sh)), "[scene:] tags need rendering_method: explainer3d")
     for c in chapters:
         c["est_start"] = segments[c["segment"]]["est_start"] if c["segment"] < len(segments) else total
     errors.sort(key=lambda e: e["line"])

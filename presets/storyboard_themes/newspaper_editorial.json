@@ -1,0 +1,27 @@
+{
+  "label": "Newspaper / Editorial",
+  "licence": "Own text and colours (this project); fonts and scene code are the bundled ones (OFL / project code)",
+  "version": 1,
+  "description": "A newsroom front page: white, red and navy panels, serif headlines, lower-third bars and clean cuts.",
+  "settings": {
+    "motion": {
+      "show": "newsroom",
+      "typography": "editorial",
+      "transitions": "clean"
+    },
+    "ai_image": {
+      "art_style": "archival_bw",
+      "captions": "serif"
+    }
+  },
+  "supports": {
+    "rendering_methods": [
+      "motion",
+      "ai_image"
+    ],
+    "formats": [
+      "landscape",
+      "vertical"
+    ]
+  }
+}

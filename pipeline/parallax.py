@@ -17,7 +17,7 @@ from PIL import Image
 
 from . import config as C
 from .visuals import enc_args
-from .util import log, run
+from .util import log
 
 DEPTH_MODEL = "depth-anything/Depth-Anything-V2-Small-hf"     # Apache-2.0 (Small only)
 _pipe = None

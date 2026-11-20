@@ -6,6 +6,7 @@
 #   bash ~/youtube-pipeline/tools/install_autostart.sh remove     stop and remove
 # (works from any folder the repo is cloned to: the services run the copy this script is in)
 #
+# The server may open 8192 files at once (macOS's default of 256 broke the audio mix of long videos).
 # Logs: <project folder>/output/server.log and ~/Library/Application Support/vs-tailscale/tailscaled.log
 set -euo pipefail
 P="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # the project folder (one up from tools/)
@@ -51,6 +52,8 @@ cat > "$LA/$SERVER.plist" <<EOF
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>10</integer>
+  <key>SoftResourceLimits</key><dict><key>NumberOfFiles</key><integer>8192</integer></dict>
+  <key>HardResourceLimits</key><dict><key>NumberOfFiles</key><integer>8192</integer></dict>
   <key>StandardOutPath</key><string>$P/output/server.log</string>
   <key>StandardErrorPath</key><string>$P/output/server.log</string>
 </dict></plist>

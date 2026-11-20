@@ -121,10 +121,10 @@ def choose_format(meta: dict, title: str, beats: list = None) -> str:
     (The header key is show: because format: already means landscape / vertical.)"""
     from . import formats as Fm
     pin = (meta.get("show") or "").strip().lower()
-    if pin and pin != "auto" and pin in Fm.FORMATS:
+    if pin and pin != "auto" and Fm.known(pin):
         return pin
     old = (entry(title) or {}).get("look") or {}
-    if old.get("format") in Fm.FORMATS:
+    if Fm.known(old.get("format")):
         return old["format"]
     return Fm.choose_auto(meta, title, recent(title), beats)
 

@@ -1,0 +1,72 @@
+{
+  "label": "Documentary Cinematic",
+  "licence": "Own text and colours (this project); fonts and scene code are the bundled ones (OFL / project code)",
+  "version": 1,
+  "description": "Dark, filmic and calm: charcoal and teal frames with amber accents, serif headlines, slow dolly and focus moves, film transitions.",
+  "settings": {
+    "motion": {
+      "typography": "editorial",
+      "camera": "dolly, pull, focus",
+      "transitions": "film"
+    },
+    "ai_image": {
+      "art_style": "cinematic_film",
+      "camera": "dolly, pull, focus",
+      "captions": "clean_lower"
+    }
+  },
+  "scene_style": {
+    "base": "case_file",
+    "palettes": [
+      {
+        "name": "doc_charcoal",
+        "bg": "#14181D",
+        "ink": "#F1EADB",
+        "hi": "#E0A03A",
+        "pop": "#E0A03A",
+        "soft": "#232B33"
+      },
+      {
+        "name": "doc_teal",
+        "bg": "#0F2A30",
+        "ink": "#EEF6F4",
+        "hi": "#F2B74B",
+        "pop": "#F2B74B",
+        "soft": "#1A3E46"
+      },
+      {
+        "name": "doc_umber",
+        "bg": "#2A1D14",
+        "ink": "#F6EBDD",
+        "hi": "#FFB454",
+        "pop": "#FFB454",
+        "soft": "#3D2B1E"
+      }
+    ],
+    "fonts": [
+      "editorial",
+      "case"
+    ],
+    "kicker": "Chapter",
+    "entrances": [
+      "mask",
+      "rise",
+      "none"
+    ],
+    "music": [
+      "emotional",
+      "mystery",
+      "calm"
+    ]
+  },
+  "supports": {
+    "rendering_methods": [
+      "motion",
+      "ai_image"
+    ],
+    "formats": [
+      "landscape",
+      "vertical"
+    ]
+  }
+}

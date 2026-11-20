@@ -1,0 +1,460 @@
+{
+ "note": "CC0 3D packs for rendering_method: blocky3d. tools/fetch_blocky3d_assets.py downloads, verifies and indexes them.",
+ "packs": [
+  {
+   "id": "blocky_characters",
+   "category": "characters",
+   "title": "Blocky Characters 2.0",
+   "page": "https://opengameart.org/content/blocky-characters",
+   "url": "https://opengameart.org/sites/default/files/kenney_blocky-characters_2.0.zip",
+   "zip": "kenney_blocky-characters_2.0.zip",
+   "sha256": "5e123859aa0c1598342b600c6db197024a1d63eb9ec531398b310725f589887e",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "character",
+    "person",
+    "blocky",
+    "animated"
+   ]
+  },
+  {
+   "id": "mini_characters",
+   "category": "characters",
+   "title": "Mini Characters 2.0",
+   "page": "https://opengameart.org/content/mini-characters",
+   "url": "https://opengameart.org/sites/default/files/kenney_mini-characters_2.0.zip",
+   "zip": "kenney_mini-characters_2.0.zip",
+   "sha256": "add348e98ab9e23d9973c4740ef2c5cceb229c742106aca2d56b30a8f1241bb7",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "character",
+    "person",
+    "animated"
+   ]
+  },
+  {
+   "id": "animated_characters_1",
+   "category": "characters",
+   "title": "Animated Characters 1 (FBX, survivors + zombies)",
+   "page": "https://opengameart.org/content/animated-characters-1",
+   "url": "https://opengameart.org/sites/default/files/kenney_animated-characters-1.zip",
+   "zip": "kenney_animated-characters-1.zip",
+   "sha256": "9cc53e82c941781f26aa8fb39d40887cf14b1d74cca2d10ccc6e7c140a68f820",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "character",
+    "person",
+    "zombie",
+    "animated"
+   ],
+   "keep": [
+    "Model",
+    "Animations",
+    "Skins"
+   ]
+  },
+  {
+   "id": "city_commercial",
+   "category": "city",
+   "title": "City Kit Commercial 2.1",
+   "page": "https://opengameart.org/content/city-kit-commercial",
+   "url": "https://opengameart.org/sites/default/files/kenney_city-kit-commercial_2.1.zip",
+   "zip": "kenney_city-kit-commercial_2.1.zip",
+   "sha256": "f8b09b081c2bb88bcc126e2dec1cb40fd0dad7e7e591b6c26aaefe96fb35276b",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "city",
+    "building",
+    "shop",
+    "skyscraper",
+    "street"
+   ]
+  },
+  {
+   "id": "city_suburban",
+   "category": "city",
+   "title": "City Kit Suburban 2.0",
+   "page": "https://opengameart.org/content/city-kit-suburban",
+   "url": "https://opengameart.org/sites/default/files/kenney_city-kit-suburban_2.0.zip",
+   "zip": "kenney_city-kit-suburban_2.0.zip",
+   "sha256": "5869c35cf30b1c87bdb2d197b6d325eebadd2ef08ea27f04797e8e08d77a9a39",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "city",
+    "house",
+    "home",
+    "suburb",
+    "street"
+   ]
+  },
+  {
+   "id": "city_roads",
+   "category": "city",
+   "title": "City Kit Roads 2.2",
+   "page": "https://opengameart.org/content/city-kit-roads",
+   "url": "https://opengameart.org/sites/default/files/kenney_city-kit-roads_2.2.zip",
+   "zip": "kenney_city-kit-roads_2.2.zip",
+   "sha256": "374a4552115cbd11b4ec5c930ee31a533562dc78a09af249a655d03f7ea3b959",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "city",
+    "road",
+    "street",
+    "traffic"
+   ]
+  },
+  {
+   "id": "city_industrial",
+   "category": "city",
+   "title": "City Kit Industrial 2.0",
+   "page": "https://opengameart.org/content/city-kit-industrial",
+   "url": "https://opengameart.org/sites/default/files/kenney_city-kit-industrial_2.0.zip",
+   "zip": "kenney_city-kit-industrial_2.0.zip",
+   "sha256": "5b381164e5760f3830a2dbee43b972deee38b2a695d091b56e238ab2910c96d2",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "city",
+    "factory",
+    "warehouse",
+    "industrial"
+   ]
+  },
+  {
+   "id": "retro_urban",
+   "category": "city",
+   "title": "Retro Urban Kit",
+   "page": "https://opengameart.org/content/retro-urban-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_retro-urban-kit.zip",
+   "zip": "kenney_retro-urban-kit.zip",
+   "sha256": "19201cbcb0d90080dfc33b54f5b4be2089de927c2a23274180798e7166d6b6ca",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "city",
+    "building",
+    "street",
+    "urban"
+   ]
+  },
+  {
+   "id": "building_kit",
+   "category": "city",
+   "title": "Building Kit (walls, floors, doors, windows)",
+   "page": "https://opengameart.org/content/building-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_building-kit.zip",
+   "zip": "kenney_building-kit.zip",
+   "sha256": "b46e4fc873d02dad2ab2153846ede6cc242208e751b778d37f4e75bce23cb2be",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "building",
+    "wall",
+    "room",
+    "school",
+    "interior"
+   ]
+  },
+  {
+   "id": "modular_buildings",
+   "category": "city",
+   "title": "Modular Buildings",
+   "page": "https://opengameart.org/content/modular-buildings",
+   "url": "https://opengameart.org/sites/default/files/kenney_modular-buildings.zip",
+   "zip": "kenney_modular-buildings.zip",
+   "sha256": "47e1614686b4c0fe55190e88b22ff2b8b10935edf61f37f478a9b6a99477edc6",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "building",
+    "wall",
+    "house",
+    "school"
+   ]
+  },
+  {
+   "id": "furniture",
+   "category": "interiors",
+   "title": "Furniture Kit (OBJ)",
+   "page": "https://opengameart.org/content/furniture-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_furniturePack.zip",
+   "zip": "kenney_furniturePack.zip",
+   "sha256": "68afa4e6dc8a53942379fb47f1e84ec735d46b77bb1c1ceb968e245693dde067",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "furniture",
+    "room",
+    "house",
+    "bedroom",
+    "kitchen",
+    "office",
+    "school",
+    "interior"
+   ]
+  },
+  {
+   "id": "mini_shop",
+   "category": "interiors",
+   "title": "Mini Shop 2.1",
+   "page": "https://opengameart.org/content/mini-market",
+   "url": "https://opengameart.org/sites/default/files/kenney_mini-shop_2.1.zip",
+   "zip": "kenney_mini-shop_2.1.zip",
+   "sha256": "51f1fafb0f5efdc7aec3af57138665a12aee5610d47bf4108cd8d4bd044a57a2",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "shop",
+    "market",
+    "store",
+    "interior"
+   ]
+  },
+  {
+   "id": "food",
+   "category": "interiors",
+   "title": "Food Kit",
+   "page": "https://opengameart.org/content/food-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_food-kit.zip",
+   "zip": "kenney_food-kit.zip",
+   "sha256": "cdad90853682499b94c9fda2f87678b24bfd8f3264e0ed323f6b6a27fd7c6f6f",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "food",
+    "cake",
+    "fruit",
+    "drink",
+    "cafeteria"
+   ]
+  },
+  {
+   "id": "nature",
+   "category": "nature",
+   "title": "Nature Kit 2.1",
+   "page": "https://opengameart.org/content/nature-kit",
+   "url": "https://opengameart.org/sites/default/files/Nature%20Kit%20%282.1%29.zip",
+   "zip": "kenney_nature-kit_2.1.zip",
+   "sha256": "fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "nature",
+    "tree",
+    "rock",
+    "grass",
+    "forest",
+    "camp"
+   ]
+  },
+  {
+   "id": "survival",
+   "category": "nature",
+   "title": "Survival Kit",
+   "page": "https://opengameart.org/content/survival-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_survival-kit.zip",
+   "zip": "kenney_survival-kit.zip",
+   "sha256": "c3586341b5932c87eb43d75d915434f47daed168b17ed36a03e8ca9977c7443e",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "survival",
+    "camp",
+    "island",
+    "tools",
+    "tent"
+   ]
+  },
+  {
+   "id": "pirate",
+   "category": "nature",
+   "title": "Pirate Kit 2.1",
+   "page": "https://opengameart.org/content/pirate-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_pirate-kit_2.1.zip",
+   "zip": "kenney_pirate-kit_2.1.zip",
+   "sha256": "667ed2caf92954ddb98f7b7cede831fe99ab75063c26b25e23d32715bee9c943",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "pirate",
+    "beach",
+    "island",
+    "palm",
+    "boat",
+    "sea"
+   ]
+  },
+  {
+   "id": "cars",
+   "category": "vehicles",
+   "title": "Car Kit 3.1",
+   "page": "https://opengameart.org/content/car-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_car-kit_3.1.zip",
+   "zip": "kenney_car-kit_3.1.zip",
+   "sha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "vehicle",
+    "car",
+    "truck",
+    "police",
+    "taxi"
+   ]
+  },
+  {
+   "id": "trains",
+   "category": "vehicles",
+   "title": "Train Kit",
+   "page": "https://opengameart.org/content/train-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_train-kit_0.zip",
+   "zip": "kenney_train-kit_0.zip",
+   "sha256": "cf50d77e8cbacbf38dd50826d4bce5392db8e4f67373d3c4e583b0ed0e474475",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "vehicle",
+    "train",
+    "rail",
+    "station"
+   ]
+  },
+  {
+   "id": "holiday",
+   "category": "themed",
+   "title": "Holiday Kit",
+   "page": "https://opengameart.org/content/holiday-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_holiday-kit.zip",
+   "zip": "kenney_holiday-kit.zip",
+   "sha256": "fde4d514d7297388d98058e8933ff614e071886f7ce57f9aea4b00d7698dd769",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "holiday",
+    "christmas",
+    "party",
+    "gift",
+    "snow"
+   ]
+  },
+  {
+   "id": "graveyard",
+   "category": "themed",
+   "title": "Graveyard Kit 5.0",
+   "page": "https://opengameart.org/content/graveyard-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_graveyard-kit_5.0.zip",
+   "zip": "kenney_graveyard-kit_5.0.zip",
+   "sha256": "1a93613f2e5675f3310acf49ec9ef13ae7adeb756ac3b205bfb6cc9311a81062",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "graveyard",
+    "horror",
+    "night",
+    "ghost",
+    "spooky"
+   ]
+  },
+  {
+   "id": "castle",
+   "category": "themed",
+   "title": "Castle Kit",
+   "page": "https://opengameart.org/content/castle-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_castle-kit.zip",
+   "zip": "kenney_castle-kit.zip",
+   "sha256": "921f3f73927bb23106cae34bc21d5ab4b033a9fc120475e96f714a406e3169df",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "castle",
+    "tower",
+    "wall",
+    "medieval"
+   ]
+  },
+  {
+   "id": "space",
+   "category": "themed",
+   "title": "Space Kit (OBJ)",
+   "page": "https://opengameart.org/content/space-kit",
+   "url": "https://opengameart.org/sites/default/files/space-kit-1.0.zip",
+   "zip": "space-kit-1.0.zip",
+   "sha256": "9b96df4925fffb1b460d6479766fb977b604d391a7d7f4f074beab1cc9104512",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "space",
+    "rocket",
+    "planet",
+    "alien",
+    "station"
+   ]
+  },
+  {
+   "id": "platformer",
+   "category": "themed",
+   "title": "Platformer Kit",
+   "page": "https://opengameart.org/content/platformer-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_platformerKit_0.zip",
+   "zip": "kenney_platformerKit_0.zip",
+   "sha256": "f25eca0c70ce0b5ea4075547ad84e386cb3999c30eb9f4c95133bea5d7e1bd39",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "game",
+    "arena",
+    "obstacle",
+    "platform",
+    "coin"
+   ]
+  },
+  {
+   "id": "fantasy_town",
+   "category": "themed",
+   "title": "Fantasy Town Kit 2.0",
+   "page": "https://opengameart.org/content/fantasy-town-kit",
+   "url": "https://opengameart.org/sites/default/files/kenney_fantasy-town-kit_2.0.zip",
+   "zip": "kenney_fantasy-town-kit_2.0.zip",
+   "sha256": "1a7530c09f4d2fa2cdee259876f089334f8b1f27fa86a0c4f54ef86cdd8676ef",
+   "author": "Kenney (kenney.nl)",
+   "licence": "CC0-1.0",
+   "tags": [
+    "village",
+    "town",
+    "house",
+    "market",
+    "medieval"
+   ]
+  },
+  {
+   "id": "studio",
+   "category": "studio",
+   "dir": "studio",
+   "build": "tools/blocky_studio/build_all.py",
+   "title": "Blocky studio: 38 poseable characters, 28 faces, 137 props (own, made by code)",
+   "page": "tools/blocky_studio/",
+   "author": "Video Studio (code in tools/blocky_studio)",
+   "licence": "own",
+   "tags": [
+    "character",
+    "person",
+    "prop",
+    "school",
+    "home",
+    "town",
+    "hospital",
+    "arena",
+    "robot",
+    "pet",
+    "sign",
+    "face"
+   ]
+  }
+ ]
+}

@@ -166,6 +166,7 @@ FORMATS = {
     },
 }
 DEFAULT = "pop_poster"
+EXTRA = {}          # formats a storyboard theme defines (presets/storyboard_themes, pipeline/themes.py); never auto-picked
 ALL_HOSTS = {"terminal", "dashboard", "sticky", "lower_third", "evidence", "level", "diagram"}
 
 # the palettes and font pairs the formats add to design.py
@@ -219,8 +220,6 @@ D.FONT_PAIRS.update({
     "arcade": {"head": "Press Start 2P", "char_w": 1.0, "body": "Space Mono"},
     "blue": {"head": "Barlow Condensed ExtraBold", "char_w": 0.5, "body": "Space Mono"},
 })
-POP_SETS = ["pop", "warm", "cool", "bold"]
-POP_FONTS = ["poster", "condensed", "comic"]
 
 
 def seed_of(title: str, fmt: str) -> int:
@@ -233,12 +232,16 @@ def seed_of(title: str, fmt: str) -> int:
 
 def get(name: str) -> dict:
     """A format with its effective banned list (its own bans + every other format's host scenes)."""
-    f = FORMATS.get(name or DEFAULT) or FORMATS[DEFAULT]
+    f = FORMATS.get(name or DEFAULT) or EXTRA.get(name) or FORMATS[DEFAULT]
     return dict(f, banned=sorted(set(f["banned"]) | (ALL_HOSTS - set(f.get("hosts") or []))))
 
 
 def names() -> list:
     return list(FORMATS)
+
+
+def known(name: str) -> bool:
+    return name in FORMATS or name in EXTRA
 
 
 # ------------------------------------------------------------------------------------------- applying a format
@@ -372,7 +375,8 @@ GOAL_BONUS = 0.03           # per variety goal the script meets in a format (pla
 
 def goals_by_format(beats: list, title: str) -> dict:
     """{format: variety goals met} from a quick plan of the script in every format (no icon search)."""
-    from . import planner as PL, variety as V
+    from . import planner as PL, variety as V, picker
+    picker.set_names(beats)
     out = {}
     for n in FORMATS:
         f = get(n)
@@ -432,3 +436,7 @@ FORMATS["type_studio"] = {
 }
 ALL_HOSTS |= set(TYPE_HOSTS)
 _TY.POOLS["type_studio"] = ["swiss", "editorial"]
+
+from .. import themes as _TH  # noqa: E402
+import sys as _sys  # noqa: E402
+_TH.register(_sys.modules[__name__])        # storyboard themes with a scene_style of their own -> EXTRA["theme_<id>"]

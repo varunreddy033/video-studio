@@ -20,7 +20,6 @@ How it works:
 import argparse
 import fnmatch
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path

@@ -264,8 +264,6 @@ def checklist(P, beat, ctx):
     return _out(html, "", js, cues)
 
 
-BA = re.compile(r"\b(before|after|used to|now|was|went from|from|to|then|today)\b", re.I)
-
 
 def before_after(P, beat, ctx):
     W, H, pal, v = ctx["W"], ctx["H"], ctx["pal"], ctx.get("variant", 0) % OWN

@@ -2,7 +2,7 @@
 
 Question: can FLUX.2 klein 4B in mflux 0.24 (a) keep one character consistent across 10 scenes using reference
 images, and (b) edit only the mouth area? Placeholder character: cartoon cat in a navy blazer.
-Contact sheet: `step1_contact_sheet.jpg`. Script: `tools/presenter_bench.py` (outputs in output/presenter_bench/).
+Contact sheet: `step1_contact_sheet.jpg`. Script: `tools/presenter_bench.py` (removed 2026-11-17, still in git history; outputs in output/presenter_bench/).
 Pipeline unchanged.
 
 ## What mflux can do

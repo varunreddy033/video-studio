@@ -70,9 +70,8 @@ def ai_images_needed(parsed: dict, job_dir=None) -> dict:
     W, H = C.SIZES[(meta["format"], "final")]
     style = meta["presets"]["art_style"]
     d = Path(job_dir) if job_dir else C.JOBS_DIR / "_none_"
-    paths = {visuals.ai_cache_path(s["query"] if s["type"] == "stock" else s["prompt"], W, H, d, style=style,
-                                   stock=s["type"] == "stock")[0]
-             for s in parsed["shots"] if s["type"] in ("ai", "stock")}
+    paths = {visuals.ai_cache_path(p, W, H, d, x, style=style, stock=st)[0]
+             for p, st, x in (visuals.shot_image(s) for s in parsed["shots"] if s["type"] in ("ai", "stock"))}
     if meta["type"] == "full" and not meta.get("character_data"):
         tp = thumbnails.thumb_prompt(parsed)
         paths |= {visuals.ai_cache_path(tp, thumbnails.TW, thumbnails.TH, d, f"thumb{i}", style=style)[0]
@@ -84,8 +83,8 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
     """What the page shows after Check (no huge lists)."""
     out = _summary(parsed)
     try:
-        if parsed["meta"].get("rendering_method") == "motion":
-            raise presets.PresetError("motion graphics use no art style")
+        if parsed["meta"].get("rendering_method") in ("motion", "blocky3d", "explainer3d", "neon"):
+            raise presets.PresetError("motion graphics and blocky 3D use no art style")
         st = presets.load("art_styles", parsed["meta"]["presets"]["art_style"])
         out["art_style"] = {"id": st["id"], "label": st["label"], "realistic": st["realistic"],
                             "images": ai_images_needed(parsed, job_dir)}
@@ -113,6 +112,11 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
         tr = (parsed["meta"].get("transitions") or "").strip().lower()
         out["camera"] = {"camera": cam or ("auto" if rm == "motion" else "classic"), "transitions": tr or "auto",
                          "method": rm}
+    try:                                                       # the Theme tab (presets/storyboard_themes)
+        th = presets.load("storyboard_themes", parsed["meta"].get("theme") or presets.DEFAULTS["storyboard_themes"])
+        out["theme"] = {"id": th["id"], "label": th["label"], "applied": parsed["meta"].get("theme_applied") or {}}
+    except presets.PresetError:
+        out["theme"] = None
     vid = parsed["meta"].get("voice")
     vp = next((v for v in presets.list("voices") if v.get("voice") == vid), None)
     out["voice"] = {"voice": vid, "preset": vp and vp["id"], "label": vp["label"] if vp else vid,
@@ -126,7 +130,8 @@ def _summary(parsed: dict) -> dict:
             "chapters": [{"title": c["title"], "est_start": c["est_start"]} for c in parsed["chapters"]],
             "shots": [{k: v for k, v in s.items() if k in ("type", "line", "query", "prompt", "text", "sub", "by",
                                                          "value", "prefix", "suffix", "label", "title", "chart",
-                                                         "data", "est_start", "est_dur")}
+                                                         "data", "est_start", "est_dur",
+                                                         "who", "action", "camera", "face", "set", "sign")}
                       | {"narration": " ".join(seg["text"] for seg in parsed["segments"] if seg["shot"] == i)[:220]}
                       for i, s in enumerate(parsed["shots"])]}
 
@@ -169,8 +174,10 @@ def enqueue(job_id: str, mode: str) -> str:
         except Exception as e:  # noqa: BLE001  (the render reserves again when it starts)
             log(jdir(job_id), f"format reservation at queue time failed: {e}")
     ahead = _queue.qsize() + sum(1 for j in list_jobs() if j.get("status") == "rendering")
+    if mode == "storyboard" and st.get("rendering_method") != "motion":
+        raise ValueError("the storyboard is for motion-graphics videos")
     set_state(job_id, status="queued", mode=mode, stage=f"waiting ({ahead} ahead)" if ahead else "starting",
-              done=0, total=0, error=None)
+              done=0, total=0, error=None, status_before=st.get("status") or "script")
     _queue.put((job_id, mode))
     return job_id
 
@@ -230,7 +237,10 @@ def _metadata(parsed, result, thumbs) -> str:
     for t in dict.fromkeys(tracks):
         track = (Path(t).stem.replace("---", "|").replace("-_-", ", ").replace("-", " ")
                  .replace("|", " - ").title())
-        parts += [f"Music: {track} (YouTube Audio Library)", ""]
+        # only the local assets/audio/bgm folder holds YouTube Audio Library tracks; the source of the library
+        # tracks (assets/library/music) isn't recorded (its CREDITS.md), so no source is claimed for them
+        source = " (YouTube Audio Library)" if (C.BGM_DIR / t).exists() else ""
+        parts += [f"Music: {track}{source}", ""]
     disclosure = ("- Studio > Details > 'Altered or synthetic content': the pictures are animated drawings, not realistic: "
                   "answer NO (YES only if a scene makes a real person or event look real)."
                   if meta.get("rendering_method") == "motion" else
@@ -259,7 +269,6 @@ def _short_script(text: str) -> str:
 
 
 def _upload_pack(d: Path, parsed, result, thumbs, short_info):
-    import shutil
     import zipfile
     meta = parsed["meta"]
     if short_info:
@@ -339,6 +348,16 @@ def _run(job_id: str, mode: str):
         set_state(job_id, stage=stage, done=done, total=total)
 
     gfx = parsed["meta"].get("rendering_method") == "motion"
+    rm3 = parsed["meta"].get("rendering_method")
+    blocky = rm3 in ("blocky3d", "explainer3d", "neon")         # styles on the shared engine (pipeline/three_video.py)
+    if mode == "storyboard":                     # voice + scenes only (pipeline/motion_gfx/storyboard.py)
+        from .motion_gfx import render as motion_render
+        result = motion_render.render(parsed, d, mode, progress)
+        presets.write_job(d, job_id, mode, parsed)
+        before = read_state(job_id).get("status_before")
+        set_state(job_id, status=before if before in ("draft_ready", "done") else "script", stage="storyboard ready",
+                  storyboard=dict(result, built=time.time()))
+        return
     if parsed["meta"].get("clip"):
         result = clip.render(parsed, d, mode, progress)
     elif parsed["meta"].get("style") == "motion":
@@ -347,6 +366,9 @@ def _run(job_id: str, mode: str):
     elif gfx:
         from .motion_gfx import render as motion_render        # separate renderer; ai_image never loads it
         result = motion_render.render(parsed, d, mode, progress)
+    elif blocky:
+        from importlib import import_module
+        result = import_module(f".{rm3}.render", __package__).render(parsed, d, mode, progress)
     else:
         result = assemble.render(parsed, d, mode, progress)
     thumbs = []
@@ -364,7 +386,7 @@ def _run(job_id: str, mode: str):
                 thumbs = []
         if thumbs:
             pass
-        elif gfx and not is_short:
+        elif (gfx or blocky) and not is_short:                # frames of the picture (no AI images)
             progress("thumbnails", 0, 3)
             from .motion_gfx import render as motion_render
             thumbs = motion_render.thumbnails(parsed, d, d / "final.mp4")
@@ -390,7 +412,6 @@ def _run(job_id: str, mode: str):
             if sp["ok"] and sp["segments"]:
                 short_info = assemble.render(sp, d / "short", "final",
                                              lambda st, a=0, b=0: progress(f"short: {st}", a, b))
-                import shutil
                 shutil.copy(d / "short" / "final.mp4", d / "short.mp4")
                 log(d, f"SHORT done: {short_info['duration_sec']} s vertical in {time.time() - t_short:.0f}s")
             else:
@@ -405,6 +426,22 @@ def _run(job_id: str, mode: str):
               read_state(job_id).get("thumbnails", []))
 
 
+def storyboard_regenerate(job_id: str, regen: dict) -> dict:
+    """Another version of one scene, made now (voice and plan are cached: a few seconds). Not while a video renders.
+    regen None = build the scenes again only (after a scene's options changed)."""
+    if not RENDER_LOCK.acquire(blocking=False):
+        raise ValueError("a video is rendering; regenerate the scene when it has finished")
+    try:
+        d = jdir(job_id)
+        parsed = script_parser.parse((d / "script.md").read_text(encoding="utf-8"))
+        if not parsed["ok"] or parsed["meta"].get("rendering_method") != "motion":
+            raise ValueError("the script has errors or isn't a motion-graphics video")
+        from .motion_gfx import render as motion_render
+        return motion_render.render(parsed, d, "storyboard", lambda *a, **k: None, regen=regen)
+    finally:
+        RENDER_LOCK.release()
+
+
 def _worker():
     while True:
         job_id, mode = _queue.get()
@@ -412,7 +449,12 @@ def _worker():
             with RENDER_LOCK:
                 _run(job_id, mode)
         except Exception as e:
-            log(jdir(job_id), "ERROR " + traceback.format_exc().strip().splitlines()[-1])
+            tb = traceback.format_exc().strip()
+            log(jdir(job_id), "ERROR " + tb.splitlines()[-1])
+            try:                                   # the whole traceback, next to render.log (the page shows the line above)
+                (jdir(job_id) / "error_traceback.txt").write_text(tb + "\n", encoding="utf-8")
+            except OSError:
+                pass
             set_state(job_id, status="failed", stage=f"{mode} render failed", error=f"{type(e).__name__}: {e}")
         finally:
             visuals.stop_image_worker()

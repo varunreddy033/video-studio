@@ -29,7 +29,6 @@ MOTION_DIR = C.BASE_DIR / "motion"
 FPS = 30
 W, H = 1920, 1080                 # the timeline is always 1080p; drafts render at --scale 0.5
 TRANSITION = 18                    # frames
-SCENE_PALETTE_TINTS = ["#16294A", "#1A2440", "#132643", "#182A45"]
 
 
 def npx() -> str:
@@ -81,11 +80,11 @@ def _assets(parsed, tl, spans, all_words, job_dir: Path, public: Path, mode: str
             else:
                 img = visuals.act_image(sh, char, W, H, job_dir)
         else:
-            prompt, stock = (sh["query"], True) if kind == "stock" else (sh["prompt"], False)
+            prompt, stock, seed_extra = visuals.shot_image(sh)
             if mode == "draft":
                 img = visuals.placeholder_image("AI IMAGE (made in the final render)", prompt, W, H, job_dir)
             else:
-                img = visuals.ai_image(prompt, W, H, job_dir, style=style, stock=stock)   # same cache as classic
+                img = visuals.ai_image(prompt, W, H, job_dir, seed_extra, style=style, stock=stock)   # same cache as classic
         dst = public / "assets" / f"img_{i:03d}{Path(img).suffix}"
         _link(Path(img), dst)
         out[i] = {"type": "image", "src": f"assets/{dst.name}"}

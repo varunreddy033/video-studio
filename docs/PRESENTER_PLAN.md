@@ -21,7 +21,7 @@ for each still. The camera then moves through the image with the foreground movi
 so it looks like a real camera move instead of a zoom.
 
 ## 3. The character (designed once, used forever = the channel's brand)
-We write a **Character Bible** together in claude.ai first (docs/CHARACTER.md):
+We write a **Character Bible** together in claude.ai first (was docs/CHARACTER.md; now docs/characters/<name>.md):
 - name, species (cat / brain / other), look, outfit, colours, art style (one only: e.g. "stylised 3D animated film look")
 - personality, how it talks, catchphrases, opening line, sign-off
 - the Kokoro voice that fits it (pick by ear from 5-6 candidates), speed

@@ -15,7 +15,6 @@ from ..util import PipelineError
 PINNED = json.loads((C.BASE_DIR / "package.json").read_text(encoding="utf-8"))["dependencies"]["hyperframes"]
 BIN = C.BASE_DIR / "node_modules" / ".bin" / ("hyperframes.cmd" if os.name == "nt" else "hyperframes")
 GSAP_JS = C.BASE_DIR / "node_modules" / "gsap" / "dist" / "gsap.min.js"
-MOTIONPATH_JS = C.BASE_DIR / "node_modules" / "gsap" / "dist" / "MotionPathPlugin.min.js"
 
 ENV = {"HYPERFRAMES_NO_TELEMETRY": "1", "DO_NOT_TRACK": "1", "HYPERFRAMES_NO_UPDATE_CHECK": "1",
        "HYPERFRAMES_SKIP_SKILLS": "1", "NO_UPDATE_NOTIFIER": "1", "npm_config_update_notifier": "false"}
@@ -39,11 +38,11 @@ def check_installed() -> dict:
         raise PipelineError(f"Node.js {v} is too old; HyperFrames needs 22 or newer: brew upgrade node")
     if not BIN.exists() or not GSAP_JS.exists():
         raise PipelineError("HyperFrames isn't installed in this project. Run once in Terminal: "
-                            "cd ~/youtube-pipeline && npm ci   (setup.sh does this too)")
+                            f"cd {C.BASE_DIR} && npm ci   (setup.sh does this too)")
     got = subprocess.run([str(BIN), "--version"], capture_output=True, text=True, env=_env()).stdout.strip()
     if got != PINNED:
         raise PipelineError(f"HyperFrames {got} is installed but this project is tested with {PINNED}: "
-                            f"cd ~/youtube-pipeline && npm ci")
+                            f"cd {C.BASE_DIR} && npm ci")
     if not shutil.which("ffmpeg"):
         raise PipelineError("FFmpeg isn't installed (brew install ffmpeg)")
     return {"node": v, "hyperframes": got}

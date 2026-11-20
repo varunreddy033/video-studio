@@ -10,7 +10,6 @@ visuals.py  -  one video clip (no audio, exact length) per shot.
 import json
 import math
 import subprocess
-import textwrap
 import threading
 import time
 from pathlib import Path
@@ -18,7 +17,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from . import config as C
-from .util import PipelineError, h, log, media_duration, run
+from .util import PipelineError, h, log, run
 
 _mflux_lock = threading.Lock()   # 16 GB RAM: never two image models at once
 
@@ -430,6 +429,12 @@ def style_prompt(prompt: str, style_id=None, stock: bool = False) -> str:
     return ", ".join(p for p in parts if p)
 
 
+def shot_image(shot) -> tuple:
+    """(prompt, stock, seed_extra) of an [ai:]/[stock:] shot; seed_extra is "" without | seed=N (the old cache keys)."""
+    stock = shot["type"] == "stock"
+    return shot["query"] if stock else shot["prompt"], stock, f"seed{shot['seed']}" if shot.get("seed") else ""
+
+
 def ai_cache_path(prompt: str, W: int, H: int, job_dir: Path, seed_extra: str = "", style=None,
                   stock: bool = False):
     """(cached image path, full prompt, generation size, steps) of an AI image; the file may not exist yet.
@@ -603,7 +608,7 @@ def make_shot(shot, idx, dur, W, H, job_dir, mode, warnings, ctx=None):
         return out
     if kind in ("ai", "stock"):   # [stock: ...] = an AI image with the art style's stock words (doc_photo: a photo)
         style = ctx.get("art_style")
-        prompt, stock = (shot["query"], True) if kind == "stock" else (shot["prompt"], False)
+        prompt, stock, seed_extra = shot_image(shot)
         if mode == "draft":   # the placeholder shows the script's prompt (as before) and the art style under it
             from . import presets
             st = presets.load("art_styles", style or presets.DEFAULTS["art_styles"])
@@ -611,7 +616,7 @@ def make_shot(shot, idx, dur, W, H, job_dir, mode, warnings, ctx=None):
             img = placeholder_image("AI IMAGE (made in the final render)", text, W, H, job_dir,
                                     note=f"Art style: {st['label']}")
         else:
-            img = ai_image(prompt, W, H, job_dir, style=style, stock=stock)
+            img = ai_image(prompt, W, H, job_dir, seed_extra, style=style, stock=stock)
         still_motion(img, dur, idx, W, H, out, job_dir, mode, ctx.get("camera"))
         return out
     graphic_clip(shot, dur, W, H, out, job_dir, mode, safe=ctx.get("safe"))

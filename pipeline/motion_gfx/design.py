@@ -41,8 +41,6 @@ FONT_PAIRS = {"poster": {"head": "Anton", "char_w": 0.5, "body": "Poppins SemiBo
 
 EASE_IN = "expo.out"            # signature entrance (kinetic-typography: cubic-bezier(0.16,1,0.3,1))
 EASE_POP = "spring.snappy"      # closed-form spring (spring.py): 23 % overshoot, settles 0.56 s
-EASE_SOFT = "power3.out"
-EASE_OUT = "power2.in"          # exits: shorter and accelerating
 WORD_IN = 0.32                  # one word's entrance (s)
 STAGGER = 0.055                 # words shown together: 55 ms apart
 

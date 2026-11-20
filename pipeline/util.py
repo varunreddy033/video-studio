@@ -5,7 +5,6 @@ import random
 import re
 import subprocess
 import time
-import wave
 from pathlib import Path
 
 from . import config as C
@@ -36,10 +35,6 @@ def h(*parts) -> str:
     """Short stable hash, used for cache file names."""
     return hashlib.sha1("|".join(str(p) for p in parts).encode()).hexdigest()[:12]
 
-
-def wav_duration(path: Path) -> float:
-    with wave.open(str(path)) as w:
-        return w.getnframes() / float(w.getframerate())
 
 
 def media_duration(path: Path) -> float:
@@ -96,15 +91,7 @@ _dur_cache = {}
 
 def list_audio(folder: Path, min_sec: float = 0.0):
     files = sorted(p for p in folder.glob("*") if p.suffix.lower() in C.AUDIO_EXT) if folder.exists() else []
-    if min_sec:
-        out = []
-        for p in files:
-            if p not in _dur_cache:
-                _dur_cache[p] = media_duration(p)
-            if _dur_cache[p] >= min_sec:
-                out.append(p)
-        files = out
-    return files
+    return _long_enough(files, min_sec) if min_sec else files
 
 
 def _lib_audio(root: Path):
@@ -112,13 +99,7 @@ def _lib_audio(root: Path):
 
 
 def _long_enough(files, min_sec: float):
-    out = []
-    for p in files:
-        if p not in _dur_cache:
-            _dur_cache[p] = media_duration(p)
-        if _dur_cache[p] >= min_sec:
-            out.append(p)
-    return out
+    return [p for p in files if audio_duration(p) >= min_sec]
 
 
 def music_blocked() -> set:
@@ -140,6 +121,11 @@ def music_files(min_sec: float = 60.0):
     blocked = music_blocked()
     lib = [f for f in _lib_audio(C.MUSIC_LIB) if Path(f).relative_to(C.MUSIC_LIB).as_posix() not in blocked]
     return list_audio(C.BGM_DIR, min_sec) + _long_enough(lib, min_sec)
+
+
+def blocky_music_files(min_sec: float = 60.0):
+    """The person's own tracks for blocky 3D videos: assets/blocky3d/music/<mood>/ (gitignored)."""
+    return _long_enough(_lib_audio(C.BASE_DIR / "assets" / "blocky3d" / "music"), min_sec)
 
 
 def sfx_files():

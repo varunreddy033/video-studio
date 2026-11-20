@@ -9,11 +9,11 @@ cd "$P"
 echo "== 1/5 Python venv"
 if [ ! -x "$PY" ]; then python3.11 -m venv "$P"; fi
 "$PY" -m pip install --upgrade pip -q
-"$PY" -m pip install -q flask requests "kokoro>=0.9" soundfile numpy pillow matplotlib "mflux>=0.24"
+"$PY" -m pip install -q flask "kokoro>=0.9" soundfile numpy pillow matplotlib "mflux>=0.24"
 # presenter characters: rembg (+ onnxruntime) cuts the character out of each pose (u2net, MIT);
 # transformers runs Depth Anything V2 Small (Apache-2.0) for the 2.5D parallax; opencv does the parallax warp
 "$PY" -m pip install -q "rembg>=2.0.50" onnxruntime "transformers>=4.45" opencv-python
-echo "   ok: flask, requests, kokoro, soundfile, pillow, matplotlib, mflux, rembg, onnxruntime, transformers, opencv"
+echo "   ok: flask, kokoro, soundfile, pillow, matplotlib, mflux, rembg, onnxruntime, transformers, opencv"
 
 echo "== 2/5 System tools"
 command -v ffmpeg >/dev/null || { brew install ffmpeg-full && brew link --force ffmpeg-full; }
@@ -107,6 +107,7 @@ HF="$P/node_modules/.bin/hyperframes"
 export HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_NO_UPDATE_CHECK=1
 echo "== extra: icon packs for motion graphics (pinned @iconify-json packages, licence allow-list)"
 "$PY" "$P/tools/import_icon_packs.py" || echo "   WARNING: an icon pack was refused or failed; see the lines above"
+"$PY" "$P/tools/fetch_blocky3d_assets.py" || echo "   WARNING: blocky 3D packs not complete; run: $PY $P/tools/fetch_blocky3d_assets.py"
 "$PY" "$P/tools/build_icon_index.py" 2>/dev/null \
   || echo "   WARNING: the icon search index wasn't built; run: $PY $P/tools/build_icon_index.py"
 "$HF" telemetry disable >/dev/null 2>&1 || true

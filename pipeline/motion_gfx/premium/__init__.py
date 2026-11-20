@@ -1,10 +1,10 @@
-"""Premium motion blocks (19), rebuilt from measured reference clips. See README.md and ../SPECS.md.
+"""Premium motion blocks (19 + 6 studio-sizzle blocks, blocks_d), rebuilt from measured reference clips. See README.md and ../SPECS.md.
 
     from premium import BLOCKS
     parts = BLOCKS["glass_quote"]["build"]("s7", {"W": 1920, "H": 1080, "quote": "..."})
     parts["html"], parts["css"], parts["js"], parts["cues"], parts["dur"]
 """
-from . import blocks_a as A, blocks_b as B, blocks_c as C
+from . import blocks_a as A, blocks_b as B, blocks_c as C, blocks_d as D
 
 # name -> builder, reference clip, recording time that equals block t=0, loops used for the comparison render
 BLOCKS = {
@@ -27,4 +27,11 @@ BLOCKS = {
     "blur_zoom_type": {"build": C.blur_zoom_type, "ref": "ex17", "ref_t0": -0.35,  "loops": 2},
     "post_card":      {"build": C.post_card,      "ref": "ex18", "ref_t0": 0.68,   "loops": 1},
     "color_carousel": {"build": C.color_carousel, "ref": "ex19", "ref_t0": 0.0,    "loops": 2},
+    # rebuilt from iart-ai/motion-skills showcase.html (MIT), not from a recording: no ref clip
+    "char_flip":      {"build": D.char_flip,      "ref": None,   "ref_t0": 0.0,    "loops": 1},
+    "serif_scatter":  {"build": D.serif_scatter,  "ref": None,   "ref_t0": 0.0,    "loops": 1},
+    "outline_slam":   {"build": D.outline_slam,   "ref": None,   "ref_t0": 0.0,    "loops": 1},
+    "three_beat":     {"build": D.three_beat,     "ref": None,   "ref_t0": 0.0,    "loops": 1},
+    "crop_lockup":    {"build": D.crop_lockup,    "ref": None,   "ref_t0": 0.0,    "loops": 1},
+    "signature_dot":  {"build": D.signature_dot,  "ref": None,   "ref_t0": 0.0,    "loops": 1},
 }

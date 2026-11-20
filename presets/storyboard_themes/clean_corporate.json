@@ -1,0 +1,99 @@
+{
+  "label": "Clean Corporate",
+  "licence": "Own text and colours (this project); fonts and scene code are the bundled ones (OFL / project code)",
+  "version": 1,
+  "description": "White, slate and blue: thin lines, soft shadows, plain icons, Swiss type, tidy charts and lists, calm slides. No stick figures.",
+  "settings": {
+    "motion": {
+      "typography": "swiss",
+      "camera": "dolly, truck",
+      "transitions": "clean"
+    },
+    "ai_image": {
+      "art_style": "doc_photo",
+      "captions": "clean_lower"
+    }
+  },
+  "scene_style": {
+    "base": "pop_poster",
+    "palettes": [
+      {
+        "name": "corp_white",
+        "bg": "#F5F7FA",
+        "ink": "#14233B",
+        "hi": "#2F6BFF",
+        "pop": "#2F6BFF",
+        "soft": "#E3E9F2"
+      },
+      {
+        "name": "corp_blue",
+        "bg": "#1F4FD8",
+        "ink": "#FFFFFF",
+        "hi": "#9EC1FF",
+        "pop": "#FFD166",
+        "soft": "#3A66E0"
+      },
+      {
+        "name": "corp_slate",
+        "bg": "#22304A",
+        "ink": "#F2F6FC",
+        "hi": "#6FA3FF",
+        "pop": "#6FA3FF",
+        "soft": "#2F4060"
+      }
+    ],
+    "fonts": [
+      "swiss"
+    ],
+    "icon_style": [
+      "plain"
+    ],
+    "card": "#FFFFFF",
+    "line": "#14233B",
+    "line_scale": 0.5,
+    "shadow": "soft",
+    "banned": [
+      "figure",
+      "reaction",
+      "pile",
+      "versus"
+    ],
+    "weights": {
+      "table": 0.4,
+      "process": 0.35,
+      "checklist": 0.35,
+      "ranking": 0.3,
+      "donut": 0.3,
+      "icon_list": 0.3,
+      "number": 0.2
+    },
+    "entrances": [
+      "rise",
+      "mask",
+      "none"
+    ],
+    "cameras": [
+      "dolly",
+      "truck",
+      "pull",
+      "focus"
+    ],
+    "signature": "fade",
+    "kicker": "Section",
+    "music": [
+      "uplifting",
+      "calm",
+      "tech"
+    ]
+  },
+  "supports": {
+    "rendering_methods": [
+      "motion",
+      "ai_image"
+    ],
+    "formats": [
+      "landscape",
+      "vertical"
+    ]
+  }
+}

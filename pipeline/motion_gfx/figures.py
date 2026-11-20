@@ -60,9 +60,6 @@ def _rot(sel, origin, a, b, t, d, ease="power3.out"):
             f'{{rotation: {b}, svgOrigin: "{origin[0]} {origin[1]}", duration: {d:.2f}, ease: "{ease}"}}, {t:.2f});')
 
 
-def _set_rot(sel, origin, a, t):
-    return f'tl.set("{sel}", {{rotation: {a}, svgOrigin: "{origin[0]} {origin[1]}"}}, {t:.2f});'
-
 
 def pose_js(P, n, pose, dur, word_times, seed=0):
     """GSAP tweens (on `tl`, times in the scene) for one figure: the pose's main move on entry, then life

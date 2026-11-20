@@ -1,0 +1,17 @@
+{
+  "label": "Auto (as before)",
+  "licence": "Own text and colours (this project); fonts and scene code are the bundled ones (OFL / project code)",
+  "version": 1,
+  "description": "No theme: Video Studio picks the style from the topic and what your last videos used, exactly as before themes.",
+  "settings": {},
+  "supports": {
+    "rendering_methods": [
+      "motion",
+      "ai_image"
+    ],
+    "formats": [
+      "landscape",
+      "vertical"
+    ]
+  }
+}

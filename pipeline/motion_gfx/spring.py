@@ -17,14 +17,6 @@ SPRINGS = {                 # name: (zeta, omega)
 }
 
 
-def spring_at(t, zeta=0.42, omega=17.0):
-    if t <= 0:
-        return 0.0
-    if zeta >= 1:
-        return 1 - math.exp(-omega * t) * (1 + omega * t)
-    wd = omega * math.sqrt(1 - zeta * zeta)
-    return 1 - math.exp(-zeta * omega * t) * (math.cos(wd * t) + (zeta * omega / wd) * math.sin(wd * t))
-
 
 def spring_duration(name_or_zeta="snappy", omega=None):
     zeta, w = SPRINGS[name_or_zeta] if isinstance(name_or_zeta, str) else (name_or_zeta, omega)

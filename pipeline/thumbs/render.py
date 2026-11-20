@@ -14,6 +14,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -61,7 +62,10 @@ def _shoot(pages: list) -> list:
     jobf.write_text(json.dumps({"chrome": chrome_path(), "pages": pages}), encoding="utf-8")
     p = subprocess.run([node, str(SHOOT), str(jobf)], capture_output=True, text=True, cwd=str(C.BASE_DIR), timeout=180)
     if p.returncode != 0:
-        raise ThumbsFailed("thumbnail screenshot failed: " + (p.stderr.strip().splitlines() or ["?"])[-1][:300])
+        # Node ends a crash with its version banner ("Node.js v22..."): show the error line, not that
+        lines = [ln.strip() for ln in p.stderr.splitlines() if ln.strip() and not ln.startswith("Node.js v")]
+        why = next((ln for ln in lines if re.match(r"\w*Error\b", ln)), lines[-1] if lines else "?")
+        raise ThumbsFailed("thumbnail screenshot failed: " + why[:300])
     return json.loads(p.stdout.strip().splitlines()[-1])
 
 

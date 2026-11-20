@@ -385,7 +385,7 @@ def check(meta, segments, shots, warn, err, wps):
                                  f"every 3 s or so")
         for e in evs:
             if e["op"] in ("char", "char_off") and not char:
-                err(e["line"], "[char: ...] needs a presenter: add 'character: sterling_flat' (or another) to the header")
+                err(e["line"], "[char: ...] needs a presenter: add 'character: sterling' (or another) to the header")
             if e["op"] == "char" and char and e["pose"] not in char["poses"]:
                 err(e["line"], f"pose '{e['pose']}' isn't in {char['name']}'s poses: {', '.join(char['poses'])}")
             if e["op"] == "add" and e["kind"] not in PROPS | DATA_KINDS | NEW_DATA | {"gen"}:

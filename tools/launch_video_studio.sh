@@ -191,6 +191,18 @@ for j in (d if isinstance(d, list) else d.get("jobs", [])):
   step "8/8 Restart Video Studio"
   local OLDPID NEWPID CODE i
   OLDPID="$(launchctl print "gui/$UIDN/$LABEL" 2>/dev/null | awk '/^\tpid = /{print $3; exit}')"
+  # open-file limit 8192 (macOS's default 256 broke the audio mix of long videos): add it to an older plist, then
+  # reload the service so launchd reads the plist again (kickstart alone keeps the old limits)
+  if [ "$(plutil -extract SoftResourceLimits.NumberOfFiles raw "$PLIST" 2>/dev/null)" != "8192" ] \
+     || [ "$(plutil -extract HardResourceLimits.NumberOfFiles raw "$PLIST" 2>/dev/null)" != "8192" ]; then
+    plutil -replace SoftResourceLimits -json '{"NumberOfFiles":8192}' "$PLIST" \
+      && plutil -replace HardResourceLimits -json '{"NumberOfFiles":8192}' "$PLIST" \
+      || die "Couldn't add the open-file limit to $PLIST." "Reinstall the service: bash \"$P/tools/install_autostart.sh\""
+    launchctl bootout "gui/$UIDN/$LABEL" 2>/dev/null || true
+    sleep 2
+    launchctl bootstrap "gui/$UIDN" "$PLIST" 2>/dev/null || true
+    ok "open-file limit 8192 added to the service"
+  fi
   if ! launchctl kickstart -k "gui/$UIDN/$LABEL" 2>/dev/null; then
     warn "the service wasn't loaded; loading it"
     launchctl bootstrap "gui/$UIDN" "$PLIST" 2>/dev/null || true

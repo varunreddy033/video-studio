@@ -17,7 +17,6 @@ Writes output/thumb_tests/contact_sheet.jpg (every option, its layout and its ti
 """
 
 import hashlib
-import json
 import shutil
 import sys
 import time

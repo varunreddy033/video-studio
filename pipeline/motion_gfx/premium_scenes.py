@@ -67,6 +67,9 @@ TOGGLE = re.compile(r"\b(turn(?:ed|s)? (?:it )?(?:off|on)|switch(?:ed|es)? (?:of
                     r"enable[ds]?|disable[ds]?)\b", re.I)
 MONEY = re.compile(r"\b(dollars?|rupees?|euros?|pounds?|currenc\w*|pay(?:s|ing|ment)?|paid|price[sd]?|money|cash|bank)\b", re.I)
 CARD = re.compile(r"\b(card|credit|debit|wallet|payment)s?\b", re.I)
+SHOCK = re.compile(r"\b(never|danger\w*|warn\w*|stop\w*|crash\w*|dead|died|fail\w*|lost|banned?|broke\w*|"
+                   r"collaps\w*|disaster|scam\w*|wrong|illegal|fake|hack\w*|leak\w*|panic\w*)\b", re.I)
+SIZZLE = {"char_flip", "serif_scatter", "outline_slam", "three_beat", "crop_lockup", "signature_dot"}   # blocks_d
 CART = re.compile(r"\b(cart|buy(?:s|ing)?|bought|order(?:s|ed)?|shop(?:ping)?|checkout)\b", re.I)
 
 
@@ -152,6 +155,25 @@ def ctx_for(name, beat, ctx):
         items = X.list_items(text) or words[:5]
         c.update(cards=[(it.title()[:14], COLOURS[k % len(COLOURS)], ("", "", "")) for k, it in enumerate(items[:6])]
                  or [("Now", COLOURS[0], ("", "", ""))], loops=max(1, min(6, int(beat["dur"] / 1.38))), start=0)
+    elif name in SIZZLE:
+        key = max(words, key=len) if words else "Now"
+        said = [w.strip(".,!?;:'\"") for w in _clean(text).split()]
+        rest = [w for w in said if w and w != key]               # the line minus its big word, as spoken
+        c["dur"] = beat.get("dur") or (beat["end"] - beat["start"])
+        if name == "char_flip":
+            c.update(word=key, kicker=" ".join(rest[:6]))
+        elif name == "serif_scatter":
+            c.update(text=" ".join(_clean(text).split()[:4]))
+        elif name == "outline_slam":
+            m = SHOCK.search(text)
+            c.update(word=m.group(0) if m else key)
+        elif name == "three_beat":
+            items = [it.split()[-1] for it in X.list_items(text)][:3] or words[:3]
+            c.update(words=items or ["Now"])
+        elif name == "crop_lockup":
+            c.update(lines=_chunks([w for w in said if w][:6], 2) or ["Now"], kicker="")
+        elif name == "signature_dot":
+            c.update(word=key, kicker=" ".join(rest[:6]))
     return c
 
 
@@ -197,6 +219,16 @@ SPECS = {   # name: (roles, fit test)
     "card_flip": ({"story": 0.6}, lambda b, st: 0.8 if CARD.search(b.get("text") or "") else 0.0),
     "card_wheel": ({"story": 0.5, "comparison": 0.4}, lambda b, st: 0.75 if MONEY.search(b.get("text") or "") else 0.0),
     "pill_split": ({"story": 0.5}, lambda b, st: 0.8 if CART.search(b.get("text") or "") else 0.0),
+    # studio-sizzle blocks (blocks_d): punchy type, so short lines only
+    "char_flip": ({"transition": 0.8, "conclusion": 0.5}, _f_len(1, 5, 0.45)),
+    "serif_scatter": ({"transition": 0.6, "story": 0.4}, _f_len(2, 4, 0.4)),
+    "outline_slam": ({"warning": 1.0, "transition": 0.5}, lambda b, st: 0.6 if SHOCK.search(b.get("text") or "") and
+                     _words_n(b) <= 8 else 0.0),
+    "three_beat": ({"list": 0.9}, lambda b, st: 0.8 if len(X.list_items(b.get("text") or "")) == 3 and
+                   all(len(i.split()) <= 2 for i in X.list_items(b.get("text") or "")) else 0.0),
+    "crop_lockup": ({"conclusion": 0.9, "definition": 0.4}, _f_len(2, 6, 0.45)),
+    "signature_dot": ({"conclusion": 1.0}, lambda b, st: 0.6 if "conclusion" in st["roles"] and _words_n(b) <= 8
+                      else 0.0),
 }
 
 
@@ -217,6 +249,8 @@ def long_enough(name, beat) -> bool:
     """A block needs most of its cycle to read (>= 55 %); a block that doesn't loop shouldn't sit finished for long
     (<= 1.6x its cycle + 0.5 s)."""
     d, nat = beat.get("dur") or (beat["end"] - beat["start"]), natural_dur(name)
+    if name in SIZZLE:                      # these hold (with a slow push-in) for the whole beat: short beats only
+        return 0.8 * nat <= d <= 6.0
     return d >= 0.55 * nat and (name in LOOPING or d <= 1.6 * nat + 0.5)
 
 

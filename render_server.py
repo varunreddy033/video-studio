@@ -6,18 +6,18 @@ render_server.py  -  Video Studio: the web app for the pipeline (local, or onlin
 All video work happens in pipeline/ (see pipeline/jobs.py and pipeline/assemble.py).
 Every page and API call needs a login (pipeline/auth.py). The first account is made at /setup with the
 one-time code printed when the server starts.
-Run:  ~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py
+Run:  bin/python render_server.py   (from the project folder)
 """
 
+import json
 import re
 import secrets
 import shutil
 import threading
 from datetime import timedelta
-from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Flask, abort, jsonify, redirect, request, send_file, session
+from flask import Flask, Response, abort, jsonify, redirect, request, send_file, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from pipeline import auth, captions, encoder, jobs, presets, script_parser, visuals, voice
@@ -38,7 +38,9 @@ app.config.update(
 MEDIA_PREVIEW = ("/preview.mp4", "/preview.wav", "/audio")
 FILE_RE = re.compile(r"(draft|final|short)\.mp4|thumb_[1-3]\.jpg|(short_)?metadata\.txt|script\.md|"
                      r"captions_(draft|final)\.(ass|srt)|upload_pack\.zip")
-OPEN = {"/login", "/setup", "/api/login", "/api/setup", "/favicon.ico"}
+SB_FRAME_RE = re.compile(r"/api/jobs/[0-9a-f-]+/storyboard/frame/[0-9a-f-]+")
+UI_FONTS = ("Jost-wght.ttf", "BarlowCondensed-ExtraBold.ttf")    # the app's own type (OFL), also on the login page
+OPEN = {"/login", "/setup", "/api/login", "/api/setup", "/favicon.ico", "/ui/studio.css"} | {f"/ui/fonts/{f}" for f in UI_FONTS}
 
 
 # ------------------------------------------------------------------ security ---
@@ -71,12 +73,14 @@ def guard():
 
 @app.after_request
 def headers(resp):
-    resp.headers["X-Frame-Options"] = "DENY"
+    frame = SB_FRAME_RE.fullmatch(request.path) is not None     # a storyboard scene, shown in an <iframe> of this page
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN" if frame else "DENY"
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["Referrer-Policy"] = "same-origin"
     resp.headers["Content-Security-Policy"] = ("default-src 'self'; script-src 'self' 'unsafe-inline'; "
                                                "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
-                                               "media-src 'self' blob:; frame-ancestors 'none'; form-action 'self'")
+                                               "media-src 'self' blob:; font-src 'self' data:; "
+                                               "frame-ancestors " + ("'self'" if frame else "'none'") + "; form-action 'self'")
     if request.scheme == "https":
         resp.headers["Strict-Transport-Security"] = "max-age=31536000"
     if request.path.endswith(MEDIA_PREVIEW) and resp.status_code in (200, 206, 304):
@@ -204,12 +208,59 @@ def page():
     return send_file(C.BASE_DIR / "ui" / "index.html")
 
 
+@app.get("/ui/storyboard.js")
+def storyboard_js():
+    resp = send_file(C.BASE_DIR / "ui" / "storyboard.js", mimetype="text/javascript")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.get("/ui/studio.css")
+def studio_css():
+    resp = send_file(C.BASE_DIR / "ui" / "studio.css", mimetype="text/css")
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.get("/ui/fonts/<name>")
+def ui_font(name):
+    if name not in UI_FONTS:
+        abort(404)
+    resp = send_file(C.ASSETS / "fonts" / name, mimetype="font/ttf", conditional=True)
+    resp.headers["Cache-Control"] = "public, max-age=604800"
+    return resp
+
+
+_SAMPLES = {k["sample"][kind] for k in C.SCRIPT_KITS.values() for kind in k["sample"]}
+
+
 @app.get("/docs/<name>")
 def docs(name):
     name = {"sample": "sample_script.md", "sample_motion": "sample_motion_gfx_script.md"}.get(name, name)
-    if name not in ("SCRIPT_FORMAT.md", "CLAUDE_SCRIPT_PROMPT.md", "sample_script.md", "sample_motion_script.md", "sample_motion_gfx_script.md"):
+    if name not in {"SCRIPT_FORMAT.md", "CLAUDE_SCRIPT_PROMPT.md", "sample_motion_script.md"} | _SAMPLES:
         abort(404)
     return send_file(C.BASE_DIR / "docs" / name, mimetype="text/plain; charset=utf-8")
+
+
+@app.get("/api/script_kit/<method>")
+def script_kit(method):
+    """The New video screen's prompt + sample for one picture style: ?kind=short|full (default full)."""
+    if method not in C.SCRIPT_KITS:
+        abort(404)
+    kind = "short" if request.args.get("kind") == "short" else "full"
+    kit = C.script_kit(method, kind)
+    return jsonify({"method": method, "label": C.RENDERING_METHODS[method], "kind": kind,
+                    "prompts": [dict(p, url=f"/docs/prompt/{p['id']}") for p in kit["prompts"]],
+                    "sample_url": f"/docs/{kit['sample']}"})
+
+
+@app.get("/docs/prompt/<pid>")
+def script_prompt(pid):
+    """A script-writing prompt to paste into a Claude chat (docs/script_prompts/<id>.md)."""
+    ids = {i for k in C.SCRIPT_KITS.values() for ps in k["prompts"].values() for i, _ in ps}
+    if pid not in ids:
+        abort(404)
+    return send_file(C.SCRIPT_PROMPTS_DIR / f"{pid}.md", mimetype="text/plain; charset=utf-8")
 
 
 @app.get("/health")
@@ -228,9 +279,20 @@ def health():
 
 
 # ---------------------------------------------------------------------- jobs ---
+def _body() -> dict:
+    """The request's JSON object ({} for anything else: a list, a number, no body)."""
+    b = request.get_json(force=True, silent=True)
+    return b if isinstance(b, dict) else {}
+
+
+def _text() -> str:
+    t = _body().get("text", "")
+    return t if isinstance(t, str) else ""
+
+
 @app.post("/api/check")
 def check():
-    text = (request.get_json(force=True) or {}).get("text", "")
+    text = _text()
     return jsonify(jobs.check_summary(script_parser.parse(text)))
 
 
@@ -243,7 +305,7 @@ def motion_icons():
     Uses the parser's estimated timings, so a few scene cuts differ from the real render."""
     from pipeline.motion_gfx import picker
     from pipeline.util import PipelineError
-    parsed = script_parser.parse((request.get_json(force=True) or {}).get("text", ""))
+    parsed = script_parser.parse(_text())
     if parsed["meta"].get("rendering_method") != "motion":
         return jsonify({"error": "icons are only picked for rendering_method: motion"}), 400
     if parsed["errors"]:
@@ -404,9 +466,30 @@ def format_preview(fid):
 @app.get("/api/typography")
 def typography_list():
     """Motion-graphics type styles for the Typography tab: a live sample of each (the render's own CSS) + fonts."""
-    from pipeline.motion_gfx import typography as TY
-    return jsonify({"styles": [TY.preview(k) for k in TY.STYLES],
-                    "fonts": [{"family": fam, "url": f"/api/fonts/{f}"} for fam, f in TY.font_files().items()]})
+    try:
+        return jsonify(_typography())
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 409
+
+
+_typo_cache = None
+
+
+def _typography() -> dict:
+    """The type-style samples, built once. typography.preview() sets the renderer's global style while it draws a
+    sample, so it must never run next to a render: built at start-up (before the render worker exists), or later
+    only while no render holds jobs.RENDER_LOCK."""
+    global _typo_cache
+    if _typo_cache is None:
+        from pipeline.motion_gfx import typography as TY
+        if not jobs.RENDER_LOCK.acquire(blocking=False):
+            raise RuntimeError("a video is rendering; the type samples load when it has finished")
+        try:
+            _typo_cache = {"styles": [TY.preview(k) for k in TY.STYLES],
+                           "fonts": [{"family": fam, "url": f"/api/fonts/{f}"} for fam, f in TY.font_files().items()]}
+        finally:
+            jobs.RENDER_LOCK.release()
+    return _typo_cache
 
 
 @app.get("/api/fonts/<name>")
@@ -473,7 +556,7 @@ def preview():
     model). Cached per script text. Refused while a render is running (FLUX and Remotion never run together)."""
     import hashlib
     import json as _json
-    text = (request.get_json(force=True) or {}).get("text", "")
+    text = _text()
     parsed = script_parser.parse(text)
     if parsed["meta"].get("style") != "motion":
         return jsonify({"error": "scene previews are for style: motion scripts"}), 400
@@ -522,8 +605,8 @@ def list_jobs():
 
 @app.post("/api/jobs")
 def create_job():
-    body = request.get_json(force=True) or {}
-    text = body.get("text", "")
+    body = _body()
+    text = _text()
     if not text.strip():
         return jsonify({"error": "paste a script first"}), 400
     job_id = jobs.create(text)
@@ -601,7 +684,7 @@ def save_script(job_id):
         abort(404)
     if jobs.read_state(job_id).get("status") in ("queued", "rendering"):
         return jsonify({"error": "wait until the render finishes before editing"}), 409
-    text = (request.get_json(force=True) or {}).get("text", "")
+    text = _text()
     if not text.strip():
         return jsonify({"error": "the script is empty"}), 400
     return jsonify(jobs.save_script(job_id, text))
@@ -648,6 +731,255 @@ def render(job_id):
     return jsonify({"ok": True})
 
 
+# ------------------------------------------------------------------ storyboard ---
+def _sb_job(job_id):
+    if not jobs.valid(job_id) or not (jobs.jdir(job_id) / "script.md").exists():
+        abort(404)
+    return jobs.jdir(job_id)
+
+
+def _sb_busy(job_id):
+    return jobs.read_state(job_id).get("status") in ("queued", "rendering")
+
+
+@app.get("/api/themes")
+def themes_list():
+    """Storyboard themes for the Theme tab (presets/storyboard_themes)."""
+    return jsonify(presets.list("storyboard_themes"))
+
+
+@app.get("/api/jobs/<job_id>/storyboard")
+def storyboard_get(job_id):
+    from pipeline.motion_gfx import storyboard as SB, planner as PL
+    d = _sb_job(job_id)
+    st = jobs.read_state(job_id)
+    return jsonify({"scenes": SB.scenes(d), "state": SB.load_state(d)["scenes"], "fonts": SB.fonts(),
+                    "types": sorted(PL.TYPES), "size": list(SB._size(d)), "built": (st.get("storyboard") or {}).get("built"),
+                    "theme": (st.get("check") or {}).get("theme"), "busy": _sb_busy(job_id),
+                    "options": SB.options(d), "posters": {} if _sb_busy(job_id) else SB.poster_names(d)})
+
+
+@app.post("/api/jobs/<job_id>/storyboard")
+def storyboard_build(job_id):
+    """Queue a storyboard build: voice + scenes, no video render."""
+    _sb_job(job_id)
+    try:
+        jobs.enqueue(job_id, "storyboard")
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 409
+    return jsonify({"ok": True})
+
+
+@app.get("/api/jobs/<job_id>/storyboard/frame/<sid>")
+def storyboard_frame(job_id, sid):
+    from pipeline.motion_gfx import storyboard as SB
+    d = _sb_job(job_id)
+    v = request.args.get("v")
+    try:
+        html = SB.frame_page(d, job_id, sid, int(v) if v and v.isdigit() else None, request.args.get("raw") == "1")
+    except (KeyError, OSError):
+        abort(404)
+    return Response(html, mimetype="text/html")
+
+
+@app.get("/api/jobs/<job_id>/motion/assets/<path:name>")
+def storyboard_asset(job_id, name):
+    """Fonts and scripts of the job's HyperFrames project (the scene pages load them)."""
+    d = _sb_job(job_id) / "motion" / "assets"
+    p = (d / name).resolve()
+    if not re.fullmatch(r"(js|fonts)/[A-Za-z0-9_.-]+", name) or d.resolve() not in p.parents or not p.is_file():
+        abort(404)
+    resp = send_file(p, conditional=True)
+    resp.headers["Cache-Control"] = "private, max-age=3600"
+    return resp
+
+
+@app.put("/api/jobs/<job_id>/storyboard/scene/<sid>")
+def storyboard_edit(job_id, sid):
+    """Save a scene's manual edits (positions, sizes, text, colours...)."""
+    from pipeline.motion_gfx import storyboard as SB
+    d = _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "wait until the render finishes before editing scenes"}), 409
+    try:
+        st = SB.save_edits(d, sid, request.get_json(force=True) or {})
+    except KeyError:
+        abort(404)
+    presets_job = d / "job.json"
+    if presets_job.exists():                               # keep job.json's "storyboard" block current
+        spec = json.loads(presets_job.read_text(encoding="utf-8"))
+        spec["storyboard"] = SB.summary(d)
+        presets_job.write_text(json.dumps(spec, indent=1, ensure_ascii=False), encoding="utf-8")
+    return jsonify({"ok": True, "scene": st})
+
+
+@app.put("/api/jobs/<job_id>/storyboard/scene/<sid>/options")
+def storyboard_options(job_id, sid):
+    """A scene's own choices (transition in, camera, entrance, text entrance, palette, layout, sounds), then the
+    scenes are built again right away (voice and plan are cached: a few seconds; untouched scenes stay the same)."""
+    from pipeline.motion_gfx import storyboard as SB
+    from pipeline.util import PipelineError
+    d = _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "wait until the render finishes before changing scenes"}), 409
+    try:
+        SB.save_opts(d, sid, request.get_json(force=True) or {})
+        jobs.storyboard_regenerate(job_id, None)            # regen None = rebuild the scenes only
+    except KeyError:
+        abort(404)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except PipelineError as e:
+        return jsonify({"error": str(e)}), 409
+    return storyboard_get(job_id)
+
+
+@app.post("/api/jobs/<job_id>/storyboard/posters")
+def storyboard_posters(job_id):
+    """Makes the scene posters that are missing or out of date ({"sids": [...]} = only those); returns all names."""
+    from pipeline.motion_gfx import storyboard as SB
+    from pipeline.util import PipelineError
+    d = _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "the scenes are being rebuilt"}), 409
+    sids = (request.get_json(force=True, silent=True) or {}).get("sids")
+    try:
+        return jsonify(SB.make_posters(d, set(map(str, sids)) if isinstance(sids, list) else None))
+    except PipelineError as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/api/jobs/<job_id>/storyboard/poster/<name>")
+def storyboard_poster(job_id, name):
+    d = _sb_job(job_id) / "storyboard" / "posters"
+    if not re.fullmatch(r"[0-9a-f]+-\d+-[0-9a-f]{12}\.jpg", name) or not (d / name).is_file():
+        abort(404)
+    resp = send_file(d / name, mimetype="image/jpeg", conditional=True)
+    resp.headers["Cache-Control"] = "private, max-age=31536000, immutable"   # the name changes with the scene
+    return resp
+
+
+@app.post("/api/jobs/<job_id>/storyboard/scene/<sid>/regenerate")
+def storyboard_regen(job_id, sid):
+    """Make another version of ONE scene; it waits for accept / reject. Other scenes are not touched."""
+    from pipeline.util import PipelineError
+    _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "wait until the render finishes"}), 409
+    body = request.get_json(force=True) or {}
+    regen = {"sid": sid, "what": body.get("what") if body.get("what") in ("scene", "layout", "icon") else "scene",
+             "type": str(body.get("type") or "")[:40], "query": str(body.get("query") or "")[:120]}
+    try:
+        jobs.storyboard_regenerate(job_id, regen)
+    except (ValueError, PipelineError) as e:
+        return jsonify({"error": str(e)}), 409
+    return storyboard_get(job_id)
+
+
+@app.post("/api/jobs/<job_id>/storyboard/scene/<sid>/version")
+def storyboard_version(job_id, sid):
+    """accept / reject the waiting version, or restore an earlier one ({"action": ..., "n": 2})."""
+    from pipeline.motion_gfx import storyboard as SB
+    d = _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "wait until the render finishes"}), 409
+    body = request.get_json(force=True) or {}
+    try:
+        SB.decide(d, sid, body.get("action"), body.get("n"))
+    except KeyError:
+        abort(404)
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": str(e)}), 400
+    return storyboard_get(job_id)
+
+
+# --------------------------------------------- shot storyboard (ai_image, blocky3d, explainer3d, neon) ---
+@app.get("/api/jobs/<job_id>/shots")
+def shots_get(job_id):
+    from pipeline import shot_storyboard as SS
+    d = _sb_job(job_id)
+    return jsonify(dict(SS.shots(d), busy=_sb_busy(job_id)))
+
+
+def _shot_script(job_id, text):
+    """Saves a script the shot storyboard made (same path as the Script editor) and returns the new shot list."""
+    jobs.save_script(job_id, text)
+    return shots_get(job_id)
+
+
+@app.put("/api/jobs/<job_id>/shots/<int:i>")
+def shots_save(job_id, i):
+    """Replace one shot's lines of script.md ({"text": new lines, "old": the lines as loaded})."""
+    from pipeline import shot_storyboard as SS
+    d = _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "wait until the render finishes before editing shots"}), 409
+    body = request.get_json(force=True) or {}
+    try:
+        return _shot_script(job_id, SS.save(d, i, str(body.get("text") or ""), str(body.get("old") or "")))
+    except (KeyError, IndexError):
+        abort(404)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@app.post("/api/jobs/<job_id>/shots/<int:i>/new_image")
+def shots_new_image(job_id, i):
+    """Another version of an [ai:]/[stock:] shot's picture, made now (~25 s); it waits for accept / reject."""
+    from pipeline import shot_storyboard as SS
+    from pipeline.util import PipelineError
+    d = _sb_job(job_id)
+    if _sb_busy(job_id) or not jobs.RENDER_LOCK.acquire(blocking=False):
+        return jsonify({"error": "a video is rendering; make the new picture when it has finished"}), 409
+    try:
+        SS.new_image(d, i)
+    except IndexError:
+        abort(404)
+    except (ValueError, PipelineError) as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        jobs.RENDER_LOCK.release()
+    return shots_get(job_id)
+
+
+@app.post("/api/jobs/<job_id>/shots/<int:i>/version")
+def shots_version(job_id, i):
+    """{"action": "accept" | "reject" | "use", "seed": N}: writes | seed=N into the shot's tag (accept / use)."""
+    from pipeline import shot_storyboard as SS
+    d = _sb_job(job_id)
+    if _sb_busy(job_id):
+        return jsonify({"error": "wait until the render finishes"}), 409
+    body = request.get_json(force=True) or {}
+    if body.get("action") not in ("accept", "reject", "use"):
+        return jsonify({"error": "action must be accept, reject or use"}), 400
+    try:
+        text = SS.decide(d, i, body["action"], body.get("seed"))
+    except IndexError:
+        abort(404)
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": str(e)}), 400
+    return _shot_script(job_id, text) if text else shots_get(job_id)
+
+
+@app.get("/api/jobs/<job_id>/shots/<int:i>/picture")
+def shots_picture(job_id, i):
+    from pipeline import shot_storyboard as SS
+    from pipeline.util import PipelineError
+    d = _sb_job(job_id)
+    seed = request.args.get("seed")
+    try:
+        p = SS.picture(d, i, int(seed) if seed and seed.isdigit() else None)
+    except IndexError:
+        abort(404)
+    except PipelineError:
+        p = None
+    if not p:
+        abort(404)
+    resp = send_file(p, conditional=True)
+    resp.headers["Cache-Control"] = "private, max-age=60"
+    return resp
+
+
 _thumbs_lock = threading.Lock()     # designed thumbnails: one Chromium batch at a time
 
 
@@ -656,7 +988,7 @@ def thumbs_preview():
     """Check page: the designed thumbnails of a motion-graphics script (3 options, or a Short's cover + 2), cached by
     the brief. Takes a few seconds the first time (headless Chromium), instantly after that."""
     from pipeline.thumbs import render as TR
-    parsed = script_parser.parse((request.get_json(force=True) or {}).get("text", ""))
+    parsed = script_parser.parse(_text())
     if parsed["meta"].get("rendering_method") != "motion" or parsed["meta"].get("clip"):
         return jsonify({"error": "designed thumbnails are for motion-graphics videos and Shorts"}), 400
     if parsed["errors"]:
@@ -717,6 +1049,10 @@ if __name__ == "__main__":
         transformers.AlbertModel, transformers.AutoModel, transformers.AutoTokenizer  # noqa: B018 (load lazily-defined names)
     except Exception as e:  # noqa: BLE001
         print(f"transformers pre-import failed: {e}", flush=True)
+    try:
+        _typography()                      # before the render worker starts (see _typography)
+    except Exception as e:  # noqa: BLE001
+        print(f"typography samples not built yet: {e}", flush=True)
     jobs.start_worker()
     print(f"Video Studio: open http://localhost:{C.PORT}", flush=True)
     code = auth.setup_code()

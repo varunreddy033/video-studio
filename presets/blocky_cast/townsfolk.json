@@ -1,0 +1,3 @@
+{"label": "Townsfolk (crowd)", "description": "A crowd: every person gets seeded random skin, hair and clothes.",
+ "skin": "#F2D0A7", "hair": "short", "hair_colour": "#1D1F24", "shirt": "solid", "shirt_colour": "#4F8EF7",
+ "shirt_colour2": "#4F8EF7", "pants_colour": "#2B2D42", "random": true, "licence": "own design (Video Studio, 2026-11-17), free to use"}

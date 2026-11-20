@@ -14,7 +14,6 @@ the action-safe box (design.SAFE).
 """
 
 import html as _html
-import random
 import re
 
 from . import design as D
@@ -49,11 +48,6 @@ RULES = [
     (r"\b(talks?|talked|meet\w*|met|call\w*|messag\w*)\b", ("talk", "tie", ["phone"], True)),
 ]
 RULES = [(re.compile(p, re.I), v) for p, v in RULES]
-# the sound a prop makes when it pops in (spreads the library: every kind gets used)
-PROP_SOUND = {"chip": "click", "heart": "ding", "money": "cash", "coin": "coin", "document": "paper", "magnifier": "swipe",
-              "phone": "click", "question": "pop", "exclaim": "alert", "globe": "whoosh", "building": "impact",
-              "lock": "click", "camera": "shutter", "chart_up": "riser", "chart_down": "error", "ship": "whoosh",
-              "flag": "swipe", "eye": "glitch"}
 MEMO_WORDS = re.compile(r"\b(report\w*|memo|documents?|files?|according|newspaper|times|journal|financial|"
                         r"cited|claims?|alleg\w*|says|said|told)\b", re.I)
 DENY_WORDS = re.compile(r"\b(deni\w*|den(y|ies)|rejects?|dismiss\w*|groundless|debunk\w*)\b", re.I)
@@ -117,6 +111,13 @@ def key_phrase(text, n=3, upper=True):
 
 # the video's font pairing (design.FONT_PAIRS), set once per render by set_look(); renders run one at a time
 HEAD, BODY, CHAR_W = "Anton", "Poppins SemiBold", 0.5
+DEFAULT_LOOK = (HEAD, BODY, CHAR_W)    # reset_look(): every render starts from these
+
+
+def reset_look() -> None:
+    """Back to the import-time fonts (motion_gfx.render calls it first, so a render never sees the last one's)."""
+    global HEAD, BODY, CHAR_W
+    HEAD, BODY, CHAR_W = DEFAULT_LOOK
 
 
 def set_look(fonts: str) -> None:
@@ -803,9 +804,6 @@ def scene_variants(names, seed=0, recent=None):
         count[base] = count.get(base, 0) + 1
     return out
 
-
-def scene_names(beats):
-    return scene_plan(beats)[0]
 
 
 def build(name, P, beat, ctx):

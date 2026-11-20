@@ -18,22 +18,27 @@ host (exit_js), and some draw an effect layer above the incoming stage (overlay_
   ink           an ink blot grows from the centre and reveals the new scene (mask)
   luma_wipe     a soft feathered diagonal wipe (mask)
   shape         a diamond grows from the centre (shape mask reveal)
+  band_sweep    three slanted colour bands sweep up the frame; the new scene is under the last one
+  shutter       four colour bars close from the top, then open from the bottom on the new scene
+                (both from the iart-ai/motion-skills showcase, MIT)
 
 UNDER = transitions whose incoming scene is drawn below the outgoing one (compose.index_file z-order).
 """
 
 NEW = ["whip_blur", "zoom_blur", "zoom_through", "spin", "light_leak", "film_burn", "rgb_split", "cube", "flip",
-       "page_curl", "ink", "luma_wipe", "shape"]
+       "page_curl", "ink", "luma_wipe", "shape", "band_sweep", "shutter"]
 OLD = ["cut", "fade", "push", "slide", "push_up", "blinds", "split", "whip", "zoom", "zoom_out", "flash", "glitch",
        "wipe", "bars", "draw", "flashlight", "page", "pixel", "shake"]
 ALL = OLD + NEW
 UNDER = {"page_curl"}
 OVERLAP = {"cube": 0.5, "flip": 0.5, "page_curl": 0.55, "film_burn": 0.6, "light_leak": 0.55, "ink": 0.5,
            "luma_wipe": 0.45, "zoom_through": 0.4, "whip_blur": 0.3, "spin": 0.4, "zoom_blur": 0.36,
-           "rgb_split": 0.36, "shape": 0.42}
+           "rgb_split": 0.36, "shape": 0.42, "band_sweep": 0.7, "shutter": 0.9}
 SFX = {"whip_blur": "whoosh", "zoom_blur": "whoosh", "zoom_through": "swoosh-up", "spin": "whoosh",
        "light_leak": "swipe", "film_burn": "impact", "rgb_split": "glitch", "cube": "swipe", "flip": "swipe",
-       "page_curl": "paper", "ink": "swoosh-up", "luma_wipe": "swipe", "shape": "pop"}
+       "page_curl": "paper", "ink": "swoosh-up", "luma_wipe": "swipe", "shape": "pop",
+       "band_sweep": "swoosh-up", "shutter": "shutter"}
+BANDS = {"band_sweep": ["#38e8d8", "#f5f2ec", "#8b5cff"], "shutter": ["#8b5cff", "#ffb347", "#38e8d8", "#f5f2ec"]}
 
 INK_SVG = ("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='black'>"
            "<circle cx='50' cy='50' r='30'/><circle cx='28' cy='38' r='16'/><circle cx='72' cy='34' r='14'/>"
@@ -73,6 +78,14 @@ def overlay_html(kind: str, hid: str, W: int, H: int) -> str:
                 f' rgba(120,20,0,0) 78%);transform-origin:85% 15%"></div>')
     if kind == "page_curl":
         return ""
+    if kind == "band_sweep":
+        return "".join(f'<div class="{hid}-band" style="position:absolute;left:-5%;width:110%;top:0;height:120%;'
+                       f'background:{c};pointer-events:none"></div>'          # start state set by GSAP (enter_js)
+                       for c in BANDS[kind])
+    if kind == "shutter":
+        return "".join(f'<div class="{hid}-band" style="position:absolute;left:0;width:100%;top:{25 * i}%;height:25.2%;'
+                       f'background:{c};pointer-events:none"></div>'
+                       for i, c in enumerate(BANDS[kind]))
     return ""
 
 
@@ -146,6 +159,21 @@ def enter_js(kind: str, hid: str, ov: float, W: int, H: int) -> str:
                 f'maskPosition: "100% 0%", webkitMaskPosition: "100% 0%"}}, {{maskPosition: "0% 0%", '
                 f'webkitMaskPosition: "0% 0%", duration: {d}, ease: "power1.inOut"}}, 0);\n'
                 f'scene.set("{st}", {{maskImage: "none", webkitMaskImage: "none"}}, {ov + 0.01:.2f});')
+    if kind == "band_sweep":       # the new scene appears while the first band covers the frame
+        k = ov / 0.7
+        return (f'scene.set("{st}", {{opacity: 0}}, 0);\n'
+                f'scene.fromTo(".{hid}-band", {{yPercent: 135, skewY: -7}}, {{yPercent: -135, skewY: -7, duration: {0.55 * k:.3f}, '
+                f'stagger: {0.07 * k:.3f}, ease: "power3.inOut"}}, 0);\n'
+                f'scene.set("{st}", {{opacity: 1}}, {0.28 * k:.3f});')
+    if kind == "shutter":          # bars close top-down over the old scene, the new one is there when they open
+        k = ov / 0.9
+        return (f'scene.set("{st}", {{opacity: 0}}, 0);\n'
+                f'scene.fromTo(".{hid}-band", {{scaleY: 0, transformOrigin: "50% 0%"}}, {{scaleY: 1, duration: {0.26 * k:.3f}, '
+                f'stagger: {0.05 * k:.3f}, ease: "power2.in"}}, 0);\n'
+                f'scene.set("{st}", {{opacity: 1}}, {0.42 * k:.3f});\n'
+                f'scene.set(".{hid}-band", {{transformOrigin: "50% 100%"}}, {0.42 * k:.3f});\n'
+                f'scene.to(".{hid}-band", {{scaleY: 0, duration: {0.32 * k:.3f}, stagger: {0.05 * k:.3f}, ease: "power2.out"}}, '
+                f'{0.43 * k:.3f});')
     if kind == "shape":
         return (f'scene.fromTo("{st}", {{clipPath: "polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%)"}}, '
                 f'{{clipPath: "polygon(50% -75%, 175% 50%, 50% 175%, -75% 50%)", duration: {d}, ease: "power3.in"}}, 0);\n'

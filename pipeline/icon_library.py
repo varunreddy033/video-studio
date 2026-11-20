@@ -17,7 +17,6 @@ An icon id is "<set>:<name>", e.g. "fluent_flat:low-battery".
 
 import json
 from functools import lru_cache
-from pathlib import Path
 
 from . import config as C
 from .util import PipelineError

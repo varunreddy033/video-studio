@@ -125,21 +125,6 @@ def changed(a, b, thr=60):
     return np.abs(a - b).sum(2) > thr
 
 
-def find_box(diff_mask, region, pad=0.25, min_frac=0.07):
-    """Bounding box of the changed pixels inside region=(x0,y0,x1,y1) fractions; robust to stray pixels."""
-    H, W = diff_mask.shape
-    x0, y0, x1, y1 = int(region[0] * W), int(region[1] * H), int(region[2] * W), int(region[3] * H)
-    ys, xs = np.nonzero(diff_mask[y0:y1, x0:x1])
-    if len(xs) < 30:
-        cx, cy, bw, bh = (x0 + x1) // 2, (y0 + y1) // 2, int(W * min_frac), int(H * min_frac)
-    else:
-        lx, hx = np.percentile(xs, [5, 95]) + x0
-        ly, hy = np.percentile(ys, [5, 95]) + y0
-        cx, cy = (lx + hx) / 2, (ly + hy) / 2
-        bw = max((hx - lx) / 2 * (1 + pad), W * min_frac)
-        bh = max((hy - ly) / 2 * (1 + pad), H * min_frac * 0.75)
-    return [int(cx - bw), int(cy - bh), int(cx + bw), int(cy + bh)]
-
 
 def locate_face(wide, blink, base):
     """Mouth and eye boxes from where the 'wide open' and 'blink' edits changed the MOST (edits also sprinkle
