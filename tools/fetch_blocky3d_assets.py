@@ -119,12 +119,17 @@ def main():
             continue
         if zpath and not a.check and zpath.exists() and not (dest / "License.txt").exists():
             extract(p, zpath, dest)
-        if not (dest / "License.txt").exists():
+        if p.get("build"):                         # own pack made by code: complete when its models are there
+            if not (dest / "models").is_dir():
+                problems.append(f"{p['id']}: not built yet ({dest.relative_to(ROOT)}; run {p['build']})")
+                continue
+        elif not (dest / "License.txt").exists():
             problems.append(f"{p['id']}: not downloaded yet ({dest.relative_to(ROOT)})")
             continue
-        lic = (dest / "License.txt").read_text(encoding="utf-8", errors="replace")
-        if p["licence"] == "CC0-1.0" and "CC0" not in lic and "Creative Commons Zero" not in lic:
-            problems.append(f"{p['id']}: License.txt doesn't say CC0")
+        else:
+            lic = (dest / "License.txt").read_text(encoding="utf-8", errors="replace")
+            if p["licence"] == "CC0-1.0" and "CC0" not in lic and "Creative Commons Zero" not in lic:
+                problems.append(f"{p['id']}: License.txt doesn't say CC0")
         n = 0
         for f in sorted((dest / "models").rglob("*")):
             if f.suffix.lower() not in {".glb", ".gltf", ".obj", ".fbx"} or (p.get("keep") and f.parent.name == "Skins"):
