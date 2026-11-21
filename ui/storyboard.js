@@ -10,7 +10,7 @@ const SB_TEXT_TYPES = ["kinetic", "title", "figure", "chapter", "memo"];
 const sbNice = (x) => String(x).replace(/_/g, " ");
 const SB_WRAPPERS = ["stage", "far", "cam", "mid", "near", "life", "ent"];
 
-const sbFill = (box, ...kids) => box.replaceChildren(...kids.flat().filter(k => k !== null && k !== undefined && k !== false));
+const sbFill = (box, ...kids) => fill(box, ...kids.flat().filter(k => k !== null && k !== undefined && k !== false));
 
 // ------------------------------------------------------------------ Theme tab (Look & sound)
 function themePane(r, getText, setText, recheck) {
@@ -47,7 +47,7 @@ async function showStoryboard(reload = true) {
   if (!sbOpen) return;
   if (sbSel && !sbScene(sbSel)) sbSel = null;
   // while a build or render runs the scene files are being rewritten: show the progress, not half-written scenes
-  m.replaceChildren(...(sbBusy() ? [sbTop(), progressCard(), h("p", { class: "hint" }, "The scenes come back when this has finished. Your edits are saved.")]
+  fill(m, ...(sbBusy() ? [sbTop(), progressCard(), h("p", { class: "hint" }, "The scenes come back when this has finished. Your edits are saved.")]
     : [sbTop(), !sb.scenes.length ? sbEmpty() : sbSel ? sbEditor() : sbGrid()]));
 }
 
@@ -60,7 +60,7 @@ function sbTop() {
       try { const text = setHeaderKey(data.script, "theme", id === "auto" ? null : id);
         await api(`/api/jobs/${current}/script`, { method: "PUT", body: JSON.stringify({ text }) }); editText = null;
         await api(`/api/jobs/${current}/storyboard`, { method: "POST", body: "{}" }); refresh(true); } catch (err) { toast(err.message); } } });
-  lookList("themes", "/api/themes").then(list => { theme.replaceChildren(...list.map(t => h("option", { value: t.id }, t.label))); theme.value = (sb.theme || {}).id || "auto"; }).catch(() => {});
+  lookList("themes", "/api/themes").then(list => { fill(theme, ...list.map(t => h("option", { value: t.id }, t.label))); theme.value = (sb.theme || {}).id || "auto"; }).catch(() => {});
   const build = async () => { try { await api(`/api/jobs/${current}/storyboard`, { method: "POST", body: "{}" }); refresh(true); } catch (e) { toast(e.message); } };
   const render = async (mode) => { await sbFlush(); go(mode); };
   return h("div", { class: "row sbtop" },
@@ -212,9 +212,11 @@ function sbBox() {
   const doc = sbDoc(); if (!doc) return;
   let box = doc.getElementById("sb-box");
   if (!box) { box = doc.createElement("div"); box.id = "sb-box";
-    box.style.cssText = "position:fixed;z-index:2147483647;pointer-events:none;outline:4px solid #f97316;outline-offset:2px;display:none";
+    // the scene page has none of our CSS variables: take the app's accent colours from this page's tokens
+    const tok = getComputedStyle(document.documentElement), acc = tok.getPropertyValue("--accent").trim(), on = tok.getPropertyValue("--on-media").trim();
+    box.style.cssText = `position:fixed;z-index:2147483647;pointer-events:none;outline:4px solid ${acc};outline-offset:2px;display:none`;
     const hd = doc.createElement("div"); hd.id = "sb-handle";
-    hd.style.cssText = "position:absolute;right:-22px;bottom:-22px;width:36px;height:36px;background:#f97316;border:4px solid #fff;border-radius:50%;pointer-events:auto;cursor:nwse-resize";
+    hd.style.cssText = `position:absolute;right:-22px;bottom:-22px;width:36px;height:36px;background:${acc};border:4px solid ${on};border-radius:50%;pointer-events:auto;cursor:nwse-resize`;
     box.append(hd); doc.body.append(box); }
   const el = sbPath && sbView === "current" ? sbElFor(sbPath) : null;
   if (!el) { box.style.display = "none"; return; }
@@ -488,7 +490,7 @@ function sbEditor() {
     list,
     h("div", { class: "sbcentre" },
       h("div", { class: "sbstage" },
-        h("div", { class: "row", style: "margin-bottom:10px" }, h("b", { style: "font:800 22px/1 var(--display)" }, `Scene ${s.n}`), h("span", { class: "chip" }, sbNice(s.template)),
+        h("div", { class: "row", style: "margin-bottom:10px" }, h("b", { class: "sbtitle" }, `Scene ${s.n}`), h("span", { class: "chip" }, sbNice(s.template)),
           h("span", { class: "hint" }, `${ts(s.start)} · ${s.dur.toFixed(1)} s`), ...sbFlags(s), h("div", { class: "spacer" }),
           h("button", { class: "btn small", disabled: !prev, title: "Previous scene", "aria-label": "Previous scene", onclick: () => prev && sbOpenScene(prev.sid) }, "‹"),
           h("button", { class: "btn small", disabled: !next, title: "Next scene", "aria-label": "Next scene", onclick: () => next && sbOpenScene(next.sid) }, "›"),
@@ -518,7 +520,7 @@ async function showShots(reload = true) {
   if (reload || !sh) { try { sh = await api(`/api/jobs/${current}/shots`); } catch (e) { toast(e.message); return; } }
   if (!shOpen) return;
   if (shSel !== null && !sh.shots[shSel]) shSel = null;
-  m.replaceChildren(shTop(), ...(sh.busy ? [progressCard(), h("p", { class: "hint" }, "The shots come back when the render has finished.")]
+  fill(m, shTop(), ...(sh.busy ? [progressCard(), h("p", { class: "hint" }, "The shots come back when the render has finished.")]
     : !sh.ok ? [h("div", { class: "banner warn" }, "The script has errors; fix them in the Script tab first: " + sh.errors.map(e => `line ${e.line}: ${e.msg}`).join("; "))]
     : [shSel !== null ? shEditor(sh.shots[shSel]) : shGrid()]));
 }

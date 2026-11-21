@@ -733,6 +733,33 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
       (an edited script only gets its rendering_method: line changed, as before). Check: tools/check_script_kits.py
       ("script kits: clean": every sample passes Check as its style, full and Short). Tested in a headless browser
       on a cloud copy: all 5 styles x full/Short load their own sample + prompt; presets clean.
+- [x] UI REDESIGN (2026-11-20, branch varun/ui-redesign, docs/ui_redesign/UI_REDESIGN.md, target ui_mockup.png): lavender
+      theme (light default, dark, system; every colour a token in ui/studio.css), Plus Jakarta Sans bundled in ui/fonts
+      (OFL.txt; served at /ui/fonts/, Jost + Barlow no longer used by the UI), no ambient background / tally light.
+      Top bar = hamburger + logo + "+ Short" / "+ Full video"; the menu is a tree (Recent videos with search + Manage,
+      Create, Studio = health rows + theme, Account), open on wide screens / overlay under 1100 px, remembered per
+      browser; Esc closes it, / focuses the search. Job page: video, then Thumbnails + For YouTube Studio side by side
+      (Title / Description / Tags / Chapters, each with Copy), then collapsed Script / Render details / Notes / Render
+      log; warnings are hidden in Notes once a render was asked for, one collapsed line on the new-video screen.
+      Picture styles = segmented control. Screenshots docs/ui_redesign/screenshots/ (light + dark, 1440 + 390 px).
+- [ ] WEB SERIES (docs/series/SERIES_PLAN.md, one PR per phase). Phase 1 FOUNDATION (2026-11-21, branch
+      varun/series-foundation, docs/SCRIPT_FORMAT.md section 9): series/<id>/ folders (series.md bible, cast/*.md,
+      sets/*.md, episodes/epNN.md; in git) read by pipeline/series/bible.py; episode scripts (`## SCENE n | PLACE |
+      TIME`, `[cast: KAI at left, ...]`, `NAME (emotion, camera): line`, `NARRATOR:`) parsed by pipeline/series/script.py
+      into one segment + one shot per line; rendering_method: series = the Blocky 3D engine at 16:9
+      (pipeline/series/render.py + the "web series" section of pipeline/blocky3d/js/world.js: grade per scene, blocking,
+      everyone facing each other, the speaker's own mouth on their own words with a drawn talking mouth on the studio
+      faces, automatic framing: two-shot / medium close-up / over-the-shoulder / listener reaction / wide, a camera fill
+      light, scene cards, subtitles in the bottom third). One Kokoro voice per cast member + voice effects
+      (pipeline/series/voicefx.py: deep, robot, echo, radio, whisper; timing kept) via a per-segment voice in
+      assemble._timeline (classic scripts unchanged). Check: unknown character / [cast:] name = error, line over 25 words,
+      dead character speaking, unknown emotion = warnings; packaging keys and [fight:]/[power:]/[action:] accepted and
+      skipped. UI: "+ New" = Video (Full video, Short) | Web series (New episode of a series, New series); Series
+      section above Recent videos (episodes with status dots, Series bible / Cast / Sets / New episode); series page
+      (arc strip, cast grid with portraits + "hear voice", sets, episodes); episode editor (#series/<id>/<epNN.md>:
+      Save / Check / Make final / Draft first, saving into the series folder). API /api/series... Sample:
+      series/sample-series ("Night Current", KAI + VEX + narrator, 3 sets), ep01.md final 3:04 1920x1080 in 133 s
+      (17 ms a frame), -14.2 LUFS (job 20261121-104347-4fb2fa). tools/check_series.py = "series: clean".
 - [ ] Phase 8 vertical motion + motion Shorts (not started).
         Root .gitignore venv entries are now anchored (/bin/ /lib/ ...) so motion/src/lib is tracked.
 - [x] Video types (2026-11-09, docs/VIDEO_TYPES.md): type header + presets, two dashboard buttons, clip picker with
@@ -776,6 +803,7 @@ Job files: script.md, draft.mp4, final.mp4, thumb_1..3.jpg, metadata.txt, render
 - Preset check (must say "presets: clean"): `bin/python tools/check_presets.py`
 - Storyboard edit-layer check (must say "storyboard: clean"): `bin/python tools/check_storyboard.py`
 - Script kit check (must say "script kits: clean"): `bin/python tools/check_script_kits.py` (each style's prompt + sample)
+- Web-series check (must say "series: clean"): `bin/python tools/check_series.py` (bibles, episodes, Check rules, voice effects)
 - GitHub login (gh CLI, your own account): `gh auth status`.
 - Start Video Studio, then open http://localhost:8765 : `~/youtube-pipeline/bin/python ~/youtube-pipeline/render_server.py`
 - Restart Video Studio (after code changes): `launchctl kickstart -k gui/$(id -u)/com.videostudio.server`

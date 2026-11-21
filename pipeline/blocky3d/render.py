@@ -104,9 +104,10 @@ def ready():
                                     "bin/python tools/fetch_blocky3d_assets.py")
 
 
-def build(meta, parsed, spans, words, W, H, project, warnings):
+def cast_data(meta_cast):
+    """The cast as world.js draws it: a studio character (GLB) or a code-drawn rig with a preset's clothes."""
     cast = {}
-    for name, c in meta["cast"].items():
+    for name, c in meta_cast.items():
         if c.get("model"):                         # a studio character (GLB); a crowd of them = seeded random colours
             cast[name] = {"model": c["model"], "count": c["count"], "random": c["count"] > 1, "skin": "#f2d0a7",
                           "lashes": "girl" in c["id"] or c["id"] in LASHES}
@@ -114,6 +115,11 @@ def build(meta, parsed, spans, words, W, H, project, warnings):
         p = presets.load("blocky_cast", c["preset"])
         cast[name] = {k: p.get(k) for k in ("skin", "hair", "hair_colour", "shirt", "shirt_colour", "shirt_colour2",
                                             "pants_colour", "random")} | {"count": c["count"]}
+    return cast
+
+
+def build(meta, parsed, spans, words, W, H, project, warnings):
+    cast = cast_data(meta["cast"])
     shots = []
     for i, (sh, (st, d)) in enumerate(zip(parsed["shots"], spans)):
         shots.append({"start": round(st, 3), "end": round(st + d, 3), "type": sh["type"], "who": sh.get("who", []),

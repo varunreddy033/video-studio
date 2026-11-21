@@ -35,7 +35,12 @@ def _timeline(parsed, job_dir, progress):
     t, out = 0.0, []
     for k, seg in enumerate(segs):
         progress("voice", k, len(segs))
-        wav, dur, words = voice.synth(seg["text"], meta["voice"], meta["speed"], job_dir)
+        # web-series episodes: every line has its speaker's own voice, speed and voice effect (pipeline/series)
+        wav, dur, words = voice.synth(seg["text"], seg.get("voice") or meta["voice"], seg.get("speed") or meta["speed"],
+                                      job_dir)
+        if seg.get("voice_fx"):
+            from .series import voicefx
+            wav = voicefx.apply(wav, seg["voice_fx"], job_dir)
         if k > 0:
             t += C.GAP_AFTER_PARAGRAPH if seg["new_paragraph"] else C.GAP_IN_PARAGRAPH
         t += seg["pause_before"]

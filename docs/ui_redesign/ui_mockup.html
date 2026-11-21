@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Studio — redesign mockup</title>
+<!-- Mockup only. In the real app the font is bundled locally (assets/fonts, OFL), not loaded from Google. -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ff; --bg-2:#efebff; --panel:#ffffff; --panel-2:#faf9ff; --line:#e6e1fb; --line-2:#d6cef8;
+  --ink:#1d1634; --ink-2:#3d3558; --muted:#6e678a;
+  --accent:#7c5cff; --accent-2:#a78bfa; --accent-ink:#ffffff; --accent-soft:#ede8ff; --accent-text:#5b3fe0;
+  --ok:#14915a; --ok-soft:#e3f6ec; --info:#3b5bdb; --info-soft:#e8edff; --warn:#a15c00; --warn-soft:#fff2dc; --bad:#d03050; --bad-soft:#fde7ec;
+  --radius:16px; --radius-s:10px;
+  --shadow:0 1px 2px rgba(40,20,110,.06),0 10px 30px -14px rgba(60,30,160,.22);
+  --font:"Plus Jakarta Sans",ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+/* top bar */
+.top{height:64px;display:flex;align-items:center;gap:14px;padding:0 22px;background:rgba(255,255,255,.78);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.burger{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer}
+.burger i{display:block;width:16px;height:2px;background:var(--ink);border-radius:2px;box-shadow:0 5px 0 var(--ink),0 -5px 0 var(--ink)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.2px}
+.mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#8b6cff,#c48bff);display:grid;place-items:center;box-shadow:0 6px 14px -6px #7c5cff}
+.mark:after{content:"";border-left:9px solid #fff;border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:3px}
+.grow{flex:1}
+.btn{height:40px;padding:0 18px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:linear-gradient(135deg,#7c5cff,#9b7bff);border-color:transparent;color:#fff;box-shadow:0 8px 18px -10px #7c5cff}
+.btn.soft{background:var(--accent-soft);border-color:transparent;color:var(--accent-text)}
+.btn.small{height:32px;padding:0 12px;font-size:13px;border-radius:10px}
+.plus{font-size:18px;line-height:1;margin-top:-2px}
+/* drawer */
+.wrap{display:flex}
+.drawer{width:290px;flex:none;height:calc(100vh - 64px);position:sticky;top:64px;background:var(--panel);border-right:1px solid var(--line);padding:16px 12px;overflow:auto}
+.sec{margin-bottom:6px}
+.sech{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;font-weight:700;font-size:14px;color:var(--ink-2);cursor:pointer}
+.sech:hover{background:var(--panel-2)}
+.sech .car{margin-left:auto;color:var(--muted);font-size:12px}
+.ico{width:28px;height:28px;border-radius:8px;background:var(--accent-soft);display:grid;place-items:center;color:var(--accent-text);font-size:14px}
+.items{padding:2px 0 8px 12px;border-left:2px solid var(--line);margin-left:25px}
+.vid{display:block;padding:9px 12px;border-radius:10px;cursor:pointer;margin-bottom:2px}
+.vid:hover{background:var(--panel-2)}
+.vid.on{background:var(--accent-soft)}
+.vid b{display:block;font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vid span{font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.dot.ok{background:var(--ok)}.dot.run{background:var(--accent)}.dot.warn{background:#e0a100}.dot.bad{background:var(--bad)}
+.link{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.link:hover{background:var(--panel-2)}
+.link small{margin-left:auto;color:var(--muted)}
+.statusrow{display:flex;justify-content:space-between;padding:6px 12px;font-size:12.5px;color:var(--muted)}
+.statusrow b{color:var(--ok);font-weight:600}
+/* main */
+main{flex:1;min-width:0;padding:28px 36px 60px;max-width:1180px}
+.head{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px}
+h1{font-size:26px;letter-spacing:-.5px;font-weight:800;line-height:1.2}
+.meta{display:flex;gap:10px;align-items:center;margin-top:8px;color:var(--muted);font-size:13px}
+.pill{padding:3px 10px;border-radius:999px;font-weight:600;font-size:12px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.type{background:var(--accent-soft);color:var(--accent-text)}
+.steps{display:flex;gap:8px;margin:4px 0 22px}
+.step{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600;font-size:13px;color:var(--muted)}
+.step .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--bg-2)}
+.step.done{color:var(--ink)}.step.done .n{background:var(--ok);color:#fff}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:18px}
+.card h3{font-size:16px;font-weight:700;letter-spacing:-.2px}
+.row{display:flex;align-items:center;gap:10px}
+.hint{color:var(--muted);font-size:13px}
+.player{aspect-ratio:16/9;border-radius:12px;background:linear-gradient(135deg,#2a1f55,#5b3fbf 60%,#c26bd8);position:relative;overflow:hidden}
+.player:before{content:"";position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;background:rgba(255,255,255,.22);backdrop-filter:blur(4px)}
+.player:after{content:"";position:absolute;left:50%;top:50%;margin:-14px 0 0 -7px;border-left:24px solid #fff;border-top:14px solid transparent;border-bottom:14px solid transparent}
+.bar{position:absolute;left:16px;right:16px;bottom:14px;height:4px;border-radius:4px;background:rgba(255,255,255,.35)}
+.bar i{display:block;width:32%;height:100%;border-radius:4px;background:#fff}
+.facts{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+.facts b{color:var(--ink);font-weight:600}
+.two{display:grid;grid-template-columns:1.25fr 1fr;gap:18px}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.th{border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.th div{aspect-ratio:16/9}
+.th p{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;font-size:12.5px;font-weight:600}
+.th p a{color:var(--accent-text);text-decoration:none}
+.field{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px;background:var(--panel-2)}
+.field .lab{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.field .lab a{color:var(--accent-text);text-transform:none;letter-spacing:0;font-weight:600;cursor:pointer}
+.field p{margin-top:4px;font-size:13.5px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.acc{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;font-weight:700}
+.acc .car{margin-left:auto;color:var(--muted)}
+.acc .sub{font-weight:500;color:var(--muted);font-size:13px}
+.badge{padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--bg-2);color:var(--muted)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.caption{position:fixed;right:18px;bottom:14px;font-size:12px;color:var(--muted)}
+</style></head>
+<body>
+<div class="top">
+  <div class="burger" title="Menu"><i></i></div>
+  <div class="brand"><div class="mark"></div>Video Studio</div>
+  <div class="grow"></div>
+  <button class="btn soft"><span class="plus">+</span> Short</button>
+  <button class="btn primary"><span class="plus">+</span> Full video</button>
+</div>
+<div class="wrap">
+  <nav class="drawer">
+    <div class="sec">
+      <div class="sech"><span class="ico">▶</span>Recent videos<span class="car">▾</span></div>
+      <div class="items">
+        <a class="vid on"><b>Who Is James Bond? Why Is James Bond?…</b><span><i class="dot ok"></i>Final ready · 15:23</span></a>
+        <a class="vid"><b>The Anthropic IPO: How the Company Behind Claude…</b><span><i class="dot run"></i>Rendering · 42%</span></a>
+        <a class="vid"><b>Why One Tiny Mistake Can Break Half the Internet</b><span><i class="dot ok"></i>Final ready · 8:33</span></a>
+        <a class="vid"><b>Tesla Will Now Sell You a Car You Can't Drive</b><span><i class="dot ok"></i>Final ready · 7:14</span></a>
+        <a class="vid"><b>ChatGPT Can Now Spend Your Money</b><span><i class="dot warn"></i>Draft ready · Short</span></a>
+        <a class="link"><span>Show all 24 videos</span><small>→</small></a>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sech"><span class="ico">＋</span>Create<span class="car">▸</span></div>
+    </div>
+    <div class="sec">
+      <div class="sech"><span class="ico">⚙</span>Studio<span class="car">▾</span></div>
+      <div class="items">
+        <div class="statusrow">Images<b>local FLUX.2</b></div>
+        <div class="statusrow">Voice<b>am_michael</b></div>
+        <div class="statusrow">Encoder<b>videotoolbox</b></div>
+        <div class="statusrow">Library<b>32 music · 214 SFX</b></div>
+        <a class="link">Theme<small>Light ◐</small></a>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sech"><span class="ico">☺</span>Account<span class="car">▾</span></div>
+      <div class="items">
+        <a class="link">varunreddy<small>Settings</small></a>
+        <a class="link">Log out</a>
+      </div>
+    </div>
+  </nav>
+  <main>
+    <div class="head">
+      <div class="grow">
+        <h1>Who Is James Bond? Why Is James Bond? When Is James Bond?</h1>
+        <div class="meta"><span class="pill ok">Final ready</span><span>17 Nov, 9:21 AM</span><span>· 15:23 · 1920×1080</span></div>
+      </div>
+      <button class="btn">Storyboard</button>
+      <button class="btn">Re-make</button>
+    </div>
+    <div class="steps">
+      <div class="step done"><span class="n">✓</span>Script checked</div>
+      <div class="step"><span class="n">2</span>Draft (optional)</div>
+      <div class="step done"><span class="n">✓</span>Final + thumbnails</div>
+    </div>
+
+    <div class="card">
+      <div class="player"><div class="bar"><i></i></div></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn primary">Download video</button>
+        <button class="btn">Upload pack (.zip)</button>
+        <div class="grow"></div>
+        <div class="facts"><span><b>15:23</b> long</span><span><b>412 MB</b></span><span>made in <b>47 min</b></span></div>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <div class="row"><h3>Thumbnails</h3><div class="grow"></div><button class="btn small">Remake</button></div>
+        <p class="hint" style="margin-top:4px">Upload all three with Test &amp; compare in YouTube Studio.</p>
+        <div class="thumbs">
+          <div class="th"><div style="background:linear-gradient(120deg,#c9fbe3,#38c99a)"></div><p>Option 1 <a>Download</a></p></div>
+          <div class="th"><div style="background:linear-gradient(120deg,#f4ff9a,#8fe04f)"></div><p>Option 2 <a>Download</a></p></div>
+          <div class="th"><div style="background:linear-gradient(120deg,#b79cff,#ff7cc0)"></div><p>Option 3 <a>Download</a></p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><h3>For YouTube Studio</h3><div class="grow"></div><button class="btn small soft">Copy all</button></div>
+        <div class="field"><div class="lab">Title <a>Copy</a></div><p>Who Is James Bond? Why Is James Bond? When Is James Bond?</p></div>
+        <div class="field"><div class="lab">Description <a>Copy</a></div><p>On November 16, 2026, Amazon MGM named Robert Pattinson the next James Bond. The vampire from Twilight is now 007, while still being Batman…</p></div>
+        <div class="field"><div class="lab">Tags <a>Copy</a></div><p>robert pattinson, james bond, 007, new james bond, the batman…</p></div>
+      </div>
+    </div>
+
+    <div class="acc">Script <span class="sub">2,689 words · saved</span><span class="car">▸</span></div>
+    <div class="acc">Render details <span class="sub">smoothness 9.8/10 · variety 7 of 8 goals · time per stage</span><span class="car">▸</span></div>
+    <div class="acc">Notes <span class="badge">3 warnings, hidden</span><span class="car">▸</span></div>
+  </main>
+</div>
+
+</body></html>

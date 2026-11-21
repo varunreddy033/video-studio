@@ -678,3 +678,64 @@ a lime box; film grain + HUD corner labels; every scene exits with a fast zoom +
 
 Check warns when a scene stays on screen longer than ~6 s. Example: docs/sample_neon_script.md. The reference pack's
 music bed (copyrighted) and its vidIQ voiceover are NOT used; voice = Kokoro, music = the library as usual.
+
+## 9. Web series episodes (`rendering_method: series`)
+
+Episodes of our own animated web series (docs/series/SERIES_PLAN.md): blocky 3D characters acting in 3D sets in 16:9,
+every character with their own voice, a narrator between scenes (pipeline/series, the Blocky 3D engine; ~10 ms a frame).
+A script with a `series:` line and no `rendering_method:` line gets series by itself. Video Studio: **+ New -> Web
+series** (New episode of a series / New series), the **Series** section of the menu and each series' page.
+
+**A series is a folder** `series/<series-id>/` (in git; rendered episodes stay in output/ like every video):
+
+| File | What's in it (front matter `key: value`; `key: |` + indented lines for long text; free notes after `---`) |
+|---|---|
+| `series.md` | title, logline, genre, tone, rating, world, origin, season_question, themes, `arc:` (one line per episode: `1: Title - what happens`), music, colour, narrator (on/off), narrator_voice, narrator_speed, narrator_fx |
+| `cast/<id>.md` | name (one word in capitals, how scripts write it), role (hero, villain, ally, civilian), look (a presets/blocky_cast id or a studio character, e.g. robot_kid, hitman), voice (Kokoro id am_onyx or preset en_us_onyx), speed, voice_fx, colour, personality, speech, catchphrase, powers, status (alive, dead, missing), intro (what "hear voice" says) |
+| `sets/<id>.md` | name, base (a Blocky 3D set: street, bedroom, town_square, ...), time (day, dawn, dusk, night, fog), mood, description |
+| `episodes/epNN.md` | the episodes (format below) |
+
+Voice effects (`voice_fx:` of a cast file, `narrator_fx:`): `deep` (villain, pitch down), `robot` (ring modulation +
+bit crush), `echo` (giant / cosmic hall), `radio` (comms, band-limited), `whisper` (breathy, no pitch). They keep each
+line's timing, so mouths and subtitles stay in sync.
+
+**Episode script:**
+
+```
+---
+series: sample-series
+episode: 1
+title: The Hum
+type: episode                  # 16:9 (episode_short = 9:16 side stories: later)
+rendering_method: series
+music: mystery
+---
+## SCENE 1 | STREET | NIGHT
+[cast: KAI at left, VEX at right]
+NARRATOR: Harbour Bay. Three years after the storm, the street lights still hum a little too loud.
+KAI (nervous): Okay. Okay okay okay. You can stop buzzing now.
+VEX (calm): They usually are, this time of night.
+VEX (cold, close): Your hand is shaking, and the lamp above you is shaking with it.
+```
+
+| Line | Meaning |
+|---|---|
+| `## SCENE n \| PLACE \| TIME` | a new scene: PLACE = a sets/ id of the series or any Blocky 3D set; TIME = day, dawn, dusk, night or fog (the light of the scene). A scene card (SCENE 1 / HARBOUR STREET / NIGHT) is held ~2.4 s before its first line |
+| `[cast: KAI at left, VEX at right]` | who is in the scene and where: left, right, centre, background, far_left, far_right, back_left, back_right. Speakers not listed join automatically. Everyone faces the others |
+| `NAME (emotion, camera): line` | dialogue in the character's own voice; their face shows the emotion and the delivery follows it a little (sad is slower, scared faster, whispering whispers). Emotions: neutral, calm, happy, cheerful, laughing, sad, quiet, angry, furious, shouting, scared, afraid, nervous, worried, shocked, surprised, smirk, smug, determined, cold, menacing, tired, bored, crying, confused, proud, hopeful, whispering |
+| `NARRATOR: line` | the series narrator (series.md) |
+| `[shot: ...]` `[sign: ...]` | Blocky 3D tags (section 6) replace the framing of the next line |
+| `[sfx: ...]` `[pause: ...]` | as everywhere |
+
+Framing is automatic: a two-shot when a scene opens and every few lines, the speaker's medium close-up (head and
+shoulders, looking across the frame) or an over-the-shoulder shot past the listener, the listener's reaction for the
+last part of a long line, a wide shot for the narrator. A camera word in the brackets overrides it: close, medium,
+two_shot, wide, over_shoulder, low, high. Only the speaker's mouth moves, on their own words. Subtitles in the
+bottom third are drawn in the picture (a `captions:` line burns a caption style instead); the .srt is made as always.
+
+Check: an unknown character (not in cast/) or a [cast:] name that isn't in the cast is an error; a line over 25 words,
+a dead character speaking, an unknown emotion and [fight:] / [power:] / [action:] (the action phase, plan step 3) are
+warnings. Problems in the series files themselves are errors of every episode. Packaging (cold open, title sting,
+previously-on, "To be continued", trailer) is plan step 4: `previously:`, `cold_open:`, `theme:` and
+`## TO BE CONTINUED` are accepted and skipped for now. Example: series/sample-series/ (docs/sample_series_script.md is
+a copy of its ep01.md for Load sample; `bin/python tools/check_series.py` keeps them equal).

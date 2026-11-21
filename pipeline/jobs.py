@@ -83,7 +83,7 @@ def check_summary(parsed: dict, job_dir=None) -> dict:
     """What the page shows after Check (no huge lists)."""
     out = _summary(parsed)
     try:
-        if parsed["meta"].get("rendering_method") in ("motion", "blocky3d", "explainer3d", "neon"):
+        if parsed["meta"].get("rendering_method") in ("motion", "blocky3d", "explainer3d", "neon", "series"):
             raise presets.PresetError("motion graphics and blocky 3D use no art style")
         st = presets.load("art_styles", parsed["meta"]["presets"]["art_style"])
         out["art_style"] = {"id": st["id"], "label": st["label"], "realistic": st["realistic"],
@@ -131,7 +131,8 @@ def _summary(parsed: dict) -> dict:
             "shots": [{k: v for k, v in s.items() if k in ("type", "line", "query", "prompt", "text", "sub", "by",
                                                          "value", "prefix", "suffix", "label", "title", "chart",
                                                          "data", "est_start", "est_dur",
-                                                         "who", "action", "camera", "face", "set", "sign")}
+                                                         "who", "action", "camera", "face", "set", "sign",
+                                                         "speaker", "emotion", "frame", "scene")}
                       | {"narration": " ".join(seg["text"] for seg in parsed["segments"] if seg["shot"] == i)[:220]}
                       for i, s in enumerate(parsed["shots"])]}
 
@@ -145,7 +146,8 @@ def save_script(job_id: str, text: str) -> dict:
     fields = {"check": summ, "title": parsed["meta"].get("title") or "Untitled",
               "est_seconds": parsed["stats"]["est_seconds"], "format": parsed["meta"]["format"],
               "type": parsed["meta"]["type"], "clip": parsed["meta"].get("clip"),
-              "rendering_method": parsed["meta"].get("rendering_method", "ai_image")}
+              "rendering_method": parsed["meta"].get("rendering_method", "ai_image"),
+              "series": parsed["meta"].get("series") or None, "episode": parsed["meta"].get("episode") or None}
     if st.get("status") not in ("queued", "rendering"):
         fields["status"] = st.get("status") if st.get("status") in ("draft_ready", "done") else "script"
     set_state(job_id, **fields)
@@ -349,7 +351,7 @@ def _run(job_id: str, mode: str):
 
     gfx = parsed["meta"].get("rendering_method") == "motion"
     rm3 = parsed["meta"].get("rendering_method")
-    blocky = rm3 in ("blocky3d", "explainer3d", "neon")         # styles on the shared engine (pipeline/three_video.py)
+    blocky = rm3 in ("blocky3d", "explainer3d", "neon", "series")         # styles on the shared engine (pipeline/three_video.py)
     if mode == "storyboard":                     # voice + scenes only (pipeline/motion_gfx/storyboard.py)
         from .motion_gfx import render as motion_render
         result = motion_render.render(parsed, d, mode, progress)

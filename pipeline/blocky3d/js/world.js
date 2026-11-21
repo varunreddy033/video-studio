@@ -49,12 +49,14 @@ const GRADES = {
   night: { sky: ["#05070f", "#121c3d", "#2a3566"], fog: [0x1b2240, 40, 190], hemi: [0x7f96d9, 0x1a1a2a, 0.6], sun: [0x9fb6ff, 1.0], exp: 1.2, sunPos: [-30, 70, 20] },
   fog: { sky: ["#9aa6b2", "#b9c3cc", "#d5dbe0"], fog: [0xc7cfd6, 14, 110], hemi: [0xdfe7ee, 0x7a8288, 1.1], sun: [0xe8eef5, 1.1], exp: 1.0, sunPos: [20, 80, 30] },
 };
-const G = GRADES[D.grade] || GRADES.bright;
-const skyTex = canvasTex(4, 256, (g, w, h) => {
+let G = GRADES[D.grade] || GRADES.bright;
+const SKY = {};
+const skyOf = (gr0) => SKY[gr0.sky.join()] || (SKY[gr0.sky.join()] = canvasTex(4, 256, (g, w, h) => {
   const gr = g.createLinearGradient(0, 0, 0, h);
-  gr.addColorStop(0, G.sky[0]); gr.addColorStop(0.62, G.sky[1]); gr.addColorStop(1, G.sky[2]);
+  gr.addColorStop(0, gr0.sky[0]); gr.addColorStop(0.62, gr0.sky[1]); gr.addColorStop(1, gr0.sky[2]);
   g.fillStyle = gr; g.fillRect(0, 0, w, h);
-});
+}));
+let skyTex = skyOf(G);
 const spaceTex = canvasTex(4, 256, (g, w, h) => {
   const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#02030a"); gr.addColorStop(1, "#141a33");
   g.fillStyle = gr; g.fillRect(0, 0, w, h);
@@ -63,12 +65,22 @@ const FOG = new THREE.Fog(G.fog[0], G.fog[1], G.fog[2]);
 scene.background = skyTex;
 scene.fog = FOG;
 renderer.toneMappingExposure = G.exp;
-scene.add(new THREE.HemisphereLight(G.hemi[0], G.hemi[1], G.hemi[2]));
+const hemi = new THREE.HemisphereLight(G.hemi[0], G.hemi[1], G.hemi[2]);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(G.sun[0], G.sun[1]);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 4; sun.shadow.bias = -0.0004;
 Object.assign(sun.shadow.camera, { left: -48, right: 48, top: 48, bottom: -48, near: 1, far: 260 });
 scene.add(sun, sun.target);
+// web series: every scene has its own time of day; Blocky 3D videos keep the one grade they start with
+let curGrade = D.grade;
+function applyGrade(name) {
+  if (name === curGrade) return;
+  curGrade = name; G = GRADES[name] || GRADES.bright; skyTex = skyOf(G);
+  FOG.color.set(G.fog[0]); FOG.near = G.fog[1]; FOG.far = G.fog[2];
+  hemi.color.set(G.hemi[0]); hemi.groundColor.set(G.hemi[1]); hemi.intensity = G.hemi[2];
+  sun.color.set(G.sun[0]); sun.intensity = G.sun[1]; renderer.toneMappingExposure = G.exp;
+}
 
 // ---------------------------------------------------------------- grounds
 function groundTex(kind) {
@@ -143,12 +155,13 @@ function buildBase(lay, grp) {
     for (let i = 0; i < 14; i++) box(8, 16, 2, MAT({ color: cols[i % cols.length] }), -52 + i * 8, 8, -44, grp);
     for (const s of [-1, 1]) for (let i = 0; i < 12; i++) box(2, 14, 9, MAT({ color: cols[(i + 3) % cols.length] }), s * 34, 7, -36 + i * 9, grp);
   }
-  if (lay.stars || D.grade === "night") {
+  if (lay.stars || D.grade === "night" || D.series) {
     const n = 700, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { const a = rnd(i, 3) * Math.PI * 2, b = rnd(i, 4) * 0.45 + 0.08;
       pos.set([Math.cos(a) * Math.cos(b) * 500, Math.sin(b) * 500, Math.sin(a) * Math.cos(b) * 500], i * 3); }
     const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    grp.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false })));
+    grp.userData.stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false }));
+    grp.add(grp.userData.stars);
   }
   if (lay.indoor) {
     const R = lay.room, back = -14;
@@ -420,13 +433,16 @@ function renderAt(t) {
   if (!LOADED) return;
   const si = shotAt(t), sh = D.shots[si], u = t - sh.start, d = Math.max(0.2, sh.end - sh.start);
   const s = clamp01(u / d);
+  if (D.series && sh.grade) applyGrade(sh.grade);
   const S = SETS[sh.set] || Object.values(SETS)[0];
   for (const v of Object.values(SETS)) v.grp.visible = v === S;
+  if (D.series && S.grp.userData.stars) S.grp.userData.stars.visible = !!S.lay.stars || curGrade === "night";
   const indoor = S.lay.indoor;
   scene.background = S.lay.stars ? spaceTex : skyTex;     // space is always black, whatever the grade
   scene.fog = S.lay.stars ? null : FOG;
   for (const a of Object.values(ACTORS)) a.r.root.visible = false;
   if (SEA) SEA.material.map.offset.set(t * 0.01, t * 0.02);
+  if (sh.type === "line" || sh.type === "card") { renderSeries(t, si, sh, u, s, S); return; }
 
   const who = sh.type === "shot" ? sh.who : [];
   const people = who.filter((n) => D.cast[n].count === 1);
@@ -516,6 +532,7 @@ function renderAt(t) {
 }
 
 function overlays(t, si, sh, u) {
+  if (D.series) seriesCard(si, sh, u);
   let k = -1;
   for (let j = 0; j < D.caps.length; j++) if (t >= D.caps[j].t0 && t < D.caps[j].t1) k = j;
   if (k !== lastCap) { capEl.innerHTML = k < 0 ? "" : D.caps[k].html; lastCap = k; }
@@ -528,6 +545,162 @@ function overlays(t, si, sh, u) {
   }
   if (isSign) { const p = spring(u, 0.5, 13); signEl.style.opacity = String(clamp01(u / 0.12));
     signEl.style.transform = `translate(-50%, -50%) scale(${0.7 + 0.3 * p}) rotate(${(1 - p) * -4 + (sh.sign === "note" ? -2 : 0)}deg)`; }
+}
+
+// ---------------------------------------------------------------- web series (rendering_method: series)
+// pipeline/series/render.py sends one shot per spoken line (type "line") or scene card (type "card"):
+// people [{name, x, z}] (the scene's blocking), speaker, listener, focus, faces {name: face}, frame
+// (close | react | ots | medium | two | wide | low | high), body (talk | sad | scared | cry), grade per scene.
+// Each person's mouth moves only on their own words (D.speech_by), everyone faces the others (cheated to camera).
+const SPEECH_BY = D.speech_by || {};
+function mouthOf(name, t) {                       // 0 closed, 1 half, 2 open (a syllable-ish flap inside each word)
+  const ws = SPEECH_BY[name]; if (!ws) return 0;
+  for (const w of ws) if (t >= w[0] && t < w[1]) {
+    const len = Math.max(0.06, w[1] - w[0]), syl = Math.max(1, Math.round(len / 0.17));
+    const v = Math.abs(Math.sin(((t - w[0]) / len) * Math.PI * syl));
+    return v > 0.66 ? 2 : v > 0.25 ? 1 : 0;
+  }
+  return 0;
+}
+// studio faces: the face's own eyes and brows + a drawn talking mouth (instead of swapping to another expression)
+const TALK_TEX = {};
+function talkTex(f, lashes, level) {
+  const key = f + (lashes ? "_l" : "") + level;
+  if (TALK_TEX[key]) return TALK_TEX[key];
+  const base = FACE_TEX[f + (lashes ? "_lashes" : "")] || FACE_TEX[f];
+  if (!base || !base.image) return null;
+  const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d");
+  g.drawImage(base.image, 0, 0, 512, 512);
+  g.clearRect(150, 296, 212, 140);                // the mouth band (eyes and brows end above row 260)
+  const w = level === 2 ? 64 : 48, hh = level === 2 ? 50 : 26, cx = 256, cy = 340;
+  g.fillStyle = "#1c1c22"; g.beginPath(); g.ellipse(cx, cy, w, hh, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "#e0566b"; g.beginPath(); g.ellipse(cx, cy + hh * 0.45, w * 0.62, hh * 0.42, 0, 0, Math.PI * 2); g.fill();
+  if (level === 2) { g.fillStyle = "#ffffff"; g.fillRect(cx - w * 0.6, cy - hh + 2, w * 1.2, hh * 0.28); }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = false;
+  return (TALK_TEX[key] = tex);
+}
+const STUDIO_ONLY = { smile: "happy", laugh: "happy", yelling: "angry", nervous_sweat: "scared", worried: "sad",
+  anime_shocked: "shocked", anime_worried: "scared", smug: "smirk", determined: "angry", glare: "angry", unimpressed: "neutral" };
+function setFace(a, state, level) {
+  if (a.faceMesh) {
+    const f = FACE_TEX[state] || FACE_TEX[state + "_lashes"] ? state : "neutral";
+    a.faceMesh.material.map = (level && talkTex(f, a.lashes, level)) || studioFace(f, a.lashes, false);
+    a.faceMesh.material.needsUpdate = true;
+  } else a.mats.face.map = face(STUDIO_ONLY[state] || state, a.c.skin, level > 0);
+}
+const HEAD_Y = 4.35;
+// a soft key light from the camera's side (no shadows) so faces read at night: series only
+const FILL = new THREE.DirectionalLight(0xfff2e6, 0), FILL_BY = { night: 1.15, dusk: 0.65, fog: 0.5, bright: 0.3 };
+if (D.series) scene.add(FILL, FILL.target);
+function renderSeries(t, si, sh, u, s, S) {
+  const indoor = S.lay.indoor;
+  scene.background = S.lay.stars ? spaceTex : skyTex;
+  scene.fog = S.lay.stars ? null : FOG;
+  for (const p of Object.values(PROPS)) p.visible = false;
+  drawCrowd(0);
+  const ppl = sh.people || [];
+  const at = {};
+  for (const p of ppl) at[p.name] = V(p.x, 0, p.z);
+  // facing: towards the middle of everyone else, cheated 40 % towards the camera (front = +z)
+  ppl.forEach((p, i) => {
+    const a = actor(p.name), me = at[p.name];
+    const others = ppl.filter((q) => q.name !== p.name);
+    let yaw = 0;
+    if (others.length) {
+      const cx = others.reduce((x, q) => x + q.x, 0) / others.length, cz = others.reduce((z, q) => z + q.z, 0) / others.length;
+      yaw = Math.atan2(cx - me.x, cz - me.z) * 0.6;
+    }
+    const talking = sh.type === "line" && p.name === sh.speaker;
+    const k = i * 1.3 + 0.7;
+    let pose = POSE.idle(t, u, k);
+    if (talking) {
+      if (sh.body === "scared") pose = POSE.scared(t, u, k);
+      else if (sh.body === "cry") pose = POSE.cry(t, u, k);
+      else { pose = POSE.talk(t, u, k); if (sh.body === "sad") Object.assign(pose, { headX: 0.2, armR: -0.2 }); }
+    } else if (sh.type === "line" && sh.speaker && SPEECH_BY[sh.speaker]) {
+      pose.headX = 0.05 * Math.max(0, Math.sin(t * 2.4 + k));           // a listener's slow nod
+      pose.headY = (sh.speaker && at[sh.speaker] ? Math.sign(at[sh.speaker].x - me.x) * 0.12 : 0);
+    }
+    applyPose(a.r, pose, me, yaw);
+    a.r.root.visible = true;
+    const level = talking ? mouthOf(p.name, t) : 0;
+    setFace(a, (sh.faces || {})[p.name] && !talking ? sh.faces[p.name] : talking ? (sh.faces || {})[p.name] || "neutral" : "neutral", level);
+  });
+  if (sh.speaker && at[sh.speaker] && sh.type === "line") {            // the speaker's own face for this line
+    const a = actor(sh.speaker), f = (sh.faces || {})[sh.speaker];
+    setFace(a, f || "neutral", mouthOf(sh.speaker, t));
+  }
+
+  // camera: a framing per line, a slow dolly inside the shot, a soft settle on the cut, a little handheld sway
+  const head = (n) => (at[n] || V(0, 0, 0)).clone().add(V(0, HEAD_Y, 0));
+  const facing = (n) => { const a = ACTORS[n]; return a ? a.r.root.rotation.y : 0; };
+  const inOut = 0.5 - 0.5 * Math.cos(Math.PI * s);
+  const settle = 1 + 0.06 * (1 - spring(u, 0.75, 9));
+  const sway = V(0.03 * Math.sin(t * 1.3 + si), 0.02 * Math.sin(t * 1.7 + si * 2), 0);
+  const cen = ppl.length ? ppl.reduce((v, p) => v.add(V(p.x, 0, p.z)), V(0, 0, 0)).multiplyScalar(1 / ppl.length) : V(0, 0, -6);
+  const span = ppl.length > 1 ? Math.max(...ppl.map((p) => p.x)) - Math.min(...ppl.map((p) => p.x)) : 0;
+  let P, L;
+  const frame = sh.type === "card" ? "card" : sh.frame || "wide";
+  const focus = sh.focus && at[sh.focus] ? sh.focus : (ppl[0] || {}).name;
+  if ((frame === "close" || frame === "react") && focus) {
+    // a medium close-up: head and shoulders, the eyes on the upper third, look room on the side they face
+    const F = head(focus), yw = facing(focus), a = yw * 0.55 + (frame === "react" ? -0.08 : 0.06) * Math.sign(yw || 1);
+    const dist = (frame === "react" ? 7.8 : 7.2) * lerp(1.03, 0.96, inOut) * settle;
+    P = F.clone().add(V(Math.sin(a) * dist, 0.15, Math.cos(a) * dist));
+    L = F.clone().add(V(Math.sin(yw) * 0.8, -0.75, 0));
+  } else if (frame === "ots" && focus && sh.listener && at[sh.listener]) {
+    // over the listener's shoulder: the camera behind and outside the listener, so their shoulder only edges the
+    // frame and the speaker faces us across it
+    const F = head(focus), B = head(sh.listener), dir = B.clone().sub(F).setY(0).normalize();
+    let side = V(-dir.z, 0, dir.x);
+    if (side.z < 0) side.multiplyScalar(-1);                              // the side towards the camera (front)
+    P = B.clone().add(dir.clone().multiplyScalar(3.6 * settle)).add(side.multiplyScalar(2.6)).add(V(0, 0.7, 0));
+    L = F.clone().add(V(0, -0.55, 0)).lerp(B, 0.12);
+  } else if (frame === "medium" && focus) {
+    const F = head(focus).add(V(0, -0.9, 0)), yw = facing(focus), a = yw * 0.4;
+    const dist = 9.5 * lerp(1.04, 0.95, inOut) * settle;
+    P = F.clone().add(V(Math.sin(a) * dist, 0.6, Math.cos(a) * dist)); L = F.clone().add(V(Math.sin(yw) * 0.6, 0, 0));
+  } else if (frame === "two" && ppl.length) {
+    const F = cen.clone().add(V(0, 3.3, 0)), dist = (8 + span * 1.25) * lerp(1.05, 0.96, inOut) * settle;
+    const a = (si % 2 ? -1 : 1) * lerp(0.1, 0.02, inOut);
+    P = F.clone().add(V(Math.sin(a) * dist, 0.7, Math.cos(a) * dist)); L = F.clone();
+  } else if (frame === "low" && focus) {
+    const F = head(focus), yw = facing(focus);
+    P = F.clone().add(V(Math.sin(yw * 0.5) * 7, -3.2, Math.cos(yw * 0.5) * 7)); L = F.clone().add(V(0, 0.4, 0));
+  } else if (frame === "high" && focus) {
+    const F = head(focus);
+    P = F.clone().add(V(1.5, 7.5, 7.5 * lerp(1.04, 0.96, inOut))); L = F.clone().add(V(0, -1, 0));
+  } else {                                    // wide / card: the whole place, a slow arc
+    const F = cen.clone().add(V(0, ppl.length ? 3 : 4, ppl.length ? 0 : -6));
+    const dist = (frame === "card" ? 30 : 21 + span) * lerp(1.06, 0.97, inOut);
+    const a = (si % 2 ? -1 : 1) * lerp(0.22, 0.08, inOut);
+    P = F.clone().add(V(Math.sin(a) * dist, dist * (frame === "card" ? 0.36 : 0.22), Math.cos(a) * dist)); L = F.clone();
+  }
+  P.add(sway);
+  if (indoor) { const w = (S.lay.room.w || 26) / 2 - 1; P.x = Math.max(-w, Math.min(w, P.x)); P.z = Math.min(P.z, 40); P.y = Math.min(P.y, (S.lay.room.h || 12) - 0.8); }
+  P.y = Math.max(0.7, P.y);
+  camera.position.copy(P); camera.lookAt(L);
+  FILL.position.copy(P).add(V(0, 2, 0)); FILL.target.position.copy(L); FILL.intensity = FILL_BY[curGrade] ?? 0.4;
+  sun.target.position.set(cen.x, 0, cen.z); sun.position.set(cen.x + G.sunPos[0], G.sunPos[1], cen.z + G.sunPos[2]);
+  renderer.render(scene, camera);
+  overlays(t, si, sh, u);
+}
+const cardEl = document.getElementById("card");
+let lastCard = -1;
+function seriesCard(si, sh, u) {
+  if (!cardEl) return;
+  const on = sh.type === "card";
+  if ((on ? si : -1) !== lastCard) {
+    if (on) { document.getElementById("cardN").textContent = "SCENE " + sh.card.number;
+      document.getElementById("cardP").textContent = sh.card.place; document.getElementById("cardT").textContent = sh.card.time; }
+    lastCard = on ? si : -1;
+  }
+  if (!on) { cardEl.style.opacity = "0"; return; }
+  const d = sh.end - sh.start, fade = Math.min(clamp01(u / 0.35), clamp01((d - u) / 0.35));
+  cardEl.style.opacity = String(fade);
+  const p = spring(u - 0.1, 0.55, 10);
+  document.getElementById("cardP").style.transform = `translateY(${(1 - p) * 18}px) scale(${0.94 + 0.06 * p})`;
+  document.getElementById("cardR").style.transform = `scaleX(${easeOut((u - 0.05) / 0.6)})`;
 }
 
 const ready = Promise.all(loads).then(() => { LOADED = true; renderAt(0); });

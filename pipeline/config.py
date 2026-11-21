@@ -65,7 +65,7 @@ FPS = int(env("FPS", "30"))
 # 2026-11-11, .env DEFAULT_RENDERING_METHOD); ai_image = the original AI-image renderer. Scripts without the line
 # that need AI images (character:, [talk:]/[act:], clip Shorts, style: motion) still get ai_image (script_parser).
 RENDERING_METHODS = {"ai_image": "AI images", "motion": "Motion graphics", "blocky3d": "Blocky 3D",
-                     "explainer3d": "3D explainer", "neon": "Neon motion"}
+                     "explainer3d": "3D explainer", "neon": "Neon motion", "series": "Web series"}
 DEFAULT_RENDERING_METHOD = env("DEFAULT_RENDERING_METHOD", "motion").lower()
 if DEFAULT_RENDERING_METHOD not in RENDERING_METHODS:
     DEFAULT_RENDERING_METHOD = "motion"
@@ -85,6 +85,9 @@ SCRIPT_KITS = {
                     "sample": {"full": "sample_explainer3d_script.md"}},
     "neon": {"prompts": {"full": [("neon", "Neon motion")]},
              "sample": {"full": "sample_neon_script.md"}},
+    # web series: the sample is series/sample-series/episodes/ep01.md (tools/check_series.py keeps the copy identical)
+    "series": {"prompts": {"full": [("series", "Web series episode")]},
+               "sample": {"full": "sample_series_script.md"}},
 }
 SCRIPT_PROMPTS_DIR = BASE_DIR / "docs" / "script_prompts"
 

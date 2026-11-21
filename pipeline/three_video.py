@@ -71,7 +71,8 @@ def render(style, parsed: dict, job_dir: Path, mode: str, progress) -> dict:
     shutil.copy(style.JS_SRC / "world.js", project / "assets/js/world.js")
     for f in style.FONTS:
         shutil.copy(C.FONTS_DIR / f, project / "assets/fonts" / f)
-    data, html, shots, summary, line = style.build(meta, parsed, spans, words, W, H, project, warnings)
+    # (the voice timeline rides along for styles that need each line's own timing, e.g. web-series dialogue)
+    data, html, shots, summary, line = style.build(meta, dict(parsed, timeline=tl), spans, words, W, H, project, warnings)
     (project / "index.html").write_text(html, encoding="utf-8")
     log(f"  project: {line}")
     progress("scenes", 1, 1)

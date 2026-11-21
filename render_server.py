@@ -39,7 +39,7 @@ MEDIA_PREVIEW = ("/preview.mp4", "/preview.wav", "/audio")
 FILE_RE = re.compile(r"(draft|final|short)\.mp4|thumb_[1-3]\.jpg|(short_)?metadata\.txt|script\.md|"
                      r"captions_(draft|final)\.(ass|srt)|upload_pack\.zip")
 SB_FRAME_RE = re.compile(r"/api/jobs/[0-9a-f-]+/storyboard/frame/[0-9a-f-]+")
-UI_FONTS = ("Jost-wght.ttf", "BarlowCondensed-ExtraBold.ttf")    # the app's own type (OFL), also on the login page
+UI_FONTS = ("PlusJakartaSans-wght.ttf",)    # the app's own type (OFL, ui/fonts/OFL.txt), also on the login page
 OPEN = {"/login", "/setup", "/api/login", "/api/setup", "/favicon.ico", "/ui/studio.css"} | {f"/ui/fonts/{f}" for f in UI_FONTS}
 
 
@@ -226,7 +226,7 @@ def studio_css():
 def ui_font(name):
     if name not in UI_FONTS:
         abort(404)
-    resp = send_file(C.ASSETS / "fonts" / name, mimetype="font/ttf", conditional=True)
+    resp = send_file(C.BASE_DIR / "ui" / "fonts" / name, mimetype="font/ttf", conditional=True)
     resp.headers["Cache-Control"] = "public, max-age=604800"
     return resp
 
@@ -588,6 +588,93 @@ def preview_file(key, name):
     if not p.exists():
         abort(404)
     return send_file(p, mimetype="image/jpeg", max_age=3600)
+
+
+# ---------------------------------------------------------------- web series (pipeline/series) ---
+@app.get("/api/series")
+def series_list():
+    from pipeline.series import api as SA
+    return jsonify(SA.list_all())
+
+
+@app.post("/api/series")
+def series_create():
+    from pipeline.series import bible as SB
+    body = request.get_json(silent=True) or {}
+    try:
+        sid = SB.create(str(body.get("title") or ""), str(body.get("logline") or ""))
+    except SB.SeriesError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"id": sid})
+
+
+@app.get("/api/series/<sid>")
+def series_detail(sid):
+    from pipeline.series import api as SA, bible as SB
+    try:
+        return jsonify(SA.detail(sid))
+    except SB.SeriesError as e:
+        return jsonify({"error": str(e)}), 404
+
+
+@app.get("/api/series/<sid>/new_episode")
+def series_new_episode(sid):
+    from pipeline.series import bible as SB
+    try:
+        name, text = SB.episode_template(SB.load(sid))
+    except SB.SeriesError as e:
+        return jsonify({"error": str(e)}), 404
+    return jsonify({"file": name, "text": text})
+
+
+@app.get("/api/series/<sid>/episodes/<name>")
+def series_episode(sid, name):
+    from pipeline.series import bible as SB
+    try:
+        s = SB.load(sid)
+    except SB.SeriesError as e:
+        return jsonify({"error": str(e)}), 404
+    p = s["dir"] / "episodes" / name
+    if not SB.EP_RE.match(name) or not p.is_file():
+        abort(404)
+    return jsonify({"file": name, "text": p.read_text(encoding="utf-8")})
+
+
+@app.put("/api/series/<sid>/episodes/<name>")
+def series_episode_save(sid, name):
+    from pipeline.series import bible as SB
+    body = request.get_json(silent=True) or {}
+    try:
+        SB.save_episode(sid, name, str(body.get("text") or ""))
+    except SB.SeriesError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify({"ok": True, "path": f"series/{sid}/episodes/{name}"})
+
+
+@app.get("/api/series/<sid>/cast/<cid>/voice.wav")
+def series_voice(sid, cid):
+    from pipeline.series import api as SA, bible as SB
+    if not re.fullmatch(r"[a-z0-9_-]{1,40}", cid):
+        abort(404)
+    try:
+        f = SA.voice_preview(sid, cid)
+    except SB.SeriesError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"error": f"voice sample failed: {e}"}), 500
+    return send_file(f, mimetype="audio/wav", conditional=True)
+
+
+@app.get("/api/series/face/<name>.png")
+def series_face(name):
+    """A studio character's face texture (the cast grid's portraits)."""
+    from pipeline.blocky3d import sets as SETS
+    if not re.fullmatch(r"[a-z_]{2,40}", name):
+        abort(404)
+    p = SETS.BASE / "studio" / "textures" / "faces" / f"face_{name}.png"
+    if not p.is_file():
+        abort(404)
+    return send_file(p, mimetype="image/png", conditional=True)
 
 
 @app.get("/api/jobs")

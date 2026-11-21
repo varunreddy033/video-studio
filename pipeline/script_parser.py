@@ -53,7 +53,8 @@ META_KEYS = {"title", "description", "tags", "format", "music", "voice", "speed"
              "icons", "icon_reuse", "icons_pin", "icons_ban",
              "look", "fonts", "icon_style", "scene_order", "show", "camera", "transitions", "critique", "typography",
              "thumbnail_number", "thumbnail_tag", "thumbnail_stamp", "thumbnail_icons", "thumbnail_pose",
-             "thumbnail_layout", "thumbnail_mode", "theme", "cast", "set", "grade"}     # + voice / music: preset ids (presets/), see presets.py
+             "thumbnail_layout", "thumbnail_mode", "theme", "cast", "set", "grade",
+             "series", "episode", "previously", "cold_open"}     # + voice / music: preset ids (presets/), see presets.py
 INTRO_RE = re.compile(r"\b(today we('| a)re|today we will|in this video|welcome (back|to)|hey (guys|everyone)|"
                       r"before we (start|begin)|let's get started|let's dive in)\b", re.I)
 OUTRO_RE = re.compile(r"\b(subscribe|like (and|&) subscribe|see you (next|in the)|thanks for watching|"
@@ -231,6 +232,8 @@ def _parse_visual(kind, arg, line, errors):
 def _default_method(meta, char, clip, shots):
     """No rendering_method: line: blocky3d tags -> blocky3d, scripts that only work with AI images -> ai_image,
     else the default (motion graphics)."""
+    if meta.get("series"):
+        return "series"
     if any(sh["type"] in B3.TAGS for sh in shots):
         return "blocky3d"
     if any(E3.is_scene(sh) for sh in shots):
@@ -288,10 +291,19 @@ def parse(text: str) -> dict:
         para_open = True
 
     is_motion = (meta.get("style") or "").strip().lower() == "motion"
+    rm_head = (meta.get("rendering_method") or "").strip().lower()
+    is_series = rm_head == "series" or (not rm_head and bool(meta.get("series")))
+    if is_series:                      # web-series episode (pipeline/series/script.py, docs/SCRIPT_FORMAT.md section 9)
+        from .series import script as SS
+        meta["series_type"] = (meta.get("type") or "episode").strip().lower()
+        if meta["series_type"] in ("episode", "episode_short"):
+            meta["type"] = "full"       # 16:9 (episode_short is refused by SS.check until it exists)
+        meta["series_theme"] = meta.pop("theme", "")   # theme: = the series title card here, not a storyboard theme
+        segments, shots, chapters = SS.parse_body(lines, start, meta, err, warn)
     if is_motion:                      # style: motion -> v3 scene tags (pipeline/script_v3.py)
         from . import script_v3
         segments, shots, chapters = script_v3.parse_body(lines, start, meta, err, warn)
-    if not is_motion:
+    if not is_motion and not is_series:
         for i in range(start, len(lines)):
             ln = i + 1
             raw = lines[i].rstrip()
@@ -522,7 +534,7 @@ def parse(text: str) -> dict:
         reuse = str(meta.get("icon_reuse") or "").strip()
         if reuse and not (reuse.isdigit() and 1 <= int(reuse) <= 5):
             err(1, f"icon_reuse must be a whole number from 1 to 5 (how often one icon may appear), got '{reuse}'")
-    elif rm in ("blocky3d", "explainer3d", "neon"):
+    elif rm in ("blocky3d", "explainer3d", "neon", "series"):
         if not header["captions"]:
             meta["presets"]["captions"] = "none"      # the 2-line key-word captions are drawn in the picture
         for why, bad in (("character: presenters", char), ("clip Shorts", clip), ("style: motion", vstyle == "motion")):
@@ -613,7 +625,7 @@ def parse(text: str) -> dict:
         sh["est_dur"] = round(sum(s["est_dur"] + s["pause_before"] for s in segs), 1)
         limit = (P["hold_talk"] if sh["type"] == "talk" else P["hold_photo"] if sh["type"] in ("ai", "stock", "act")
                  else P["hold_graphic"])
-        if sh["est_dur"] > limit and not is_motion and rm not in ("motion", "blocky3d", "explainer3d", "neon"):      # motion scenes have their own pacing rules
+        if sh["est_dur"] > limit and not is_motion and rm not in ("motion", "blocky3d", "explainer3d", "neon", "series"):      # motion scenes have their own pacing rules
             warn(sh["line"], f"this {sh['type']} shot stays on screen ~{sh['est_dur']:.0f} s; "
                              f"add another shot inside that narration so the picture changes")
         if sh["type"] in CHARACTER_SHOTS and not char:
@@ -641,7 +653,7 @@ def parse(text: str) -> dict:
     if meta["sfx"] == "off":
         for seg in segments:
             seg["sfx"] = []
-    elif meta["sfx"] in ("auto", "rich") and not clip and rm not in ("motion", "blocky3d", "explainer3d", "neon"):   # motion: placed by the animation
+    elif meta["sfx"] in ("auto", "rich") and not clip and rm not in ("motion", "blocky3d", "explainer3d", "neon", "series"):   # motion: placed by the animation
         sfx_cues, sfx_missing = sfx.auto_cues(segments, shots, chapters, sfx_all, meta["sfx"])
     for seg in segments:
         for cue in seg["sfx"]:
@@ -703,7 +715,7 @@ def parse(text: str) -> dict:
         err(1, f"a Short must be at least {P['min_sec']} s; this one is ~{total:.0f} s")
     lo, hi = P["plan_sec"]
     if not (P["max_sec"] and total > P["max_sec"]) and not (P["min_sec"] and total < P["min_sec"]) \
-            and (total < lo or total > hi) and not clip:
+            and (total < lo or total > hi) and not clip and rm != "series":     # (episodes: their own pacing)
         warn(1, f"{P['label']}s are planned at {mins(lo)}-{mins(hi)}; this one is ~{mins(total)}")
     if segments:
         first_text = " ".join(sg["text"] for sg in segments[:2])[:200]
@@ -715,7 +727,7 @@ def parse(text: str) -> dict:
             if OUTRO_RE.search(segments[-1]["text"]):
                 warn(segments[-1]["line"], "end a Short on a line that loops back into the first line, "
                                            "not a sign-off or 'subscribe'")
-        elif "?" not in last_text:
+        elif "?" not in last_text and rm != "series":
             warn(segments[-1]["line"], "end a full video with a question for the comments")
     stats = {
         "segments": len(segments), "shots": len(shots), "words": sum(s["words"] for s in segments),
@@ -761,7 +773,14 @@ def parse(text: str) -> dict:
     elif rm == "neon":
         stats.update(neon=N3.check(meta, shots, err, warn), est_draft_seconds=round(15 + total * 0.6),
                      est_final_seconds=round(20 + total * 1.0))
-    if rm != "blocky3d" and any(sh["type"] in B3.TAGS for sh in shots):
+    elif rm == "series":
+        from .series import script as SS
+        # the Blocky 3D engine at 16:9 (~13 ms a frame) + one Kokoro line per speaker
+        stats.update(series=SS.check(meta, shots, segments, err, warn, key_line),
+                     est_draft_seconds=round(20 + total * 0.6), est_final_seconds=round(25 + total * 1.0))
+    if rm != "series" and (meta.get("series") or meta.get("episode")):
+        err(1, "series: / episode: belong to web-series episodes (rendering_method: series)")
+    if rm not in ("blocky3d", "series") and any(sh["type"] in B3.TAGS for sh in shots):
         err(next(sh["line"] for sh in shots if sh["type"] in B3.TAGS),
             "[shot:] / [sign:] tags need rendering_method: blocky3d")
     if rm != "neon" and any(N3.is_scene(sh) for sh in shots):

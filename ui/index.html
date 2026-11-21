@@ -6,26 +6,66 @@
 <title>Video Studio</title>
 <link rel="stylesheet" href="/ui/studio.css">
 <script>try { const t = localStorage.getItem("vs.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="preload" href="/ui/fonts/PlusJakartaSans-wght.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
-<div class="ambient" aria-hidden="true"><i></i><i></i><b></b></div>
-<header>
-  <h1><span class="tally" aria-hidden="true"></span>Video Studio</h1>
-  <div class="chips" id="health"></div>
-  <div class="row" id="userbox"></div>
-</header>
-<div class="layout">
-  <aside>
-    <div class="newbtns newbtn">
-      <button class="btn primary" id="shortBtn">Make Short</button>
-      <button class="btn primary" id="fullBtn">Make full video</button>
+<header class="top">
+  <button class="burger" id="menuBtn" type="button" aria-label="Menu" aria-controls="menu" aria-expanded="false" title="Menu"><i></i></button>
+  <a class="brand" href="#" id="homeLink" aria-label="Video Studio: new full video"><span class="mark" aria-hidden="true"></span><span class="bt">Video Studio</span></a>
+  <div class="grow"></div>
+  <div class="newwrap">
+    <button class="btn primary" id="newBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="newMenu"><span class="plus" aria-hidden="true">+</span> New</button>
+    <div class="popover" id="newMenu" role="menu" hidden>
+      <div class="pophead">Video</div>
+      <button class="popitem" id="fullBtn" type="button" role="menuitem"><span class="ico" aria-hidden="true">▶</span><span><b>Full video</b><small>16:9, chapters, 3 thumbnails</small></span></button>
+      <button class="popitem" id="shortBtn" type="button" role="menuitem"><span class="ico" aria-hidden="true">▮</span><span><b>Short</b><small>vertical, 15 s to 2:00</small></span></button>
+      <div class="pophead">Web series</div>
+      <button class="popitem" id="newEpBtn" type="button" role="menuitem" aria-expanded="false"><span class="ico" aria-hidden="true">◆</span><span><b>New episode of a series</b><small>pick the series</small></span></button>
+      <div class="popsub" id="newEpList" hidden></div>
+      <button class="popitem" id="newSeriesBtn" type="button" role="menuitem"><span class="ico" aria-hidden="true">＋</span><span><b>New series</b><small>a bible, cast and sets</small></span></button>
     </div>
-    <div class="jobtools" id="jobtools"></div>
-    <div class="joblist" id="jobs"></div>
-  </aside>
+  </div>
+</header>
+<div class="shell">
+  <nav class="drawer" id="menu" aria-label="Menu">
+    <div class="msearch"><label class="vh" for="jobSearch">Search videos</label>
+      <input id="jobSearch" type="search" placeholder="Search videos" autocomplete="off" spellcheck="false"><kbd aria-hidden="true">/</kbd></div>
+    <div class="sec" data-sec="series">
+      <button class="sech" type="button"><span class="ico" aria-hidden="true">◆</span>Series<span class="car" aria-hidden="true">▾</span></button>
+      <div class="items" id="seriesTree"></div>
+    </div>
+    <div class="sec" data-sec="recent">
+      <button class="sech" type="button"><span class="ico" aria-hidden="true">▶</span>Recent videos<span class="car" aria-hidden="true">▾</span></button>
+      <div class="items">
+        <div class="joblist" id="jobs"></div>
+        <div class="jobtools" id="jobtools"></div>
+      </div>
+    </div>
+    <div class="sec" data-sec="create">
+      <button class="sech" type="button"><span class="ico" aria-hidden="true">＋</span>Create<span class="car" aria-hidden="true">▾</span></button>
+      <div class="items">
+        <button class="navlink" type="button" id="mkFull">Full video</button>
+        <button class="navlink" type="button" id="mkShort">Short from scratch</button>
+        <button class="navlink" type="button" id="mkClip">Short from a video I already made</button>
+        <button class="navlink" type="button" id="mkSample">Load a sample<small>passes Check</small></button>
+      </div>
+    </div>
+    <div class="sec" data-sec="studio">
+      <button class="sech" type="button"><span class="ico" aria-hidden="true">⚙</span>Studio<span class="car" aria-hidden="true">▾</span></button>
+      <div class="items">
+        <div id="health"></div>
+        <div class="themerow"><span>Theme</span><div class="seg tiny" id="themeSeg" role="group" aria-label="Theme"></div></div>
+      </div>
+    </div>
+    <div class="sec" data-sec="account">
+      <button class="sech" type="button"><span class="ico" aria-hidden="true">☺</span>Account<span class="car" aria-hidden="true">▾</span></button>
+      <div class="items" id="userbox"></div>
+    </div>
+  </nav>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
   <main id="main"></main>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const STATUS = {
@@ -34,7 +74,7 @@ const STATUS = {
 };
 const STAGE_ORDER = ["voice", "images + presenter", "visuals", "timeline", "picture (Remotion)", "captions", "audio mix", "encode", "mux"];
 const STAGES = ["voice", "visuals", "captions", "audio mix", "encoding", "thumbnails"];
-const TYPE_LABEL = { stock: "AI photo", ai: "AI image", card: "card", number: "number", quote: "quote", chart: "chart" };
+const TYPE_LABEL = { stock: "AI photo", ai: "AI image", card: "card", number: "number", quote: "quote", chart: "chart", line: "line" };
 let health = {}, current = null, data = null, editText = null, lastReport = null, pollTimer = null, tab = null;
 let newText = "", newKind = "full", loadedSample = "";   // full | short-choice | short | clip
 
@@ -52,6 +92,8 @@ function h(tag, attrs = {}, ...kids) {
     e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
   return e;
 }
+// replaceChildren() would turn a null child into the text "null": drop empty children first
+function fill(el, ...kids) { el.replaceChildren(...kids.flat().filter(k => k !== null && k !== undefined && k !== false)); return el; }
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show");
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2400); }
 async function api(path, opts = {}) {
@@ -69,100 +111,141 @@ function when(t) { const d = new Date(t * 1000); return d.toLocaleDateString(und
   " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
 const file = (name, extra = "") => `/api/jobs/${current}/file/${name}?v=${Math.round((data && data.updated) || 0)}${extra}`;
 
-// ----------------------------------------------------------------- header
+// ----------------------------------------------------------------- menu (the collapsible drawer)
+// Open by default on wide screens (pushes the page), closed under 1100 px (slides over it). The wide-screen choice and
+// which sections are open are remembered in this browser; storage can be missing (private window), so every access is guarded.
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const WIDE = matchMedia("(min-width: 1100px)");
+const SEC_DEFAULT = { series: true, recent: true, create: false, studio: true, account: true };
+function menuOpen() { return document.body.classList.contains("menu-open"); }
+function setMenu(open, remember = true) {
+  document.body.classList.toggle("menu-open", open);
+  $("#menuBtn").setAttribute("aria-expanded", String(open));
+  if (remember && WIDE.matches) store.set("vs.menu", open);
+}
+function closeMenuIfOverlay() { if (!WIDE.matches && menuOpen()) setMenu(false, false); }
+setMenu(WIDE.matches ? store.get("vs.menu", true) : false, false);
+WIDE.addEventListener("change", () => setMenu(WIDE.matches ? store.get("vs.menu", true) : false, false));
+$("#menuBtn").onclick = () => setMenu(!menuOpen());
+$("#scrim").onclick = () => setMenu(false, false);
+document.querySelectorAll(".sec").forEach((sec) => {
+  const id = sec.dataset.sec, btn = sec.querySelector(".sech"), items = sec.querySelector(".items");
+  if (!items.id) items.id = "sec-" + id; btn.setAttribute("aria-controls", items.id);
+  const draw = (open) => { btn.setAttribute("aria-expanded", String(open)); items.hidden = !open; };
+  draw(store.get("vs.menuSecs", SEC_DEFAULT)[id] ?? SEC_DEFAULT[id]);
+  btn.onclick = () => { const open = btn.getAttribute("aria-expanded") !== "true"; draw(open);
+    store.set("vs.menuSecs", { ...SEC_DEFAULT, ...store.get("vs.menuSecs", {}), [id]: open }); };
+});
+function openSec(id) { const sec = document.querySelector(`.sec[data-sec="${id}"]`), btn = sec && sec.querySelector(".sech");
+  if (btn && btn.getAttribute("aria-expanded") !== "true") btn.click(); }
+document.addEventListener("keydown", (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target || {}).tagName || "") || (e.target || {}).isContentEditable;
+  if (e.key === "Escape" && menuOpen() && !WIDE.matches) { setMenu(false, false); $("#menuBtn").focus(); }
+  else if (e.key === "Escape" && e.target === $("#jobSearch")) { $("#jobSearch").value = ""; drawJobs(); $("#jobSearch").blur(); }
+  else if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault(); if (!menuOpen()) setMenu(true, WIDE.matches); openSec("recent"); $("#jobSearch").focus(); }
+});
+document.addEventListener("click", (e) => {     // a click outside the overlay menu closes it
+  if (!WIDE.matches && menuOpen() && !$("#menu").contains(e.target) && !$("#menuBtn").contains(e.target)) setMenu(false, false);
+});
+
+// ----------------------------------------------------------------- Studio section (this Mac's health)
 async function loadHealth() {
   try { health = await api("/health"); } catch { health = {}; }
   drawHealth();
 }
-// Header chips. With a video's Check report on screen they show THAT video's picture style, voice, music and sound
-// effects (they change as soon as a Look & sound choice re-checks the script); a click opens that Look & sound tab.
-// Without one they show this Mac's defaults.
+// With a video's Check report on screen, a click on a row opens that Look & sound tab (the rows show this Mac's set-up).
 let headerReport = null;
-function setHeaderLook(r) { headerReport = r && !isClip(r) ? r : null; drawHealth(); }
+function setHeaderLook(r) { headerReport = r && !isClip(r) ? r : null; }
 function openLookTab(id) {
   const look = $("#look"), btn = look && look.querySelector(`.ltab[data-tab="${id}"]`);
   if (!btn) { toast(headerReport ? "That choice isn't available for this video" : "Open a video's script and press Check to change this for that video"); return; }
+  closeMenuIfOverlay();
   const det = look.closest("details"); if (det) det.open = true;
   btn.click();
   ($("#look") || look).scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
 function drawHealth() {
   const c = $("#health"); if (!c) return;
-  const r = headerReport, st = (r && r.stats) || {}, motion = st.rendering_method === "motion";
-  const chip = (text, cls, title, onclick) => h("button", { class: "chip chipbtn " + cls, type: "button", title, onclick }, text);
+  const row = (name, value, cls, title, onclick) => h("button", { class: "statusrow", type: "button", title, onclick }, h("span", {}, name), h("b", { class: cls }, value));
   const flux = health.local_image_model;
-  const pictures = !r ? chip(flux ? "Images: local FLUX.2" : "Images: cached only on this machine", flux ? "ok" : "warn",
-      flux ? "New AI images are made on this Mac. Click to choose a video's picture style." : "New AI images need the Mac; clips and talk + graphics Shorts work here",
-      () => openLookTab("style"))
-    : motion ? chip(`Pictures: motion graphics${(r.show || {}).label ? ", " + (r.show || {}).label.toLowerCase() + " style" : ""}`, "ok", "This video's style (motion graphics). Click to change it.", () => openLookTab(r.show ? "show" : "theme"))
-    : chip(`Art style: ${(r.art_style || {}).label || "default"}`, flux ? "ok" : "warn",
-      (flux ? "AI images on this Mac (FLUX.2)." : "New AI images need the Mac.") + " Click to change this video's art style.", () => openLookTab("style"));
   const enc = (health.encoder || "").replace("h264_", "");
-  c.replaceChildren(pictures,
-    enc ? chip(`Encoder: ${enc}`, "", "Picked automatically for this machine", () => toast(`Videos are encoded with ${health.encoder}: picked automatically for this machine (VIDEO_ENCODER in .env forces another).`)) : "",
-    chip(`Voice: ${r ? (r.voice || {}).label || (r.voice || {}).preset || "?" : health.voice || "?"}`, "ok",
-      r ? "This video's voice. Click to change it." : "Default voice of this Mac (.env). Click to change a video's voice.", () => openLookTab("voice")),
-    chip(`Music: ${r ? musicSummary(r) || "?" : (health.music_tracks ?? "?") + " tracks"}`, r || health.music_tracks ? "" : "warn",
-      r ? "This video's music. Click to change it." : "Music tracks in the library. Click to choose a video's music.", () => openLookTab("music")),
-    chip(`SFX: ${r ? sfxSummary(r) || "?" : (health.sfx_files ?? "?") + " files"}`, "",
-      r ? "This video's sound effects. Click to change them." : "Sound effects in the library. Click to choose a video's sound effects.", () => openLookTab("sfx")));
+  const lib = [health.music_tracks != null ? `${health.music_tracks} music` : "", health.sfx_files != null ? `${health.sfx_files} SFX` : ""].filter(Boolean).join(" · ");
+  fill(c, 
+    row("Images", flux ? "local FLUX.2" : "cached only", flux ? "" : "warn",
+      flux ? "New AI images are made on this Mac. Click to choose a video's picture style." : "New AI images need the Mac; clips and talk + graphics Shorts work here",
+      () => openLookTab(headerReport && (headerReport.stats || {}).rendering_method === "motion" ? (headerReport.show ? "show" : "theme") : "style")),
+    row("Voice", health.voice || "?", "", "Default voice of this Mac (.env). Click to change the open video's voice.", () => openLookTab("voice")),
+    enc ? row("Encoder", enc, "", "Picked automatically for this machine", () => toast(`Videos are encoded with ${health.encoder}: picked automatically for this machine (VIDEO_ENCODER in .env forces another).`)) : "",
+    row("Library", lib || "?", health.music_tracks ? "" : "warn", "Music tracks and sound effects in the library. Click to choose the open video's music.", () => openLookTab("music")));
 }
+// light / dark / follow the Mac (remembered per browser)
+function drawTheme() {
+  const seg = $("#themeSeg"), cur = document.documentElement.dataset.theme || "";
+  fill(seg, ...[["light", "Light"], ["dark", "Dark"], ["", "System"]].map(([t, l]) =>
+    h("button", { type: "button", class: t === cur ? "on" : "", "aria-pressed": String(t === cur), title: t ? `Theme: ${l.toLowerCase()}` : "Theme: follows your Mac",
+      onclick: () => { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+        try { t ? localStorage.setItem("vs.theme", t) : localStorage.removeItem("vs.theme"); } catch (e) {} drawTheme(); } }, l)));
+}
+drawTheme();
 
 // ------------------------------------------------------------------ account
 let me = {};
+function openAccount(part) {
+  if (unsaved() && !confirm("You have unsaved script changes. Leave without saving?")) return;
+  history.replaceState(null, "", "/"); current = "__account"; data = null; editText = null; closeMenuIfOverlay(); drawJobs(); showAccount(part);
+}
 async function loadMe() {
   try { me = await api("/api/me"); } catch { me = {}; }
-  const box = $("#userbox"); box.replaceChildren(
-    themeButton(),
-    h("span", { class: "hint" }, me.user ? `Signed in as ${me.user}` : ""),
-    h("button", { class: "btn small", onclick: () => { history.replaceState(null, "", "/"); current = "__account"; loadJobs(); showAccount(); } }, "Account"),
-    h("button", { class: "btn small", onclick: async () => { await api("/api/logout", { method: "POST" }).catch(() => {}); location.replace("/login"); } }, "Log out"));
+  $("#userbox").replaceChildren(
+    h("button", { class: "navlink", type: "button", onclick: () => openAccount() }, me.user || "Account", h("small", {}, "Settings")),
+    me.admin ? h("button", { class: "navlink", type: "button", onclick: () => openAccount("people") }, "People who can log in") : "",
+    h("button", { class: "navlink", type: "button", onclick: async () => { await api("/api/logout", { method: "POST" }).catch(() => {}); location.replace("/login"); } }, "Log out"));
 }
-// light / dark / follow the Mac (remembered per browser)
-function themeButton() {
-  const order = ["", "dark", "light"], label = { "": "Theme: follows your Mac", dark: "Theme: dark", light: "Theme: light" };
-  const icon = { "": "◐", dark: "☾", light: "☀" };
-  const b = h("button", { class: "btn small themebtn" });
-  const draw = () => { const t = document.documentElement.dataset.theme || ""; b.textContent = icon[t]; b.title = label[t] + " (click to change)"; b.setAttribute("aria-label", label[t]); };
-  b.onclick = () => { const t = order[(order.indexOf(document.documentElement.dataset.theme || "") + 1) % 3];
-    if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
-    try { t ? localStorage.setItem("vs.theme", t) : localStorage.removeItem("vs.theme"); } catch (e) {} draw(); };
-  draw(); return b;
-}
-async function showAccount() {
+async function showAccount(part) {
   clearTimeout(pollTimer); setHeaderLook(null);
-  const m = $("#main"); m.replaceChildren(h("h2", {}, "Account"), h("p", { class: "sub" }, `Signed in as ${me.user}${me.admin ? " (admin)" : ""}.`));
-  const cur = h("input", { type: "password", autocomplete: "current-password", class: "inp" });
-  const nw = h("input", { type: "password", autocomplete: "new-password", class: "inp" });
-  const nw2 = h("input", { type: "password", autocomplete: "new-password", class: "inp" });
+  const m = $("#main"); m.classList.remove("wide");
+  fill(m, h("h1", {}, "Account"), h("p", { class: "sub" }, `Signed in as ${me.user}${me.admin ? " (admin)" : ""}.`));
+  const cur = h("input", { type: "password", autocomplete: "current-password", class: "inp", id: "pwCur" });
+  const nw = h("input", { type: "password", autocomplete: "new-password", class: "inp", id: "pwNew" });
+  const nw2 = h("input", { type: "password", autocomplete: "new-password", class: "inp", id: "pwNew2" });
   m.append(h("div", { class: "card" }, h("h3", {}, "Change password"),
-    h("div", { class: "hint" }, "Current password"), cur, h("div", { class: "hint", style: "margin-top:8px" }, "New password (at least 10 characters)"), nw,
-    h("div", { class: "hint", style: "margin-top:8px" }, "New password again"), nw2,
-    h("div", { class: "row", style: "margin-top:12px" }, h("button", { class: "btn primary", onclick: async () => {
+    h("div", { class: "formgrid" },
+      h("label", { class: "fl", for: "pwCur", style: "margin-top:0" }, "Current password"), cur,
+      h("label", { class: "fl", for: "pwNew" }, "New password (at least 10 characters)"), nw,
+      h("label", { class: "fl", for: "pwNew2" }, "New password again"), nw2),
+    h("div", { class: "actions" }, h("div", { class: "btns", style: "margin-left:0" }, h("button", { class: "btn primary", onclick: async () => {
       if (nw.value !== nw2.value) { toast("The new passwords don't match"); return; }
       try { await api("/api/password", { method: "POST", body: JSON.stringify({ current: cur.value, new: nw.value }) });
-        cur.value = nw.value = nw2.value = ""; toast("Password changed"); } catch (e) { toast(e.message); } } }, "Change password"))));
+        cur.value = nw.value = nw2.value = ""; toast("Password changed"); } catch (e) { toast(e.message); } } }, "Change password")))));
   if (!me.admin) return;
   const list = h("div");
   const draw = async () => { let us = []; try { us = await api("/api/users"); } catch (e) { toast(e.message); }
-    list.replaceChildren(...us.map(u => h("div", { class: "row", style: "padding:6px 0;border-bottom:1px solid var(--line)" },
-      h("b", {}, u.name), h("span", { class: "hint" }, u.admin ? "admin" : "user"), h("div", { class: "spacer" }),
-      u.name === me.user ? null : h("button", { class: "btn small", onclick: async () => {
+    fill(list, ...us.map(u => h("div", { class: "userrow" },
+      h("b", {}, u.name), h("span", { class: "pill " + (u.admin ? "type" : "") }, u.admin ? "admin" : "user"), h("div", { class: "spacer" }),
+      u.name === me.user ? h("span", { class: "hint" }, "you") : h("button", { class: "btn small danger", onclick: async () => {
         if (!confirm(`Remove ${u.name}? They won't be able to log in any more.`)) return;
         try { await api("/api/users/" + encodeURIComponent(u.name), { method: "DELETE" }); draw(); } catch (e) { toast(e.message); } } }, "Remove")))); };
-  const un = h("input", { type: "text", autocomplete: "off", class: "inp", placeholder: "username" });
-  const up = h("input", { type: "password", autocomplete: "new-password", class: "inp", placeholder: "password (at least 10 characters)" });
-  m.append(h("div", { class: "card" }, h("h3", {}, "People who can log in"), list,
-    h("div", { class: "hint", style: "margin-top:12px" }, "Add someone (they can make videos on this Mac; they can't manage users):"),
-    h("div", { class: "row", style: "margin-top:6px" }, un, up, h("button", { class: "btn", onclick: async () => {
+  const un = h("input", { type: "text", autocomplete: "off", class: "inp", placeholder: "username", "aria-label": "New username" });
+  const up = h("input", { type: "password", autocomplete: "new-password", class: "inp", placeholder: "password (at least 10 characters)", "aria-label": "New user's password" });
+  const people = h("div", { class: "card", id: "people" }, h("h3", {}, "People who can log in"), list,
+    h("p", { class: "hint", style: "margin:14px 0 6px" }, "Add someone (they can make videos on this Mac; they can't manage users):"),
+    h("div", { class: "row" }, un, up, h("button", { class: "btn", onclick: async () => {
       try { await api("/api/users", { method: "POST", body: JSON.stringify({ username: un.value, password: up.value }) });
-        un.value = up.value = ""; toast("Added"); draw(); } catch (e) { toast(e.message); } } }, "Add"))));
+        un.value = up.value = ""; toast("Added"); draw(); } catch (e) { toast(e.message); } } }, "Add")));
+  m.append(people);
   draw();
+  if (part === "people") people.scrollIntoView({ block: "start" });
 }
 
-// ---------------------------------------------------------------- sidebar
-let picking = false; const picked = new Set(); let lastJobs = [];
+// ---------------------------------------------------------------- Recent videos
+let picking = false; const picked = new Set(); let lastJobs = []; let showAllJobs = false;
 const BUSY = ["queued", "rendering"];
+const RECENT = 8;
+const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
 async function deleteJobs(ids) {
   // moves the job folders to the Trash (server: jobs.delete); queued / rendering ones are refused there
   if (!ids.length) return;
@@ -177,48 +260,250 @@ async function deleteJobs(ids) {
   if (!picked.size) picking = false;
   loadJobs();
 }
-function drawJobTools() {
+function drawJobTools(shown, total) {
   const box = $("#jobtools");
-  if (!lastJobs.length) { box.replaceChildren(); return; }
-  if (!picking) { box.replaceChildren(h("button", { class: "btn small", title: "Pick several videos to delete", onclick: () => { picking = true; loadJobs(); } }, "Select…")); return; }
-  const pickWhere = (f) => { lastJobs.filter(j => !BUSY.includes(j.status) && f(j)).forEach(j => picked.add(j.id)); loadJobs(); };
-  box.replaceChildren(
+  if (!lastJobs.length) { fill(box); return; }
+  const more = !picking && total > shown ? h("button", { class: "navlink", type: "button", onclick: () => { showAllJobs = true; drawJobs(); } },
+    `Show all ${total} videos`, h("small", { "aria-hidden": "true" }, "→")) : null;
+  const fewer = !picking && showAllJobs && total > RECENT && !$("#jobSearch").value.trim()
+    ? h("button", { class: "navlink minor", type: "button", onclick: () => { showAllJobs = false; drawJobs(); } }, "Show fewer") : null;
+  if (!picking) { fill(box, ...[more, fewer].filter(Boolean),
+    h("button", { class: "navlink minor", type: "button", title: "Pick several videos to delete", onclick: () => { picking = true; showAllJobs = true; drawJobs(); } }, "Manage…")); return; }
+  const pickWhere = (f) => { lastJobs.filter(j => !BUSY.includes(j.status) && f(j)).forEach(j => picked.add(j.id)); drawJobs(); };
+  fill(box, 
+    h("span", { class: "n" }, picked.size ? `${picked.size} selected` : "Tick the videos to delete, or pick:"),
     h("button", { class: "btn small", onclick: () => pickWhere(j => j.status === "failed") }, "Failed"),
     h("button", { class: "btn small", onclick: () => pickWhere(j => !j.has_final) }, "Without final"),
     h("button", { class: "btn small", onclick: () => pickWhere(() => true) }, "All"),
-    h("button", { class: "btn small", onclick: () => { picked.clear(); picking = false; loadJobs(); } }, "Cancel"),
     h("button", { class: "btn small primary", disabled: !picked.size, onclick: () => deleteJobs([...picked]) }, `Delete ${picked.size || ""}`.trim()),
-    h("span", { class: "n" }, picked.size ? `${picked.size} selected` : "tick the videos to delete"));
+    h("button", { class: "btn small quiet", onclick: () => { picked.clear(); picking = false; showAllJobs = false; drawJobs(); } }, "Cancel"));
 }
+function jobLine(j) {
+  // second line under a title: status dot + status + length / % / Short
+  const dot = { done: "ok", rendering: "run", queued: "run", draft_ready: "warn", failed: "bad" }[j.status] || "";
+  let [label] = STATUS[j.status] || [j.status || "Old test"];
+  let extra = j.type === "short" ? "Short" : j.duration ? ts(j.duration) : j.est_seconds ? "~" + ts(j.est_seconds) : "";
+  if (j.status === "rendering") { label = `Rendering ${j.mode || ""}`.trim(); extra = j.total ? `${Math.round(100 * j.done / j.total)}%` : (j.stage || ""); }
+  return h("span", {}, h("i", { class: "sdot " + dot, "aria-hidden": "true" }), [label, extra].filter(Boolean).join(" · "));
+}
+function drawJobs() {
+  const jobs = lastJobs, q = ($("#jobSearch").value || "").trim().toLowerCase();
+  const list = $("#jobs"); fill(list);
+  const found = q ? jobs.filter(j => (j.title || "Untitled").toLowerCase().includes(q) || (j.id || "").includes(q)) : jobs;
+  const shown = q || showAllJobs || picking ? found : found.slice(0, RECENT);
+  if (!jobs.length) list.append(h("div", { class: "empty" }, "No videos yet. Press + Full video or + Short to make the first one."));
+  else if (!found.length) list.append(h("div", { class: "empty" }, `No video matches “${q}”.`));
+  for (const j of shown) {
+    const busy = BUSY.includes(j.status);
+    const title = j.title || "Untitled";
+    const body = [h("b", { title }, title), jobLine(j)];
+    if (picking) {
+      const cb = h("input", { type: "checkbox", "aria-label": "Select " + title });
+      cb.checked = picked.has(j.id); cb.disabled = busy;
+      const flip = () => { if (busy) return; if (picked.has(j.id)) picked.delete(j.id); else picked.add(j.id); drawJobs(); };
+      cb.onclick = (e) => { e.stopPropagation(); flip(); };
+      list.append(h("div", { class: "vid picking" + (picked.has(j.id) ? " on" : ""), onclick: flip, title: busy ? "Can't delete while it renders" : "" },
+        cb, h("div", { style: "min-width:0" }, ...body)));
+    } else {
+      const del = busy ? null : h("button", { class: "del", type: "button", title: "Delete this video", "aria-label": "Delete " + title,
+        onclick: (e) => { e.preventDefault(); e.stopPropagation(); deleteJobs([j.id]); } });
+      if (del) del.innerHTML = TRASH;
+      list.append(h("a", { class: "vid" + (j.id === current ? " on" : ""), href: "#" + j.id, "aria-current": j.id === current ? "page" : null,
+        onclick: (e) => { e.preventDefault(); closeMenuIfOverlay(); select(j.id); } }, ...body, del));
+    }
+  }
+  drawJobTools(shown.length, found.length);
+  if (typeof drawSeriesTree === "function" && seriesList.length) drawSeriesTree();
+}
+$("#jobSearch").addEventListener("input", drawJobs);
 async function loadJobs() {
   let jobs; try { jobs = await api("/api/jobs"); } catch { return; }
   lastJobs = jobs;
-  document.body.classList.toggle("rendering", jobs.some(j => BUSY.includes(j.status)));   // background pauses while rendering
+  document.body.classList.toggle("rendering", jobs.some(j => BUSY.includes(j.status)));
   [...picked].forEach(id => { if (!jobs.some(j => j.id === id)) picked.delete(id); });
-  const list = $("#jobs"); list.replaceChildren();
-  if (!jobs.length) list.append(h("div", { class: "empty" }, "No videos yet."));
-  for (const j of jobs) {
-    let [label, cls] = STATUS[j.status] || [j.status || "old test", ""];
-    if (j.status === "rendering") label = `Rendering ${j.mode || ""}`.trim();
-    const len = j.duration ? dur(j.duration) : j.est_seconds ? "~" + dur(j.est_seconds) : "";
-    const busy = BUSY.includes(j.status);
-    const body = [h("div", { class: "t" }, j.title || "Untitled"),
-      h("div", { class: "m" }, h("span", { class: "chip " + cls }, label), j.type === "short" ? h("span", { class: "chip type" }, "Short") : null,
-        h("span", {}, [len, when(j.created)].filter(Boolean).join("  ·  ")))];
-    if (picking) {
-      const cb = h("input", { type: "checkbox", "aria-label": "Select " + (j.title || "video") });
-      cb.checked = picked.has(j.id); cb.disabled = busy;
-      const flip = () => { if (busy) return; if (picked.has(j.id)) picked.delete(j.id); else picked.add(j.id); cb.checked = picked.has(j.id); drawJobTools(); };
-      cb.onclick = (e) => { e.stopPropagation(); flip(); };
-      list.append(h("div", { class: "job picking" + (picked.has(j.id) ? " active" : ""), onclick: flip, title: busy ? "Can't delete while it renders" : "" },
-        cb, h("div", {}, ...body)));
-    } else {
-      list.append(h("div", { class: "job" + (j.id === current ? " active" : ""), onclick: () => select(j.id) }, ...body,
-        busy ? null : h("button", { class: "del", title: "Delete this video", "aria-label": "Delete " + (j.title || "video"),
-          onclick: (e) => { e.stopPropagation(); deleteJobs([j.id]); } }, "🗑")));
-    }
-  }
-  drawJobTools();
+  drawJobs();
+}
+
+// ---------------------------------------------------------------- web series (pipeline/series, docs/series/SERIES_PLAN.md)
+// Routes: #series/<id> = the series page, #series/<id>/<epNN.md> = an episode's script (edit, check, render).
+let seriesList = [], seriesOpen = store.get("vs.seriesOpen", {});
+const EP_DOT = (j) => !j ? "" : j.has_final ? "ok" : ["queued", "rendering"].includes(j.status) ? "run" : j.has_draft ? "warn" : j.status === "failed" ? "bad" : "";
+const EP_STATE = (j) => !j ? "written" : j.has_final ? "Final ready" : ["queued", "rendering"].includes(j.status) ? "Rendering"
+  : j.has_draft ? "Draft ready" : j.status === "failed" ? "Failed" : "Script saved";
+async function loadSeries() {
+  try { seriesList = await api("/api/series"); } catch { return; }
+  drawSeriesTree(); drawNewEpisodes();
+}
+function drawSeriesTree() {
+  const box = $("#seriesTree");
+  if (!seriesList.length) { fill(box, h("div", { class: "empty" }, "No series yet."),
+    h("button", { class: "navlink", type: "button", onclick: () => newSeries() }, "New series", h("small", { "aria-hidden": "true" }, "＋"))); return; }
+  fill(box, ...seriesList.map((s) => {
+    const open = seriesOpen[s.id] !== false, here = current && current.startsWith("series/" + s.id);
+    const head = h("button", { class: "navlink sername" + (here && current === "series/" + s.id ? " on" : ""), type: "button", "aria-expanded": String(open),
+      onclick: () => { seriesOpen[s.id] = !open; store.set("vs.seriesOpen", seriesOpen); drawSeriesTree(); } },
+      h("span", { class: "car", "aria-hidden": "true" }, open ? "▾" : "▸"), h("b", {}, s.title), h("small", {}, `${s.episodes.length} ep`));
+    if (!open) return h("div", { class: "seritem" }, head);
+    const go = (hash) => (e) => { e.preventDefault(); closeMenuIfOverlay(); location.hash = hash; };
+    return h("div", { class: "seritem" }, head, h("div", { class: "serkids" },
+      ...s.episodes.map((e) => h("a", { class: "vid" + (current === `series/${s.id}/${e.file}` || (e.job && e.job.id === current) ? " on" : ""),
+        href: e.job ? "#" + e.job.id : `#series/${s.id}/${e.file}`, onclick: go(e.job ? e.job.id : `series/${s.id}/${e.file}`) },
+        h("b", { title: e.title }, `Ep ${e.episode}: ${e.title}`),
+        h("span", {}, h("i", { class: "sdot " + EP_DOT(e.job), "aria-hidden": "true" }), EP_STATE(e.job) + (e.job && e.job.duration ? " · " + ts(e.job.duration) : "")))),
+      h("a", { class: "navlink minor", href: `#series/${s.id}`, onclick: go(`series/${s.id}`) }, "Series bible"),
+      h("a", { class: "navlink minor", href: `#series/${s.id}`, onclick: (e) => { go(`series/${s.id}`)(e); seriesAnchor = "cast"; } }, "Cast"),
+      h("a", { class: "navlink minor", href: `#series/${s.id}`, onclick: (e) => { go(`series/${s.id}`)(e); seriesAnchor = "sets"; } }, "Sets"),
+      h("button", { class: "navlink minor", type: "button", onclick: () => { closeMenuIfOverlay(); newEpisode(s.id); } }, "＋ New episode")));
+  }));
+}
+// "+ New": Video (Full video | Short) and Web series (New episode of a series | New series)
+function setNewMenu(open) { $("#newMenu").hidden = !open; $("#newBtn").setAttribute("aria-expanded", String(open)); if (!open) { $("#newEpList").hidden = true; $("#newEpBtn").setAttribute("aria-expanded", "false"); } }
+$("#newBtn").onclick = (e) => { e.stopPropagation(); setNewMenu($("#newMenu").hidden); };
+document.addEventListener("click", (e) => { if (!$("#newMenu").hidden && !e.target.closest(".newwrap")) setNewMenu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#newMenu").hidden) { setNewMenu(false); $("#newBtn").focus(); } });
+$("#newEpBtn").onclick = (e) => { e.stopPropagation(); const l = $("#newEpList"); l.hidden = !l.hidden; $("#newEpBtn").setAttribute("aria-expanded", String(!l.hidden)); };
+$("#newSeriesBtn").onclick = () => { setNewMenu(false); newSeries(); };
+function drawNewEpisodes() {
+  fill($("#newEpList"), ...(seriesList.length ? seriesList.map((s) => h("button", { class: "popitem small", type: "button", role: "menuitem",
+    onclick: () => { setNewMenu(false); newEpisode(s.id); } }, h("span", {}, h("b", {}, s.title), h("small", {}, `${s.episodes.length} episode${s.episodes.length === 1 ? "" : "s"} so far`))))
+    : [h("p", { class: "hint", style: "margin:4px 12px 8px" }, "No series yet: make one first.")]));
+}
+async function newEpisode(sid) {
+  if (unsaved() && !confirm("You have unsaved script changes. Leave without saving?")) return;
+  let t; try { t = await api(`/api/series/${sid}/new_episode`); } catch (e) { toast(e.message); return; }
+  epDraft = { sid, file: t.file, text: t.text, fresh: true };
+  editText = null; location.hash = `series/${sid}/${t.file}`;
+}
+async function newSeries() {
+  const title = prompt("Title of the new series (you can change it later in series.md):");
+  if (!title || !title.trim()) return;
+  const logline = prompt("Logline: one sentence, hero + goal + obstacle + stakes (optional):") || "";
+  try { const r = await api("/api/series", { method: "POST", body: JSON.stringify({ title, logline }) });
+    toast(`Made series/${r.id}/: add cast/*.md and sets/*.md next`); await loadSeries(); location.hash = "series/" + r.id; }
+  catch (e) { toast(e.message); }
+}
+
+let seriesAnchor = null, epDraft = null;
+function portrait(c) {
+  const lk = c.look || {};
+  if (lk.kind === "studio") return h("div", { class: "portrait", style: c.colour ? `--pc:${c.colour}` : null },
+    h("img", { src: `/api/series/face/${lk.face || "neutral"}.png`, alt: "", loading: "lazy" }));
+  // a code-drawn rig: the preset's own colours as a little blocky figure
+  return h("div", { class: "portrait mini", style: c.colour ? `--pc:${c.colour}` : null },
+    h("i", { class: "hair", style: `background:${lk.hair}` }), h("i", { class: "head", style: `background:${lk.skin}` }),
+    h("i", { class: "body", style: `background:${lk.shirt}` }));
+}
+async function showSeries(sid) {
+  clearTimeout(pollTimer); setHeaderLook(null);
+  const m = $("#main"); m.classList.remove("wide");
+  let s; try { s = await api("/api/series/" + sid); } catch (e) { fill(m, h("h1", {}, "Series"), h("div", { class: "banner bad" }, e.message)); return; }
+  const chips = [s.genre, s.tone, s.rating].filter(Boolean).map((x) => h("span", { class: "pill type" }, x));
+  const later = (what) => () => toast(`${what} comes with episode packaging (plan step 4)`);
+  fill(m, h("div", { class: "jhead" },
+      h("div", { class: "tt" }, h("h1", { title: s.title }, s.title), h("div", { class: "meta-line" }, h("span", { class: "pill" }, "Web series"), ...chips,
+        h("span", {}, `${s.episodes.length} episode${s.episodes.length === 1 ? "" : "s"} · ${s.cast.length} characters`))),
+      h("div", { class: "btns" },
+        h("button", { class: "btn", title: `The bible is series/${s.id}/series.md (plain text in the project folder)`,
+          onclick: () => copyText(`series/${s.id}/series.md`).then(() => toast(`Edit series/${s.id}/series.md, cast/*.md and sets/*.md in your editor (path copied)`)) }, "Edit bible"),
+        h("button", { class: "btn", disabled: true, title: "The trailer (ep00) comes with episode packaging, plan step 4", onclick: later("The trailer") }, "Render trailer"),
+        h("button", { class: "btn primary", onclick: () => newEpisode(s.id) }, h("span", { class: "plus", "aria-hidden": "true" }, "+"), " New episode"))),
+    s.logline ? h("p", { class: "sub logline" }, s.logline) : null,
+    s.problems.length ? h("div", { class: "banner bad" }, h("b", {}, `${s.problems.length} problem${s.problems.length > 1 ? "s" : ""} in the series files`),
+      h("ul", { class: "msgs", style: "margin:8px 0 0" }, s.problems.map((p) => h("li", { class: "e", style: "cursor:default" }, h("span", { class: "ln" }, `${p.file}:${p.line}`), h("span", {}, p.msg))))) : null,
+    h("div", { class: "card" }, h("div", { class: "cardhead" }, h("h3", {}, "Season arc"), h("div", { class: "spacer" }),
+        s.season_question ? h("span", { class: "hint" }, s.season_question) : null),
+      s.arc.length ? h("div", { class: "arc" }, s.arc.map((a) => h(a.job || a.file ? "a" : "div", { class: "arccard st-" + a.state,
+          href: a.job ? "#" + a.job : a.file ? `#series/${s.id}/${a.file}` : null },
+        h("span", { class: "n" }, `EP ${a.episode}`), h("b", {}, a.title), a.summary ? h("span", { class: "hint" }, a.summary) : null,
+        h("span", { class: "pill " + { rendered: "ok", draft: "warn", rendering: "info", written: "type", planned: "" }[a.state] }, a.state))))
+        : h("div", { class: "emptystate" }, h("p", {}, "No arc yet: add arc: lines (1: Title - what happens) to series.md."))),
+    h("div", { class: "card", id: "cast" }, h("div", { class: "cardhead" }, h("h3", {}, "Cast")),
+      h("div", { class: "castgrid" },
+        ...s.cast.map((c) => h("div", { class: "castcard" }, portrait(c),
+          h("div", { class: "cc" }, h("div", { class: "row", style: "gap:8px" }, h("b", {}, c.name), h("span", { class: "pill " + (c.role === "villain" ? "bad" : c.role === "hero" ? "ok" : "") }, c.role),
+              c.status !== "alive" ? h("span", { class: "pill warn" }, c.status) : null),
+            h("span", { class: "hint" }, `${c.look.label}${c.look.kind === "studio" ? " (studio)" : ""}`),
+            h("span", { class: "hint" }, `Voice ${c.voice} · speed ${c.speed}${c.voice_fx && c.voice_fx !== "none" ? " · " + c.voice_fx + " effect" : ""}`),
+            c.personality ? h("span", {}, c.personality) : null,
+            c.catchphrase ? h("span", { class: "quote" }, `“${c.catchphrase}”`) : null),
+          h("div", { class: "hear" }, playBtn(c.voice_url, c.name), h("span", { class: "hint" }, "hear voice")))),
+        h("div", { class: "castcard narr" }, h("div", { class: "portrait mini narr", "aria-hidden": "true" }, "N"),
+          h("div", { class: "cc" }, h("b", {}, "NARRATOR"), h("span", { class: "hint" }, s.narrator.on ? `Voice ${s.narrator.voice} · speed ${s.narrator.speed}` : "off in series.md")),
+          h("div", { class: "hear" }, playBtn(s.narrator.voice_url, "the narrator"), h("span", { class: "hint" }, "hear voice")))),
+      !s.cast.length ? h("p", { class: "hint" }, `Add one file per character to ${s.folder}cast/ (name, role, look, voice, voice_fx, personality).`) : null),
+    h("div", { class: "card", id: "sets" }, h("div", { class: "cardhead" }, h("h3", {}, "Sets")),
+      s.sets.length ? h("div", { class: "setlist" }, s.sets.map((x) => h("div", { class: "setrow" }, h("b", {}, x.name), h("span", { class: "pill" }, x.id.toUpperCase()),
+        h("span", { class: "hint" }, `on ${x.base.replace(/_/g, " ")} · ${x.time}${x.mood ? " · " + x.mood : ""}`))))
+        : h("p", { class: "hint" }, `Add places to ${s.folder}sets/ (base: a Blocky 3D set, time: day / dusk / night / fog). SCENE headings can also use any Blocky 3D set.`)),
+    h("div", { class: "card", id: "episodes" }, h("div", { class: "cardhead" }, h("h3", {}, "Episodes"), h("div", { class: "spacer" }),
+        h("button", { class: "btn small soft", onclick: () => newEpisode(s.id) }, "+ New episode")),
+      s.episodes.length ? h("div", { class: "eplist" }, s.episodes.map((e) => h("div", { class: "eprow" },
+        h("i", { class: "sdot " + EP_DOT(e.job), "aria-hidden": "true" }), h("b", {}, `Ep ${e.episode}: ${e.title}`),
+        h("span", { class: "hint" }, EP_STATE(e.job) + (e.job && e.job.duration ? " · " + ts(e.job.duration) : "")), h("div", { class: "spacer" }),
+        h("a", { class: "btn small", href: `#series/${s.id}/${e.file}` }, "Script"),
+        e.job ? h("a", { class: "btn small", href: "#" + e.job.id }, "Open video") : null)))
+        : h("div", { class: "emptystate" }, h("p", {}, "No episodes yet."), h("button", { class: "btn primary", onclick: () => newEpisode(s.id) }, "Write episode 1"))));
+  if (seriesAnchor) { const el = document.getElementById(seriesAnchor); seriesAnchor = null; if (el) el.scrollIntoView({ block: "start" }); }
+}
+async function showEpisode(sid, file) {
+  clearTimeout(pollTimer); setHeaderLook(null);
+  const m = $("#main"); m.classList.remove("wide");
+  let text = "", isNew = false;
+  if (epDraft && epDraft.sid === sid && epDraft.file === file) { text = epDraft.text; isNew = !!epDraft.fresh; }
+  else { try { text = (await api(`/api/series/${sid}/episodes/${file}`)).text; } catch (e) { fill(m, h("h1", {}, "Episode"), h("div", { class: "banner bad" }, e.message)); return; } }
+  epDraft = { sid, file, text, fresh: isNew };
+  if (!seriesList.some((x) => x.id === sid)) await loadSeries();
+  const s = seriesList.find((x) => x.id === sid) || { title: sid, episodes: [] };
+  const ep = s.episodes.find((e) => e.file === file);
+  const ta = h("textarea", { class: "script", spellcheck: "false", "aria-label": "Episode script", oninput: (e) => { epDraft.text = e.target.value; dirty = true; finalBtn.disabled = draftBtn.disabled = true; } });
+  ta.value = text;
+  let dirty = isNew;
+  const out = h("div");
+  const save = async () => { await api(`/api/series/${sid}/episodes/${file}`, { method: "PUT", body: JSON.stringify({ text: epDraft.text }) });
+    dirty = false; epDraft.fresh = false; loadSeries(); };
+  const check = async () => {
+    try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: epDraft.text }) });
+      fill(out, h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => epDraft.text)));
+      finalBtn.disabled = draftBtn.disabled = !r.ok; return r; } catch (e) { toast(e.message); return null; } };
+  const create = async (mode) => {
+    finalBtn.disabled = draftBtn.disabled = true; rememberChoice(mode);
+    try { await save(); const r = await api("/api/jobs", { method: "POST", body: JSON.stringify({ text: epDraft.text, render: mode }) });
+      epDraft = null; select(r.id); } catch (e) { toast(e.message); finalBtn.disabled = draftBtn.disabled = false; } };
+  const finalBtn = h("button", { class: "btn", disabled: true, onclick: () => create("final"), title: "Save the episode file, then render the final" }, "Make final");
+  const draftBtn = h("button", { class: "btn", disabled: true, onclick: () => create("draft"), title: "Save the episode file, then a quick half-size draft" }, "Draft first");
+  markChoice(finalBtn, draftBtn);
+  fill(m, h("div", { class: "jhead" },
+      h("div", { class: "tt" }, h("h1", {}, `${s.title} · Ep ${(file.match(/\d+/) || [""])[0].replace(/^0+/, "")}${ep ? ": " + ep.title : ""}`),
+        h("div", { class: "meta-line" }, h("span", { class: "pill type" }, "Web series episode"), h("span", {}, `series/${sid}/episodes/${file}`),
+          isNew ? h("span", { class: "pill warn" }, "not saved yet") : null)),
+      h("div", { class: "btns" }, h("a", { class: "btn", href: "#series/" + sid }, "Series page"),
+        ep && ep.job ? h("a", { class: "btn", href: "#" + ep.job.id }, "Open video") : null)),
+    h("div", { class: "card" },
+      h("div", { class: "toolbar" }, h("a", { class: "link", href: "/docs/SCRIPT_FORMAT.md", target: "_blank" }, "Script format (section 9)"),
+        h("a", { class: "link", href: "/docs/prompt/series", target: "_blank" }, "Prompt to give Claude"), h("div", { class: "spacer" }),
+        h("span", { class: "hint" }, "NAME (emotion, camera): line · NARRATOR: line · [cast: KAI at left, VEX at right] · ## SCENE n | PLACE | TIME")),
+      ta,
+      h("div", { class: "actions" }, h("span", { class: "hint" }, "Check, then Make final or Draft first (both save the file to the series folder first)."),
+        h("div", { class: "btns" }, h("button", { class: "btn", onclick: async () => { try { await save(); toast("Saved to the series folder"); } catch (e) { toast(e.message); } } }, "Save"),
+          h("button", { class: "btn", onclick: check }, "Check"), finalBtn, draftBtn))),
+    out);
+  check();
+  window.onbeforeunload = () => (dirty ? "" : undefined);
+}
+function seriesReport(r) {
+  const se = (r.stats || {}).series;
+  if (!se) return null;
+  const voices = se.voices || {};
+  return h("div", { class: "serrep" },
+    h("div", { class: "stats" },
+      h("div", { class: "stat" }, h("b", {}, se.scenes.length), h("span", {}, "scenes")),
+      h("div", { class: "stat" }, h("b", {}, Object.values(se.lines).reduce((a, b) => a + b, 0)), h("span", {}, "spoken lines")),
+      h("div", { class: "stat" }, h("b", {}, "~" + dur((r.stats || {}).est_seconds)), h("span", {}, "length (estimated)")),
+      h("div", { class: "stat" }, h("b", {}, "~" + dur((r.stats || {}).est_final_seconds)), h("span", {}, "final render"))),
+    h("table", { class: "shots" }, h("thead", {}, h("tr", {}, h("th", {}, "who"), h("th", {}, "lines"), h("th", {}, "voice"))),
+      h("tbody", {}, Object.entries(se.lines).map(([k, n]) => h("tr", {}, h("td", {}, h("b", {}, k)), h("td", { class: "t" }, n),
+        h("td", { class: "n" }, voices[k] ? `${voices[k].voice} · speed ${voices[k].speed}${voices[k].fx && voices[k].fx !== "none" ? " · " + voices[k].fx : ""}` : ""))))),
+    h("p", { class: "hint" }, "Scenes: " + se.scenes.map((x) => `${x.number}. ${x.place} · ${x.time || x.grade} (${x.cast.join(", ") || "nobody"})`).join("  ·  ")));
 }
 
 // ------------------------------------------------------------- navigation
@@ -228,16 +513,33 @@ function select(id) {
   current = id; data = null; editText = null; lastReport = null; tab = null; sbOpen = false; sb = null; shOpen = false; sh = null; $("#main").classList.remove("wide");
   setHeaderLook(null);
   if ((location.hash.slice(1) || null) !== id) location.hash = id ? "#" + id : "";
-  loadJobs(); refresh(true);
+  window.scrollTo(0, 0); loadJobs(); refresh(true);
 }
-$("#fullBtn").onclick = () => { newKind = "full"; select(null); showNewView(); };
-$("#shortBtn").onclick = () => { newKind = "short-choice"; select(null); showNewView(); };
+function startNew(kind, sample = false) {
+  if (unsaved() && !confirm("You have unsaved script changes. Leave without saving?")) return;
+  editText = null; newKind = kind; wantSample = sample; closeMenuIfOverlay(); setNewMenu(false); select(null); }
+let wantSample = false;   // "Load a sample" in the menu: open the new-video screen with the sample of the chosen picture style
+$("#fullBtn").onclick = () => startNew("full");
+$("#shortBtn").onclick = () => startNew("short-choice");
+$("#homeLink").onclick = (e) => { e.preventDefault(); startNew("full"); };
+$("#mkFull").onclick = () => startNew("full");
+$("#mkShort").onclick = () => startNew("short");
+$("#mkClip").onclick = () => startNew("clip");
+$("#mkSample").onclick = () => { if (!current && newKind === "full" && $("#loadSampleBtn")) { closeMenuIfOverlay(); $("#loadSampleBtn").click(); return; }
+  if (!current && newText.trim() && newText !== loadedSample && !confirm("Replace the script in the box with the sample?")) return;
+  if (!current) newText = ""; startNew("full", true); };
 window.addEventListener("hashchange", () => { const id = location.hash.slice(1) || null; if (id !== current) select(id); });
 window.addEventListener("beforeunload", (e) => { if (unsaved() || (!current && newText.trim())) { e.preventDefault(); e.returnValue = ""; } });
 
 async function refresh(force = false) {
   clearTimeout(pollTimer);
   if (!current) { showNewView(); return; }
+  window.onbeforeunload = null;
+  if (current.startsWith("series/")) {                        // #series/<id> or #series/<id>/<epNN.md>
+    const [, sid, file] = current.split("/");
+    if (file) showEpisode(sid, file); else showSeries(sid);
+    drawSeriesTree(); return;
+  }
   let d; try { d = await api("/api/jobs/" + current); } catch { current = null; showNewView(); return; }
   const running = ["queued", "rendering"].includes(d.status);
   const changed = !data || data.status !== d.status || data.mode !== d.mode;
@@ -276,7 +578,9 @@ function motionScenes(r, onJump, getText) {
     btn, status), grid);
 }
 
-function report(r, onJump, getText) {
+// warnings never block anything. Before a render they are one collapsed line ("4 warnings, show"); on a video that has
+// been rendered (Make final / Draft first pressed) they are hidden here and listed in the job page's Notes section.
+function report(r, onJump, getText, opts = {}) {
   const box = h("div");
   const s = r.stats || {}, by = s.by_type || {};
   if (s.clip) {
@@ -286,7 +590,8 @@ function report(r, onJump, getText) {
       h("div", { class: "stat" }, h("b", {}, "0"), h("span", {}, "new AI images (reuses the source)")),
       h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_final_seconds)), h("span", {}, "render"))));
     box.append(h("p", { class: "hint" }, `From: ${s.clip.source_title}`));
-  } else
+  } else if (s.series) box.append(seriesReport(r));    // web-series episodes: scenes, lines and voices
+  else
   box.append(h("div", { class: "stats" },
     h("div", { class: "stat" }, h("b", {}, s.type_label || "Full video"), h("span", {}, s.type === "short" ? "vertical 1080×1920, up to 2:00" : "16:9 1920×1080")),
     h("div", { class: "stat" }, h("b", {}, "~" + dur(s.est_seconds)), h("span", {}, "length (estimated)")),
@@ -303,12 +608,16 @@ function report(r, onJump, getText) {
   if (r.errors.length) box.append(h("h3", {}, `${r.errors.length} error${r.errors.length > 1 ? "s" : ""} to fix before rendering`),
     h("ul", { class: "msgs" }, r.errors.map(m => item(m, "e"))));
   else box.append(h("div", { class: "okline" }, "✓ No errors. Ready to render."));
-  if (r.warnings.length) box.append(h("h3", {}, `${r.warnings.length} warning${r.warnings.length > 1 ? "s" : ""}`),
-    h("ul", { class: "msgs" }, r.warnings.map(m => item(m, "w"))));
+  const nw = r.warnings.length, wtxt = `${nw} warning${nw > 1 ? "s" : ""}`;
+  if (nw && opts.notes) box.append(h("p", { class: "hint", style: "margin:-4px 0 12px" }, `${wtxt}, hidden: they are in Notes below (warnings never block a render).`));
+  else if (nw) box.append(h("details", { class: "warnline" }, h("summary", {}, `${wtxt}, show`),
+    h("ul", { class: "msgs" }, r.warnings.map(m => item(m, "w")))));
   if (r.chapters && r.chapters.length) box.append(h("p", { class: "hint" }, "Chapters: " + r.chapters.map(c => `${ts(c.est_start)} ${c.title}`).join("  ·  ")));
   if (s.style === "motion" && s.scenes) { box.append(motionScenes(r, onJump, getText)); return box; }
   if (r.shots && r.shots.length) {
-    const what = (x) => x.type === "stock" ? x.query : x.type === "ai" ? x.prompt : x.type === "card" ? x.text + (x.sub ? " — " + x.sub : "")
+    const what = (x) => x.type === "line" ? `${x.speaker || "NARRATOR"} (${x.emotion || "neutral"}${x.frame ? ", " + x.frame : ""})`
+      : x.type === "shot" ? `${(x.who || []).join(", ") || "the place"} · ${x.action || "idle"} · ${x.camera || "auto"}`
+      : x.type === "sign" ? `${x.sign}: ${x.text}` : x.type === "stock" ? x.query : x.type === "ai" ? x.prompt : x.type === "card" ? x.text + (x.sub ? " — " + x.sub : "")
       : x.type === "number" ? `${x.prefix || ""}${x.value}${x.suffix || ""} ${x.label || ""}` : x.type === "quote" ? `“${x.text}” ${x.by ? "— " + x.by : ""}`
       : `${x.chart} chart: ${x.title}`;
     box.append(h("details", { open: r.shots.length <= 40 }, h("summary", {}, `Shot list (${r.shots.length})`),
@@ -378,15 +687,23 @@ function methodPicker(getText, setText, recheck, hooks = {}) {
     : "AI pictures from the image model, with camera moves. Character (presenter) videos always use this.";
     const dh = $("#draftHint"); if (dh) dh.textContent = DRAFT_HINT[sel.value] || DRAFT_HINT.ai_image;
     if (hooks.onShow) hooks.onShow(sel.value); };
-  const sel = h("select", { id: "methodSel", class: "btn small", "aria-label": "Rendering method", onchange: async () => {
+  // a segmented control that behaves like the old <select>: .value (get / set) and an onchange when clicked
+  const sel = h("div", { id: "methodSel", class: "seg", role: "radiogroup", "aria-label": "Pictures" });
+  let value = METHOD_LABEL[cur] ? cur : "motion";
+  const btns = Object.entries(METHOD_LABEL).map(([v, l]) => h("button", { type: "button", role: "radio", "data-v": v, onclick: async () => {
+      if (v === value) return; sel.value = v;
       show();
-      if (hooks.onPick && await hooks.onPick(sel.value)) return;
-      setText(setHeaderKey(getText(), "rendering_method", sel.value));
-      if (getText().trim()) recheck(); } },
-    Object.entries(METHOD_LABEL).map(([v, l]) => h("option", { value: v, selected: v === cur }, l)));
+      if (hooks.onPick && await hooks.onPick(v)) return;
+      setText(setHeaderKey(getText(), "rendering_method", v));
+      if (getText().trim()) recheck(); } }, l));
+  sel.append(...btns);
+  Object.defineProperty(sel, "value", { get: () => value, set: (v) => { value = v;
+    btns.forEach(b => { const on = b.dataset.v === v; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); }); } });
+  sel.value = value;
   sel._show = show; setTimeout(show, 0);   // after the page is built (the draft hint is added later)
   show();
-  return h("label", { class: "row", style: "gap:8px;margin-bottom:10px;align-items:center" }, h("b", {}, "Pictures"), sel, note);
+  return h("div", { style: "margin-bottom:12px" }, h("div", { class: "toolbar", style: "margin-bottom:6px" }, h("span", { class: "lab" }, "Pictures"), sel),
+    h("p", { class: "hint", style: "margin:0" }, note));
 }
 
 // ------------------------------------- look & sound: one card with a tab per choice (each writes a header line)
@@ -418,7 +735,7 @@ function voicePane(r, getText, setText, recheck) {
     const fits = (v, f) => f === "all" || v.gender === f || v.accent === f;
     const pick = (v) => { if (v.id === cur) return; stopSound(); setText(setHeaderKey(getText(), "voice", v.id)); recheck(); };
     const draw = () => {
-      box.replaceChildren(
+      fill(box, 
         h("p", { class: "hint", style: "margin-top:0" }, "The narrator (Kokoro, runs on this Mac). ▶ plays a sample; click a voice to put voice: in the script header. "
           + "The grade is Kokoro's own rating of each voice (A is best)."
           + ((r.stats || {}).character ? ` A voice picked here replaces ${r.stats.character}'s own voice.` : "")
@@ -462,7 +779,7 @@ function musicPane(r, getText, setText, recheck) {
         return tile(sel, () => toggle(t.value), "Use this track", h("div", { class: "vrow" }, playBtn(t.url, t.label),
           h("div", {}, h("b", {}, t.label + (sel ? ` ✓${items.length > 1 ? " " + (items.indexOf(t.value) + 1) : ""}` : "")), h("span", {}, ts(t.seconds))))); })));
     }
-    box.replaceChildren(...kids.filter(Boolean));
+    fill(box, ...kids.filter(Boolean));
   })();
   return box;
 }
@@ -487,7 +804,7 @@ function sfxPane(r, getText, setText, recheck) {
     kids.push(h("div", { class: "mood" }, h("b", {}, "Sounds in the library"), h("span", { class: "hint" }, "“starter” sounds are simple generated ones; a file you add to the same folder is used instead")));
     kids.push(h("div", { class: "voices" }, kinds.map(k => h("div", { class: "style", style: "cursor:default" }, h("div", { class: "vrow" }, playBtn(k.files[0].url, k.kind),
       h("div", {}, h("b", {}, k.kind), h("span", {}, k.starter_only ? "starter sound" : `${k.files.filter(f => !f.starter).length} of your own`)))))));
-    box.replaceChildren(...kids);
+    fill(box, ...kids);
   })();
   return box;
 }
@@ -530,7 +847,7 @@ function iconCard(r, getText, setText, recheck) {
     card.dataset.family = x.family;
     const pins = new Set(x.pinned), used = new Set(x.rows.filter(y => y.icon).map(y => y.icon));
     const banned = x.banned.map(id => h("button", { class: "btn small", onclick: () => toggle("icons_ban", id, false) }, "↺ " + id.split(":")[1]));
-    card.replaceChildren(h("h3", {}, `Icons (${x.family.replace("_", " ")})`),
+    fill(card, h("h3", {}, `Icons (${x.family.replace("_", " ")})`),
       h("div", { class: "stats" },
         h("div", { class: "stat" }, h("b", {}, x.icons), h("span", {}, `different icons in ${x.beats_with_icon} of ${x.beats} scenes (${x.percent_with_icon}%)`)),
         h("div", { class: "stat" }, h("b", {}, `${x.most_used.count}×`), h("span", {}, "most used icon (should be 1)")),
@@ -546,7 +863,7 @@ function iconCard(r, getText, setText, recheck) {
       banned.length ? h("p", { class: "hint" }, "Banned (click to allow again): ", ...banned) : null);
     const old = document.getElementById("variety"), vc = varietyCard(x.variety, true, x.format);
     if (vc) { if (old) old.replaceWith(vc); else card.after(vc); }
-  }).catch((e) => card.replaceChildren(h("h3", {}, "Icons"), h("p", { class: "hint" }, e.message)));
+  }).catch((e) => fill(card, h("h3", {}, "Icons"), h("p", { class: "hint" }, e.message)));
   return card;
 }
 
@@ -623,7 +940,7 @@ function thumbsCard(r, getText, setText, recheck) {
       for (const k of Object.keys(inputs)) { const v = inputs[k].value.trim(); t = setHeaderKey(t, k, v ? v : (k === "thumbnail" ? headerValue(t, k) : null)); }
       setText(t); recheck(); } }, "Apply and redraw");
     const ms = x.options.map(o => o.ms);
-    card.replaceChildren(h("h3", {}, isShort ? "Cover (Short) + 2 alternates" : "Thumbnails (3 options for Test & compare)"),
+    fill(card, h("h3", {}, isShort ? "Cover (Short) + 2 alternates" : "Thumbnails (3 options for Test & compare)"),
       h("p", { class: "hint" }, `Drawn from the script in ${x.cached ? "cache" : x.seconds + " s"} · look: ${(x.look || {}).format || ""}, ${(x.look || {}).icons || ""} · ` +
         `${ms.length ? Math.max(...ms) : 0} ms per option. The final render saves these as thumb_1..3.jpg.`),
       h("div", { class: "thumbs" + (isShort ? " vert" : "") }, x.options.map((o, i) => h("figure", {},
@@ -633,7 +950,7 @@ function thumbsCard(r, getText, setText, recheck) {
       (b.notes || []).length ? h("p", { class: "hint" }, b.notes.join(" · ")) : null,
       h("div", { class: "tfields" }, fields), h("div", { class: "row", style: "margin-top:10px" }, apply,
         h("span", { class: "hint" }, "Empty fields = auto. Icons: names from the Icons card, comma separated.")));
-  }).catch((e) => card.replaceChildren(h("h3", {}, "Thumbnails"), h("p", { class: "hint" }, e.message)));
+  }).catch((e) => fill(card, h("h3", {}, "Thumbnails"), h("p", { class: "hint" }, e.message)));
   return card;
 }
 
@@ -644,7 +961,7 @@ function lookCard(r, getText, setText, recheck) {
   const card = h("div", { class: "card", id: "look" });
   const draw = () => {
     stopSound();
-    card.replaceChildren(h("h3", {}, "Look & sound"),
+    fill(card, h("h3", {}, "Look & sound"),
       h("div", { class: "ltabs", role: "tablist" }, ids.map(id => h("button", { class: "ltab" + (id === lookTab ? " on" : ""), role: "tab",
           "aria-selected": String(id === lookTab), "data-tab": id, onclick: () => { lookTab = id; draw(); } },
         h("b", {}, PANES[id].label), h("span", {}, PANES[id].summary(r) || "")))),
@@ -667,7 +984,7 @@ function stylePane(r, getText, setText, recheck) {
     const auto = tile(cur === "auto", () => pick("auto"), "Let Video Studio choose",
       h("div", { class: "pv wide autopv" }, h("b", {}, "AUTO")), h("b", {}, "Auto (recommended)" + (cur === "auto" ? " ✓" : "")),
       h("span", {}, "Picks the style that fits the topic best and that your last 10 videos used least. Two videos queued together always get different styles."));
-    box.replaceChildren(
+    fill(box, 
       h("p", { class: "hint", style: "margin-top:0" }, "The whole look of the video: colours, fonts, background, which scenes it uses, transitions and sounds. "
         + "Click a style to put show: in the script header. The Variety card below shows the result."),
       h("div", { class: "styles" }, auto, list.map(f => tile(f.id === cur, () => pick(f.id), "Use this style",
@@ -711,7 +1028,7 @@ function cameraPane(r, getText, setText, recheck) {
         h("div", { class: "styles" }, sets.map(([id, label, d]) => tile(c.transitions === id, () => pick("transitions", id, "auto"), "Use these transitions",
           h("b", {}, label + (c.transitions === id ? " ✓" : "")), h("span", {}, d)))));
     }
-    box.replaceChildren(...kids);
+    fill(box, ...kids);
   })();
   return box;
 }
@@ -735,7 +1052,7 @@ function typographyPane(r, getText, setText, recheck) {
     const auto = tile(cur === "auto", () => pick("auto"), "Let Video Studio choose",
       h("div", { class: "pv wide autopv" }, h("b", {}, "AUTO")), h("b", {}, "Auto (recommended)" + (cur === "auto" ? " ✓" : "")),
       h("span", {}, "Picks a type style that suits the video's Style (format) and that your last 5 videos used least."));
-    box.replaceChildren(
+    fill(box, 
       h("p", { class: "hint", style: "margin-top:0" }, "How the words in the scenes look and move: fonts, text effect, how key words stand out "
         + "and the word animations. Click a style to put typography: in the script header. Classic = the look before typography styles."),
       h("div", { class: "styles" }, auto, d.styles.map(x => tile(x.id === cur, () => pick(x.id), "Use this type style", sample(x),
@@ -750,7 +1067,7 @@ function captionsPane(r, getText, setText, recheck) {
     let list; try { list = await lookList("captions", "/api/captions"); } catch (e) { box.firstChild.textContent = e.message; return; }
     const cur = (r.captions || {}).id || list[0].id, def = (r.captions || {}).default || list[0].id;
     const pick = (c) => { if (c.id === cur) return; setText(setHeaderKey(getText(), "captions", c.id === def ? null : c.id)); recheck(); };
-    box.replaceChildren(
+    fill(box, 
       h("p", { class: "hint", style: "margin-top:0" }, "How the words on screen look. Each clip is drawn by the same code as the real video. "
         + "Click a style to put captions: in the script header."
         + ((r.stats || {}).rendering_method === "motion" ? " Motion graphics: No captions is the default, because the scenes already show the key words."
@@ -783,7 +1100,7 @@ function styleCard(r, getText, setText, recheck, bare = false) {
         h("div", { class: "pv" }, pv), h("b", {}, s.label + (s.id === cur ? " ✓" : "")), h("span", {}, s.description),
         s.realistic ? h("small", {}, "Realistic: tick the AI-content box when you upload") : null);
     }));
-    box.replaceChildren(...[bare ? null : h("h3", {}, "Art style"),
+    fill(box, ...[bare ? null : h("h3", {}, "Art style"),
       h("p", { class: "hint", style: bare ? "margin-top:0" : "margin-top:-4px" }, "Used for every [ai:] and [stock:] image and the 2 AI thumbnails. "
         + "Click a style to put art_style: in the script header." + (r.stats && r.stats.character ? " Character scenes ([act:]) keep the character's own style." : "")),
       grid].filter(Boolean));
@@ -807,33 +1124,34 @@ function withType(text, kind) {
   return text.replace(/^---\r?\n/, "---\ntype: short\n");
 }
 function showShortChoice() {
-  const m = $("#main"); m.replaceChildren(h("h2", {}, "Make a Short"),
+  const m = $("#main"); fill(m, h("h1", {}, "Make a Short"),
     h("p", { class: "sub" }, "Vertical 1080×1920, 15 s to 2:00, one thumbnail, #Shorts in the description."),
     h("div", { class: "choices" },
-      h("button", { class: "choice", onclick: () => { newKind = "short"; showNewView(); } },
+      h("button", { class: "choice", onclick: () => { newKind = "short"; showNewView(); } }, h("span", { class: "ico", "aria-hidden": "true" }, "✎"),
         h("b", {}, "From scratch"), h("span", {}, "Paste a short script (type: short). Mostly Sterling talking + graphics, so it needs 0-2 new AI images.")),
-      h("button", { class: "choice", onclick: () => { newKind = "clip"; showNewView(); } },
+      h("button", { class: "choice", onclick: () => { newKind = "clip"; showNewView(); } }, h("span", { class: "ico", "aria-hidden": "true" }, "✂"),
         h("b", {}, "From a video I already made"), h("span", {}, "Pick a finished video and a start and end. Reuses its images and voice, re-framed vertical. No new AI images."))));
 }
 async function showClip() {
-  const m = $("#main"); m.replaceChildren(h("h2", {}, "Short from a video I already made"),
+  const m = $("#main"); fill(m, h("h1", {}, "Short from a video I already made"),
     h("p", { class: "sub" }, "Pick the video, then the moment. The cut snaps to the gaps between words."));
   let list = []; try { list = await api("/api/finished"); } catch (e) { toast(e.message); }
-  if (!list.length) { m.append(h("div", { class: "banner warn" }, "No finished full videos yet. Make a full video first.")); return; }
+  if (!list.length) { m.append(h("div", { class: "card emptystate" }, h("p", {}, "No finished full videos yet. A clip Short is cut from a full video's final."),
+    h("button", { class: "btn primary", onclick: () => startNew("full") }, h("span", { class: "plus", "aria-hidden": "true" }, "+"), " Full video"))); return; }
   let src = null, a = 0, b = 60;
   const listBox = h("div", { class: "srclist" });
   const detail = h("div");
   const parse = (v) => { v = String(v).trim(); if (!/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(v)) return NaN;
     return v.split(":").reduce((t, x) => t * 60 + parseFloat(x), 0); };
   const draw = () => {
-    listBox.replaceChildren(...list.map(j => h("div", { class: "src" + (src && src.id === j.id ? " on" : ""), onclick: () => { src = j; a = 0; b = Math.min(60, j.duration || 60); draw(); } },
+    fill(listBox, ...list.map(j => h("div", { class: "src" + (src && src.id === j.id ? " on" : ""), onclick: () => { src = j; a = 0; b = Math.min(60, j.duration || 60); draw(); } },
       h("span", { class: "t" }, j.title || j.id), h("span", { class: "hint" }, dur(j.duration)))));
-    detail.replaceChildren();
+    fill(detail);
     if (!src) return;
     const vid = h("video", { src: `/api/jobs/${src.id}/file/final.mp4`, controls: true, preload: "metadata" });
-    const sIn = h("input", { class: "inp", value: ts(a) }), eIn = h("input", { class: "inp", value: ts(b) });
+    const sIn = h("input", { class: "inp", value: ts(a), "aria-label": "Start" }), eIn = h("input", { class: "inp", value: ts(b), "aria-label": "End" });
     const lenLine = h("span", { class: "hint" });
-    const title = h("input", { class: "inp", style: "width:100%", value: ((src.title || "").slice(0, 88) + " #Shorts") });
+    const title = h("input", { class: "inp", style: "width:100%", "aria-label": "Title", value: ((src.title || "").slice(0, 88) + " #Shorts") });
     const makeBtn = h("button", { class: "btn primary" }, "Make Short");
     const upd = () => { a = parse(sIn.value); b = parse(eIn.value); const L = b - a;
       const bad = !(L >= 15 && L <= 120);
@@ -857,9 +1175,10 @@ async function showClip() {
         h("span", { style: "margin-left:10px" }, "End"), eIn, h("button", { class: "btn small", onclick: () => setNow(eIn) }, "Set to now"),
         h("button", { class: "btn small", onclick: () => { if (isNaN(a) || isNaN(b)) return; vid.currentTime = a; stopAt = b; vid.play(); } }, "▶ Preview the clip"),
         lenLine),
-      h("div", { class: "hint", style: "margin-top:12px" }, "Title"), title,
-      h("div", { class: "row", style: "margin-top:12px" }, makeBtn,
-        h("span", { class: "hint" }, "Renders the vertical final straight away (about a minute): Sterling re-centred, captions re-made for Shorts."))));
+      h("label", { class: "fl" }, "Title"), title,
+      h("div", { class: "actions" },
+        h("span", { class: "hint" }, "Renders the vertical final straight away (about a minute): Sterling re-centred, captions re-made for Shorts."),
+        h("div", { class: "btns" }, makeBtn))));
     upd();
   };
   draw();
@@ -880,7 +1199,7 @@ async function copyText(text) {
 function kitLinks(box, kit) {
   // one "Prompt to give Claude" link + Copy button per prompt of the chosen style
   const many = kit.prompts.length > 1;
-  box.replaceChildren(...kit.prompts.map(p => h("span", { class: "row", style: "gap:6px" },
+  fill(box, ...kit.prompts.map(p => h("span", { class: "row", style: "gap:6px" },
     h("a", { class: "link", href: p.url, target: "_blank", title: `The ${kit.label} script prompt (opens as text)` },
       many ? `Prompt: ${p.label}` : "Prompt to give Claude"),
     h("button", { class: "btn small", type: "button", title: `Copy the ${kit.label}${many ? " / " + p.label : ""} prompt, then paste it into a Claude chat`,
@@ -892,8 +1211,8 @@ function kitLinks(box, kit) {
 }
 
 function showNew(kind = "full") {
-  const m = $("#main"); m.replaceChildren();
-  const ta = h("textarea", { class: "script", spellcheck: "false", placeholder: kind === "short"
+  const m = $("#main"); fill(m);
+  const ta = h("textarea", { class: "script", spellcheck: "false", "aria-label": "Script", placeholder: kind === "short"
       ? "---\ntitle: ... #Shorts\ntype: short\ncharacter: sterling\n---\n\n[talk: shocked | studio]\nThe surprising fact, first...\n[number: ...]\n..."
       : "---\ntitle: ...\n---\n\n## First chapter\n[stock: ...]\nNarration...",
     oninput: (e) => { newText = e.target.value; createBtn.disabled = true; } });
@@ -921,7 +1240,7 @@ function showNew(kind = "full") {
     { const sel = $("#methodSel"), v = (headerValue(newText, "rendering_method") || health.default_rendering_method || "motion").toLowerCase();
       if (sel && METHOD_LABEL[v] && sel.value !== v) { sel.value = v; if (sel._show) sel._show(); } }
     try { const r = await api("/api/check", { method: "POST", body: JSON.stringify({ text: withType(newText, kind) }) });
-      out.replaceChildren(h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => withType(newText, kind))),
+      fill(out, h("div", { class: "card" }, h("h3", {}, "Check"), report(r, (ln) => jumpTo(ta, ln), () => withType(newText, kind))),
         lookCard(r, () => newText, (t) => { newText = t; ta.value = t; }, doCheck),
         iconCard(r, () => withType(newText, kind), (t) => { newText = t; ta.value = t; }, doCheck) || "",
         thumbsCard(r, () => withType(newText, kind), (t) => { newText = t; ta.value = t; }, doCheck) || "");
@@ -931,32 +1250,37 @@ function showNew(kind = "full") {
     } catch (e) { toast(e.message); } };
   const fileIn = h("input", { type: "file", accept: ".md,.txt,text/markdown,text/plain", style: "display:none", onchange: async (e) => {
     const f = e.target.files[0]; if (!f) return; newText = await f.text(); ta.value = newText; createBtn.disabled = true; doCheck(); } });
-  m.append(h("h2", {}, kind === "short" ? "New Short (from scratch)" : "New full video"),
+  const sampleBtn = h("button", { class: "btn small soft", id: "loadSampleBtn", title: "Loads the sample script of the Pictures choice below (it passes Check)",
+    onclick: () => { if (newText.trim() && newText !== loadedSample && !confirm("Replace the script in the box with the sample?")) return;
+      loadSample(($("#methodSel") || {}).value || health.default_rendering_method || "motion"); } }, "Load sample");
+  m.append(h("h1", {}, kind === "short" ? "New Short (from scratch)" : "New full video"),
     h("p", { class: "sub" }, kind === "short"
       ? "Paste a short script (type: short is added if the header doesn't have it). 15 s to 2:00, hook in the first 2 seconds, end on a line that loops back to the start."
       : "Paste the script.md you wrote with Claude and press Check. Then Make final (straight to the upload files) or Draft first (a quick low-resolution review, then the final)."),
     h("div", { class: "card" },
-      h("div", { class: "row", style: "margin-bottom:10px" },
+      h("div", { class: "toolbar" },
         h("a", { class: "link", href: "/docs/SCRIPT_FORMAT.md", target: "_blank" }, "Script format"),
         kitBox,
         h("div", { class: "spacer" }),
         h("button", { class: "btn small", onclick: () => fileIn.click() }, "Open .md file"), fileIn,
-        h("button", { class: "btn small", title: "Loads the sample script of the Pictures choice below (it passes Check)",
-          onclick: () => loadSample(($("#methodSel") || {}).value || health.default_rendering_method || "motion") }, "Load sample")),
+        sampleBtn),
       methodPicker(() => newText, (t) => { newText = t; ta.value = t; createBtn.disabled = true; }, doCheck, {
         onShow: (v) => { if (v === kitBox._method) return; kitBox._method = v;
           scriptKit(v, kitKind).then((k) => { if (kitBox._method === v) kitLinks(kitBox, k); }).catch((e) => toast(e.message)); },
         // switching style while the box still holds an untouched sample: load that style's sample instead
         onPick: async (v) => (newText.trim() && newText === loadedSample) ? loadSample(v) : false }),
       ta,
-      h("div", { class: "row", style: "margin-top:12px" },
-        h("button", { class: "btn", onclick: doCheck }, "Check"), finalBtn, draftBtn,
-        h("span", { class: "hint", id: "draftHint" }, DRAFT_HINT.motion))),
+      h("div", { class: "actions" },
+        h("span", { class: "hint", id: "draftHint" }, DRAFT_HINT.motion),
+        h("div", { class: "btns" }, h("button", { class: "btn", onclick: doCheck }, "Check"), finalBtn, draftBtn))),
     out);
+  if (wantSample) { wantSample = false; sampleBtn.click(); return; }
   if (newText.trim()) doCheck();
 }
 
 // ------------------------------------------------------------------ job view
+// Order (docs/ui_redesign/UI_REDESIGN.md section 3): title + buttons, steps, progress, the video, Thumbnails and
+// For YouTube Studio side by side, then collapsed Script / Render details / Notes / Render log.
 function stepsBar(d) {
   const st = d.status, mode = d.mode;
   const hasDraft = !!d.draft, hasFinal = !!d.final;
@@ -968,11 +1292,13 @@ function stepsBar(d) {
     h("div", { class: cls(hasFinal, ["queued", "rendering"].includes(st) && mode === "final") }, h("span", { class: "dot" }, hasFinal ? "✓" : "3"), "Final + thumbnails"));
 }
 
+let logOpen = false;   // the progress card's "Show log" stays open while it redraws
 function progressCard() {
   const d = data;
   const card = h("div", { class: "card", id: "progress" });
-  const stages = d.mode === "final" ? STAGES : STAGES.slice(0, 5);
-  const idx = stages.indexOf(d.stage);
+  const stages = d.mode === "final" ? [...STAGES] : STAGES.slice(0, 5);
+  let idx = stages.indexOf(d.stage);
+  if (idx < 0 && d.stage && d.status === "rendering") { stages.push(d.stage); idx = stages.length - 1; }   // e.g. critique, picture
   const pct = d.total ? Math.round(100 * d.done / d.total) : 0;
   let eta = "";
   if (d.status === "rendering" && d.stage === "visuals" && d.done > 1 && d.render_started) {
@@ -981,13 +1307,17 @@ function progressCard() {
     if (per > 0) eta = ` · about ${dur(per * (d.total - d.done))} left for visuals`;
   }
   const elapsed = d.render_started && d.status === "rendering" ? `running for ${dur(Date.now() / 1000 - d.render_started)}` : "";
-  card.append(h("h3", {}, d.status === "queued" ? `Queued: ${d.mode} render (${d.stage})` : `Making the ${d.mode}`),
+  const log = d.log_tail && d.log_tail.length ? h("details", { class: "showlog", open: logOpen, ontoggle: (e) => { logOpen = e.target.open; } },
+    h("summary", {}, "Show log"), h("div", { class: "log" }, d.log_tail.join("\n"))) : null;
+  fill(card, h("div", { class: "cardhead" }, h("h3", {}, d.status === "queued" ? `Queued: ${d.mode} render (${d.stage})` : `Making the ${d.mode}`),
+      h("div", { class: "spacer" }), h("span", { class: "hint" }, elapsed)),
     h("div", { class: "stages" }, stages.map((s, i) => h("span", { class: i < idx ? "done" : i === idx ? "now" : "" }, s))),
-    h("div", { class: "row hint", style: "justify-content:space-between;margin-bottom:6px" },
-      h("span", {}, d.total ? `${d.stage}: ${d.done} / ${d.total}${eta}` : (d.stage || "starting")), h("span", {}, elapsed)),
-    h("div", { class: "bar" + (d.total ? "" : " indet") }, h("div", { style: `width:${pct}%` })),
-    d.log_tail && d.log_tail.length ? h("div", { class: "log" }, d.log_tail.join("\n")) : null,
-    h("p", { class: "hint", style: "margin:10px 0 0" }, d.mode === "final"
+    h("div", { class: "row hint", style: "justify-content:space-between;margin-bottom:8px" },
+      h("span", {}, d.total ? `${d.stage}: ${d.done} / ${d.total}${eta}` : (d.stage || "starting")), d.total ? h("b", {}, `${pct}%`) : null),
+    h("div", { class: "bar" + (d.total ? "" : " indet"), role: "progressbar", "aria-label": "Render progress", "aria-valuemin": "0", "aria-valuemax": "100",
+      "aria-valuenow": d.total ? String(pct) : null }, h("div", { style: `width:${pct}%` })),
+    log,
+    h("p", { class: "hint", style: "margin:12px 0 0" }, d.mode === "final"
       ? "The final uses the Mac's GPU for AI images. You can leave this page; progress is saved."
       : "You can leave this page; progress is saved."));
   return card;
@@ -999,26 +1329,22 @@ function videoCard(d) {
   if (!hasDraft && !hasFinal) return null;
   if (!tab || (tab === "final" && !hasFinal) || (tab === "draft" && !hasDraft)) tab = hasFinal ? "final" : "draft";
   const info = d[tab] || {};
-  const card = h("div", { class: "card" });
-  if (hasDraft && hasFinal) card.append(h("div", { class: "tabs" },
-    h("button", { class: tab === "draft" ? "on" : "", onclick: () => { tab = "draft"; showJob(); } }, "Draft"),
-    h("button", { class: tab === "final" ? "on" : "", onclick: () => { tab = "final"; showJob(); } }, "Final")));
-  card.append(h("video", { src: file(`${tab}.mp4`), controls: true, preload: "metadata" }),
-    h("div", { class: "row", style: "margin-top:12px" },
-      h("a", { class: "btn" + (tab === "final" ? " primary" : ""), href: file(`${tab}.mp4`, "&download=1") }, `Download ${tab}`),
-      h("span", { class: "hint" }, [info.duration_sec ? dur(info.duration_sec) : "", info.width ? `${info.width}×${info.height}` : "",
-        info.size_mb ? `${info.size_mb} MB` : "", info.render_seconds ? `made in ${dur(info.render_seconds)}` : "",
-        info.bgm ? "music: " + info.bgm.replace(/\.mp3$/, "").split("---")[0].replace(/-/g, " ") : ""].filter(Boolean).join("  ·  "))));
-  if (info.stages && Object.keys(info.stages).length) {
-    const tot = Object.values(info.stages).reduce((x, y) => x + y, 0) || 1;
-    card.append(h("div", { class: "stagetimes" },
-      h("span", { class: "hint" }, `${info.style === "motion" ? "Motion" : "Classic"} render, time per stage:`),
-      Object.entries(info.stages).sort((x, y) => STAGE_ORDER.indexOf(x[0]) - STAGE_ORDER.indexOf(y[0])).map(([k, v]) => h("span", { class: "stg", title: `${Math.round(100 * v / tot)}% of the render` },
-        h("b", {}, k), ` ${v < 10 ? v.toFixed(1) : Math.round(v)} s`))));
-  }
-  if (tab === "draft") card.append(h("p", { class: "hint", style: "margin:10px 0 0" },
+  const card = h("div", { class: "card", id: "video" });
+  if (hasDraft && hasFinal) card.append(h("div", { class: "tabs", role: "tablist", "aria-label": "Which video" },
+    h("button", { class: tab === "draft" ? "on" : "", role: "tab", "aria-selected": String(tab === "draft"), onclick: () => { tab = "draft"; showJob(); } }, "Draft"),
+    h("button", { class: tab === "final" ? "on" : "", role: "tab", "aria-selected": String(tab === "final"), onclick: () => { tab = "final"; showJob(); } }, "Final")));
+  const pack = tab === "final" && d.files.includes("upload_pack.zip");
+  card.append(h("video", { src: file(`${tab}.mp4`), controls: true, preload: "metadata", "aria-label": `${tab} video`, class: (info.height || 0) > (info.width || 1) ? "vert" : null }),
+    h("div", { class: "vidrow" },
+      h("a", { class: "btn" + (tab === "final" ? " primary" : ""), href: file(`${tab}.mp4`, "&download=1") }, tab === "final" ? "Download video" : "Download draft"),
+      pack ? h("a", { class: "btn", href: file("upload_pack.zip", "&download=1"), title: "The final, thumbnails / cover, metadata and subtitles in one .zip" }, "Upload pack (.zip)") : null,
+      h("div", { class: "facts" },
+        info.duration_sec ? h("span", {}, h("b", {}, ts(info.duration_sec)), " long") : null,
+        info.width ? h("span", {}, `${info.width}×${info.height}`) : null,
+        info.size_mb ? h("span", {}, h("b", {}, `${Math.round(info.size_mb)} MB`)) : null,
+        info.render_seconds ? h("span", {}, "made in ", h("b", {}, dur(info.render_seconds))) : null)));
+  if (tab === "draft") card.append(h("p", { class: "hint", style: "margin:12px 0 0" },
     "Draft: lower resolution, and AI images are placeholders showing their prompt. Check the voice, pacing, captions and graphics."));
-  if (info.warnings && info.warnings.length) card.append(h("div", { class: "banner warn", style: "margin:12px 0 0" }, info.warnings.join("\n")));
   return card;
 }
 
@@ -1029,61 +1355,169 @@ function jobButtons(d, off) {
     d.draft ? "Re-make draft" : fresh ? "Draft first" : "Make draft");
   const finalB = h("button", { class: "btn", disabled: off, onclick: () => { rememberChoice("final"); go("final"); } },
     d.final ? "Re-make final" : "Make final");
-  if (fresh) markChoice(finalB, draftB); else finalB.classList.add("primary");
+  if (fresh) markChoice(finalB, draftB); else if (!d.final) finalB.classList.add("primary");
   return fresh ? [finalB, draftB] : [draftB, finalB];
+}
+
+// metadata.txt (pipeline/jobs._metadata) -> the fields YouTube Studio asks for. The description keeps the chapters and
+// music credits (YouTube reads chapters from the description); Chapters is shown on its own too.
+function parseMeta(txt) {
+  const out = { title: "", description: "", chapters: "", tags: "", checklist: [] };
+  const lines = (txt || "").replace(/\r/g, "").split("\n");
+  const at = (name) => lines.findIndex(l => l.trim() === name);
+  const iT = at("TITLE"), iD = at("DESCRIPTION"), iG = at("TAGS"), iC = at("UPLOAD CHECKLIST");
+  if (iT < 0 || iD < 0) return null;
+  const block = (a, b) => lines.slice(a + 1, b < 0 ? lines.length : b).join("\n").trim();
+  out.title = block(iT, iD);
+  out.description = block(iD, iG >= 0 ? iG : iC);
+  if (iG >= 0) out.tags = block(iG, iC);
+  if (iC >= 0) out.checklist = block(iC, -1).split("\n").map(l => l.replace(/^-\s*/, "").trim()).filter(Boolean);
+  const d = out.description.split("\n"), iCh = d.findIndex(l => l.trim() === "Chapters");
+  if (iCh >= 0) { const ch = []; for (const l of d.slice(iCh + 1)) { if (!l.trim()) break; ch.push(l); } out.chapters = ch.join("\n"); }
+  return out;
+}
+async function copy(text, what) { toast(await copyText(text) ? `Copied ${what}` : "Couldn't copy; select the text instead"); }
+function ytCard(d) {
+  const meta = parseMeta(d.metadata);
+  const card = h("div", { class: "card", id: "ytcard" });
+  const head = h("div", { class: "cardhead" }, h("h3", {}, "For YouTube Studio"), h("div", { class: "spacer" }),
+    d.metadata ? h("button", { class: "btn small soft", onclick: () => copy(d.metadata, "everything") }, "Copy all") : null);
+  if (!d.metadata) { card.append(head, h("div", { class: "emptystate" }, h("p", {}, "Title, description, tags and chapters are written with the final."))); return card; }
+  if (!meta) { card.append(head, h("pre", { class: "meta", style: "margin-top:12px" }, d.metadata)); return card; }
+  const field = (label, text, clamp = true) => {
+    if (!text) return null;
+    const p = h("p", { class: clamp ? "clamp" : "" }, text);
+    if (clamp) { p.title = "Click to show all"; p.style.cursor = "pointer"; p.onclick = () => p.classList.toggle("open"); }
+    return h("div", { class: "field" }, h("div", { class: "lab" }, label, h("button", { class: "btn small quiet", "aria-label": `Copy ${label.toLowerCase()}`,
+      onclick: () => copy(text, label.toLowerCase()) }, "Copy")), p);
+  };
+  fill(card, head, field("Title", meta.title, false), field("Description", meta.description), field("Tags", meta.tags), field("Chapters", meta.chapters),
+    meta.checklist.length ? h("ul", { class: "checklist", "aria-label": "Upload checklist" }, meta.checklist.map(x => h("li", {}, x))) : null);
+  return card;
+}
+function thumbCard(d, running) {
+  const isShort = d.type === "short";
+  const designedOk = d.rendering_method === "motion" && !d.clip && d.script;
+  const nums = [1, 2, 3].filter(i => d.files.includes(`thumb_${i}.jpg`));
+  const remake = designedOk && d.final ? h("button", { class: "btn small", disabled: running, title: "Draw the designed thumbnails again from the saved script (no re-render)",
+    onclick: async (ev) => { const b = ev.currentTarget; b.disabled = true; b.textContent = "Drawing…";
+      try { const r = await api(`/api/jobs/${d.id}/thumbnails`, { method: "POST", body: "{}" });
+        toast(`Thumbnails remade in ${r.seconds} s` + (r.failed.length ? ` (${r.failed.length} layout(s) dropped)` : ""));
+        data = await api("/api/jobs/" + current); showJob(); } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Remake"; } } }, "Remake") : null;
+  const card = h("div", { class: "card", id: "thumbs" }, h("div", { class: "cardhead" }, h("h3", {}, isShort ? "Cover" : "Thumbnails"), h("div", { class: "spacer" }), remake));
+  if (!nums.length) {
+    card.append(h("div", { class: "emptystate" }, h("p", {}, d.final ? "No thumbnails were saved for this video." : "Thumbnails are made with the final."),
+      !d.final && d.script && (d.check || {}).ok ? h("button", { class: "btn", disabled: running, onclick: () => { rememberChoice("final"); go("final"); } }, "Make final") : null));
+    return card;
+  }
+  card.append(h("p", { class: "hint", style: "margin:2px 0 0" }, isShort ? "Option 1 is the cover in the upload pack; 2 and 3 are alternates."
+      : "Upload all three with Test & compare in YouTube Studio."),
+    h("div", { class: "thumbs three" + (isShort ? " vert" : "") }, nums.map(i => h("figure", {},
+      h("img", { src: file(`thumb_${i}.jpg`), alt: `${isShort && i === 1 ? "Cover" : "Thumbnail option " + i}`, loading: "lazy" }),
+      h("figcaption", {}, isShort && i === 1 ? "Cover" : `Option ${i}`, h("a", { href: file(`thumb_${i}.jpg`, "&download=1"), "aria-label": `Download option ${i}` }, "Download"))))));
+  return card;
+}
+
+// collapsed sections: the open ones are remembered while the same video is on screen
+let accOpen = { id: null, open: {} };
+function acc(key, title, summary, kids, openDefault = false) {
+  if (accOpen.id !== current) accOpen = { id: current, open: {} };
+  const open = key in accOpen.open ? accOpen.open[key] : openDefault;
+  const el = h("details", { class: "acc", id: "acc-" + key, open, ontoggle: (e) => { accOpen.open[key] = e.target.open; } },
+    h("summary", {}, h("span", {}, title), summary, h("span", { class: "car", "aria-hidden": "true" }, "▶")),
+    h("div", { class: "accbody" }, ...kids.filter(Boolean)));
+  return el;
+}
+function words(t) { const body = (t || "").replace(/^---\r?\n[\s\S]*?\r?\n---/, "").replace(/\[[^\]]*\]/g, " ").replace(/^#+.*$/gm, " ");
+  return (body.match(/[A-Za-z0-9][A-Za-z0-9'’.,$%-]*/g) || []).length; }
+function notesList(d, ta) {
+  // every warning of the video: the script check (click jumps to the line) + what the renders reported
+  const rep = lastReport || d.check || {};
+  const cw = (rep.warnings || []);
+  const rw = [...new Set([...((d.final || {}).warnings || []), ...((d.draft || {}).warnings || [])])];
+  const items = [...cw.map(m => h("li", { class: "w", onclick: () => { const s = $("#acc-script"); if (s) s.open = true; if (ta) jumpTo(ta, m.line); } },
+      h("span", { class: "ln" }, `line ${m.line}`), h("span", {}, m.msg))),
+    ...rw.map(w => h("li", { class: "w", style: "cursor:default" }, h("span", { class: "ln" }, "render"), h("span", {}, w)))];
+  return { count: items.length, el: items.length ? h("ul", { class: "msgs" }, items) : h("p", { class: "hint", style: "margin:0" }, "No warnings for this video.") };
 }
 
 function showJob() {
   if (sbOpen && data && data.rendering_method === "motion") { showStoryboard(true); return; }
   if (shOpen && data && data.rendering_method !== "motion") { showShots(); return; }
-  const d = data; const m = $("#main"); m.classList.remove("wide"); m.replaceChildren();
+  const d = data; const m = $("#main"); m.classList.remove("wide"); fill(m);
   const running = ["queued", "rendering"].includes(d.status);
   const ok = (d.check || {}).ok;
+  const rendered = !!(d.draft || d.final) || running || d.status === "failed";   // Make final / Draft first was pressed
   const [label, cls] = STATUS[d.status] || [d.status || "old test", ""];
-  m.append(h("div", { class: "row", style: "align-items:flex-start" },
-    h("div", { style: "flex:1;min-width:0" }, h("h2", {}, d.title || "Untitled"),
-      h("div", { class: "row hint" }, h("span", { class: "chip " + cls }, label), d.type === "short" ? h("span", { class: "chip type" }, d.clip ? "Short · clip" : "Short") : null,
-        when(d.created), d.format ? `· ${d.format}` : "")),
-    d.script ? h("button", { class: "btn", disabled: !ok || !!d.clip, onclick: d.rendering_method === "motion" ? openStoryboard : openShots,
-      title: d.clip ? "A clip Short re-uses another video's shots: open that video's Storyboard to change them"
-        : d.rendering_method === "motion" ? "Look at every scene, move and restyle things, regenerate single scenes"
-        : "Look at every shot, change its picture, words and options, make a new version of an AI image" }, "Storyboard") : null,
-    ...jobButtons(d, running || !ok || !d.script)));
-  if (!d.script) { m.append(h("div", { class: "banner warn", style: "margin-top:16px" }, "This is an older test job from before the script.md format. It can be watched but not re-rendered.")); }
-  else m.append(stepsBar(d));
-  if (d.status === "failed") m.append(h("div", { class: "banner bad" }, h("b", {}, d.stage || "Failed"), "\n", d.error || "",
-    "\nFix the script below if needed, then press the render button again. Finished voice and AI images are reused."));
+  const info = d.final || d.draft || {};
+  m.append(h("div", { class: "jhead" },
+    h("div", { class: "tt" }, h("h1", { title: d.title || "Untitled" }, d.title || "Untitled"),
+      h("div", { class: "meta-line" }, h("span", { class: "pill " + cls }, label), d.series ? h("span", { class: "pill type" }, `Episode ${d.episode || ""}`.trim()) : null, d.type === "short" ? h("span", { class: "pill type" }, d.clip ? "Short · clip" : "Short") : null,
+        h("span", {}, when(d.created)), info.duration_sec ? h("span", {}, "· " + ts(info.duration_sec)) : null,
+        info.width ? h("span", {}, `· ${info.width}×${info.height}`) : d.format ? h("span", {}, "· " + d.format) : null)),
+    h("div", { class: "btns" },
+      d.series ? h("a", { class: "btn", href: "#series/" + d.series, title: "The series bible, cast and all episodes" }, "Series page") : null,
+      d.script && !d.series ? h("button", { class: "btn", disabled: !ok || !!d.clip, onclick: d.rendering_method === "motion" ? openStoryboard : openShots,
+        title: d.clip ? "A clip Short re-uses another video's shots: open that video's Storyboard to change them"
+          : d.rendering_method === "motion" ? "Look at every scene, move and restyle things, regenerate single scenes"
+          : "Look at every shot, change its picture, words and options, make a new version of an AI image" }, "Storyboard") : null,
+      ...jobButtons(d, running || !ok || !d.script))));
+  if (!d.script) m.append(h("div", { class: "banner warn" }, "This is an older test job from before the script.md format. It can be watched but not re-rendered."));
+  if (d.status === "failed") {
+    const again = h("button", { class: "btn primary", disabled: !ok || !d.script, title: ok ? "Render again: finished voice and images are reused" : "Fix the script's errors first (Script, below)",
+      onclick: () => go(d.mode === "draft" ? "draft" : "final") }, "Try again");
+    m.append(h("div", { class: "banner bad failbox", role: "alert" },
+      h("div", {}, h("b", {}, `The ${d.mode || "render"} didn't finish${d.stage ? " (" + d.stage + ")" : ""}.`),
+        h("p", {}, d.error || "No error message was saved; the render log below has the details."),
+        h("p", { class: "hint" }, "Fix the script below if needed, then press Try again. Finished voice and AI images are reused.")), again));
+  }
+  if (d.script) m.append(stepsBar(d));
   if (running) m.append(progressCard());
   const vc = videoCard(d); if (vc) m.append(vc);
-  { const v = ((d.final || d.draft || {}).motion || {}).variety; const c = varietyCard(v, false); if (c) m.append(c); }
-  { const cr = ((d.final || d.draft || {}).motion || {}).critique; if (cr && cr.first) m.append(critiqueCard(cr, d.id, !!d.final)); }
-  const designedOk = d.rendering_method === "motion" && !d.clip && d.script;
-  if (d.files.some(f => f.startsWith("thumb_")) || (designedOk && d.final)) {
-    const isShort = d.type === "short";
-    const remake = designedOk ? h("button", { class: "btn small", disabled: running, title: "Draw the designed thumbnails again from the saved script (no re-render)",
-      onclick: async (ev) => { ev.target.disabled = true; ev.target.textContent = "Drawing…";
-        try { const r = await api(`/api/jobs/${d.id}/thumbnails`, { method: "POST", body: "{}" });
-          toast(`Thumbnails remade in ${r.seconds} s` + (r.failed.length ? ` (${r.failed.length} layout(s) dropped)` : ""));
-          data = await api("/api/jobs/" + current); showJob(); } catch (e) { toast(e.message); ev.target.disabled = false; ev.target.textContent = "Remake thumbnails"; } } },
-      "Remake thumbnails") : null;
-    m.append(h("div", { class: "card" }, h("div", { class: "row", style: "margin-bottom:6px" }, h("h3", { style: "margin:0" }, isShort ? "Cover" : "Thumbnails"),
-        h("div", { class: "spacer" }), remake),
-      h("p", { class: "hint", style: "margin-top:-4px" }, isShort ? "Option 1 is the cover in the upload pack; 2 and 3 are alternates. Pick one as the cover when you upload."
-        : "Upload all three in YouTube Studio with “Test & compare” and let YouTube pick the winner."),
-      h("div", { class: "thumbs" + (isShort ? " vert" : "") }, [1, 2, 3].filter(i => d.files.includes(`thumb_${i}.jpg`)).map(i => h("figure", {},
-        h("img", { src: file(`thumb_${i}.jpg`), alt: `Thumbnail ${i}` }),
-        h("figcaption", {}, `Option ${i}`, h("a", { class: "btn small", href: file(`thumb_${i}.jpg`, "&download=1") }, "Download")))))));
+  if (vc || d.final || d.files.some(f => f.startsWith("thumb_")) || d.metadata)
+    m.append(h("div", { class: "two" }, thumbCard(d, running), ytCard(d)));
+
+  // Script (opens by itself when the check has errors, or before the first render)
+  let ta = null;
+  if (d.script) { const ed = editorCard(d, rendered); ta = ed.ta;
+    const rep = lastReport || d.check || {};
+    const nerr = (rep.errors || []).length, saved = !unsaved();
+    m.append(acc("script", "Script", h("span", { class: "sub" }, `${words(editText ?? d.script).toLocaleString()} words · ${saved ? "saved" : "unsaved changes"}`),
+      [ed.el], nerr > 0 || !rendered));
+    if (nerr) $("#acc-script summary").append(h("span", { class: "badge bad" }, `${nerr} error${nerr > 1 ? "s" : ""}`)); }
+
+  // Render details: smoothness check, variety, time per stage, music
+  const mo = info.motion || {}, cr = mo.critique, v = mo.variety;
+  const details = [];
+  if (info.stages && Object.keys(info.stages).length) {
+    const tot = Object.values(info.stages).reduce((x, y) => x + y, 0) || 1;
+    details.push(h("div", { class: "card" }, h("h3", {}, "Time per stage"),
+      h("div", { class: "stagetimes" }, h("span", { class: "hint" }, `${info.style === "motion" ? "Motion" : "Classic"} render:`),
+        Object.entries(info.stages).sort((x, y) => STAGE_ORDER.indexOf(x[0]) - STAGE_ORDER.indexOf(y[0])).map(([k, t]) => h("span", { class: "stg", title: `${Math.round(100 * t / tot)}% of the render` },
+          h("b", {}, k), ` ${t < 10 ? t.toFixed(1) : Math.round(t)} s`))),
+      info.bgm ? h("p", { class: "hint", style: "margin:12px 0 0" }, "Music: " + info.bgm.replace(/\.mp3$/, "").split("---")[0].replace(/-/g, " ")) : null));
   }
-  if (d.metadata) m.append(h("div", { class: "card" }, h("div", { class: "row", style: "margin-bottom:10px" }, h("h3", { style: "margin:0" }, "For YouTube Studio"),
-      h("div", { class: "spacer" }), h("button", { class: "btn small", onclick: () => { navigator.clipboard.writeText(d.metadata); toast("Copied"); } }, "Copy all")),
-    h("pre", { class: "meta" }, d.metadata)));
-  if (d.script) m.append(editorCard(d, !d.draft || d.status === "failed" || !ok));
-  if (!running && d.log_tail && d.log_tail.length && d.status === "failed") m.append(h("details", { class: "card" }, h("summary", {}, "Render log"), h("div", { class: "log" }, d.log_tail.join("\n"))));
+  if (cr && cr.first) details.push(critiqueCard(cr, d.id, !!d.final));
+  const vcard = varietyCard(v, false); if (vcard) details.push(vcard);
+  if (details.length) {
+    const sum = [cr && cr.first ? `smoothness ${(cr.last || cr.first).mean}/10` : "", v ? `variety ${v.goals_met} of ${v.goals_total} goals` : "",
+      info.stages ? "time per stage" : "", info.bgm ? "music" : ""].filter(Boolean).join(" · ");
+    m.append(acc("details", "Render details", h("span", { class: "sub" }, sum), details));
+  }
+
+  // Notes: every warning, hidden once a render was asked for
+  const notes = notesList(d, ta);
+  m.append(acc("notes", "Notes", h("span", { class: "badge" + (notes.count && !rendered ? " warn" : "") },
+    notes.count ? `${notes.count} warning${notes.count > 1 ? "s" : ""}${rendered ? ", hidden" : ""}` : "no warnings"), [notes.el], !rendered && notes.count > 0));
+
+  if (!running && d.log_tail && d.log_tail.length && d.status === "failed")
+    m.append(acc("log", "Render log", h("span", { class: "sub" }, `last ${d.log_tail.length} lines`), [h("div", { class: "log", style: "margin:0" }, d.log_tail.join("\n"))], true));
 }
 
-function editorCard(d, open) {
+function editorCard(d, rendered) {
   if (editText === null) editText = d.script;
-  const ta = h("textarea", { class: "script", spellcheck: "false", oninput: (e) => { editText = e.target.value; } });
+  const ta = h("textarea", { class: "script", spellcheck: "false", "aria-label": "Script", oninput: (e) => { editText = e.target.value;
+    const s = $("#acc-script .sub"); if (s) s.textContent = `${words(editText).toLocaleString()} words · ${unsaved() ? "unsaved changes" : "saved"}`; } });
   ta.value = editText;
   const rep = lastReport || d.check;
   const running = ["queued", "rendering"].includes(d.status);
@@ -1092,17 +1526,17 @@ function editorCard(d, open) {
       lastReport = r; data.script = editText; data.check = r; toast(r.ok ? "Saved. No errors." : `Saved, ${r.errors.length} error(s) to fix`);
       const dd = await api("/api/jobs/" + current); data = dd; editText = dd.script; showJob(); loadJobs();
     } catch (e) { toast(e.message); } };
-  const out = h("div", { style: "margin-top:14px" }, rep ? report(rep, (ln) => jumpTo(ta, ln), () => editText) : null,
+  const out = h("div", { style: "margin-top:18px" }, rep ? report(rep, (ln) => jumpTo(ta, ln), () => editText, { notes: rendered }) : null,
     rep && !running ? lookCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null,
     rep && !running ? iconCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null,
     rep && !running ? thumbsCard(rep, () => editText, (t) => { editText = t; ta.value = t; }, save) : null);
-  return h("details", { class: "card", open },
-    h("summary", {}, "Script"),
+  const el = h("div", {},
     ta,
-    h("div", { class: "row", style: "margin-top:12px" },
-      h("button", { class: "btn", disabled: running, onclick: save }, "Check & save"),
-      h("span", { class: "hint" }, running ? "Editing is locked while rendering." : "Saving doesn't re-render; press Make final (or Draft first) after.")),
+    h("div", { class: "actions" },
+      h("span", { class: "hint" }, running ? "Editing is locked while rendering." : "Saving doesn't re-render; press Make final (or Draft first) after."),
+      h("div", { class: "btns" }, h("button", { class: "btn", disabled: running, onclick: save }, "Check & save"))),
     out);
+  return { el, ta };
 }
 
 async function go(mode) {
@@ -1112,8 +1546,8 @@ async function go(mode) {
 }
 
 (async () => {
-  await loadMe(); await loadHealth(); current = location.hash.slice(1) || null; await loadJobs(); refresh(true);
-  setInterval(loadJobs, 5000); setInterval(loadHealth, 30000);
+  await loadMe(); await loadHealth(); current = location.hash.slice(1) || null; await loadJobs(); loadSeries(); refresh(true);
+  setInterval(loadJobs, 5000); setInterval(loadHealth, 30000); setInterval(loadSeries, 15000);
 })();
 </script>
 <script src="/ui/storyboard.js"></script>
